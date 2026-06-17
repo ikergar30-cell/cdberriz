@@ -1,0 +1,43 @@
+import { NextResponse, type NextRequest } from "next/server";
+import { stripe } from "@/lib/stripe";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+
+// Abre el portal de cliente de Stripe para que el socio gestione su cuota.
+// Seguridad: exige sesión iniciada (enlace mágico). Buscamos el socio por el
+// email AUTENTICADO, no por uno que mande el cliente. Así nadie gestiona la
+// cuota de otro.
+export async function POST(request: NextRequest) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.email) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  }
+
+  // El socio puede no tener perfil de empleado; leemos con service_role,
+  // pero SOLO su propia ficha (filtrada por su email autenticado).
+  const admin = createAdminClient();
+  const { data: socio } = await admin
+    .from("socios")
+    .select("stripe_customer_id")
+    .ilike("email", user.email)
+    .not("stripe_customer_id", "is", null)
+    .maybeSingle();
+
+  if (!socio?.stripe_customer_id) {
+    return NextResponse.json(
+      { error: "No encontramos una cuota asociada a tu email" },
+      { status: 404 },
+    );
+  }
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const sesion = await stripe.billingPortal.sessions.create({
+    customer: socio.stripe_customer_id,
+    return_url: `${siteUrl}/`,
+  });
+
+  return NextResponse.json({ url: sesion.url });
+}

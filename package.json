@@ -6,21 +6,41 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "migrar:noticias:prueba": "node --env-file=.env.local scripts/migrar-noticias.mjs --dry",
+    "migrar:noticias": "node --env-file=.env.local scripts/migrar-noticias.mjs"
   },
   "dependencies": {
+    "@portabletext/react": "^3.2.4",
+    "@sanity/icons": "^3.7.4",
+    "@sanity/image-url": "^1.2.0",
+    "@sanity/vision": "^3.99.0",
+    "@supabase/ssr": "^0.12.0",
+    "@supabase/supabase-js": "^2.108.2",
+    "html5-qrcode": "^2.3.8",
+    "next": "14.2.35",
+    "next-intl": "^3.26.5",
+    "next-sanity": "^9.12.3",
+    "qrcode": "^1.5.4",
     "react": "^18",
     "react-dom": "^18",
-    "next": "14.2.35"
+    "resend": "^6.12.4",
+    "sanity": "^3.99.0",
+    "stripe": "^22.2.1",
+    "styled-components": "^6.4.2"
   },
   "devDependencies": {
-    "typescript": "^5",
+    "@sanity/client": "^7.23.0",
     "@types/node": "^20",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.35",
+    "fast-xml-parser": "^5.9.2",
+    "node-html-parser": "^7.1.0",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
-    "eslint": "^8",
-    "eslint-config-next": "14.2.35"
+    "typescript": "^5"
   }
 }

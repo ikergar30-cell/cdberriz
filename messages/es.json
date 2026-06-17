@@ -1,0 +1,105 @@
+{
+  "metadata": {
+    "siteName": "C.D. Berriz",
+    "defaultDescription": "Club Deportivo Berriz — fútbol federado y escolar en Berriz (Bizkaia)."
+  },
+  "nav": {
+    "inicio": "Inicio",
+    "noticias": "Noticias",
+    "equipos": "Equipos",
+    "socios": "Socios/as",
+    "club": "Club",
+    "contacto": "Contacto",
+    "tienda": "Tienda",
+    "clubInfo": "Información del club",
+    "historia": "Historia",
+    "familias": "Familias",
+    "abrirMenu": "Abrir menú",
+    "cerrarMenu": "Cerrar menú"
+  },
+  "langSwitcher": {
+    "label": "Idioma"
+  },
+  "home": {
+    "heroTagline": "50 años compartiendo ilusiones",
+    "heroCta": "Hazte socio/a",
+    "card1Title": "Juega con nosotros",
+    "card1Text": "Únete y juega en el C.D. Berriz.",
+    "card2Title": "Entrena al Berriz",
+    "card2Text": "Formando jugadores desde 1973.",
+    "card3Title": "Hazte socio/a",
+    "card3Text": "Tu segunda familia desde 1973.",
+    "cardCta": "Más información",
+    "noticiasTitle": "Noticias recientes",
+    "noticiasCta": "Ver todas las noticias",
+    "eventosTitle": "Próximos eventos",
+    "eventosEmpty": "Sin próximos eventos."
+  },
+  "noticias": {
+    "title": "Noticias",
+    "intro": "Toda la actualidad del C.D. Berriz.",
+    "todas": "Todas",
+    "leerMas": "Leer más",
+    "vacio": "No hay noticias todavía.",
+    "categorias": {
+      "cantera": "Cantera",
+      "club": "Club",
+      "primerEquipo": "Primer equipo",
+      "socios": "Socios/as"
+    }
+  },
+  "equipos": {
+    "title": "Equipos",
+    "intro": "Fútbol federado y fútbol escolar.",
+    "federado": "Fútbol Federado",
+    "escolar": "Fútbol Escolar",
+    "verEquipo": "Ver equipo",
+    "temporada": "Temporada"
+  },
+  "socios": {
+    "title": "Socios/as",
+    "intro": "Forma parte de la familia del C.D. Berriz.",
+    "cuotaAnual": "/año",
+    "hazteSocio": "Hazte socio/a",
+    "beneficiosTitle": "Ventajas de ser socio/a",
+    "faqTitle": "Preguntas frecuentes"
+  },
+  "club": {
+    "infoTitle": "Información del club",
+    "datosTitle": "Datos del club",
+    "juntaTitle": "Junta Directiva",
+    "historiaTitle": "Historia",
+    "familiasTitle": "Familias"
+  },
+  "familias": {
+    "documentosTitle": "Documentos descargables",
+    "noticiasTitle": "Noticias para familias",
+    "faqTitle": "Preguntas frecuentes",
+    "contactoTitle": "Contacto",
+    "descargar": "Descargar"
+  },
+  "contacto": {
+    "title": "Contacto",
+    "intro": "¿Tienes alguna duda? Escríbenos.",
+    "nombre": "Nombre",
+    "email": "Correo electrónico",
+    "asunto": "Asunto",
+    "mensaje": "Mensaje",
+    "enviar": "Enviar",
+    "sponsorTitle": "Hazte sponsor",
+    "sponsorText": "¿Quieres apoyar al club? Ponte en contacto con nosotros.",
+    "aviso": "Este formulario es una maqueta; el envío real se configurará más adelante."
+  },
+  "footer": {
+    "siguenos": "Síguenos",
+    "navTitle": "Navegación",
+    "contactoTitle": "Contacto",
+    "direccion": "Berrizburu Zelaia, 48240 Berriz (Bizkaia)",
+    "derechos": "Todos los derechos reservados."
+  },
+  "notFound": {
+    "title": "Página no encontrada",
+    "text": "La página que buscas no existe o ha cambiado de sitio.",
+    "volver": "Volver al inicio"
+  }
+}

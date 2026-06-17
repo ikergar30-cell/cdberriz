@@ -1,0 +1,105 @@
+{
+  "metadata": {
+    "siteName": "C.D. Berriz",
+    "defaultDescription": "Club Deportivo Berriz — futbol federatua eta eskola-futbola Berrizen (Bizkaia)."
+  },
+  "nav": {
+    "inicio": "Hasiera",
+    "noticias": "Albisteak",
+    "equipos": "Taldeak",
+    "socios": "Bazkideak",
+    "club": "Kluba",
+    "contacto": "Kontaktua",
+    "tienda": "Denda",
+    "clubInfo": "Klubaren informazioa",
+    "historia": "Historia",
+    "familias": "Familiak",
+    "abrirMenu": "Menua ireki",
+    "cerrarMenu": "Menua itxi"
+  },
+  "langSwitcher": {
+    "label": "Hizkuntza"
+  },
+  "home": {
+    "heroTagline": "50 urte ilusioak elkarbanatuz",
+    "heroCta": "Egin zaitez bazkide",
+    "card1Title": "Jokatu gurekin",
+    "card1Text": "Elkartu eta jokatu C.D. Berrizen.",
+    "card2Title": "Entrenatu Berriz",
+    "card2Text": "Jokalariak trebatzen 1973tik.",
+    "card3Title": "Egin zaitez bazkide",
+    "card3Text": "Zure bigarren familia 1973tik.",
+    "cardCta": "Informazio gehiago",
+    "noticiasTitle": "Azken albisteak",
+    "noticiasCta": "Ikusi albiste guztiak",
+    "eventosTitle": "Hurrengo ekitaldiak",
+    "eventosEmpty": "Ez dago hurrengo ekitaldirik."
+  },
+  "noticias": {
+    "title": "Albisteak",
+    "intro": "C.D. Berrizen albiste guztiak.",
+    "todas": "Guztiak",
+    "leerMas": "Irakurri gehiago",
+    "vacio": "Oraindik ez dago albisterik.",
+    "categorias": {
+      "cantera": "Harrobia",
+      "club": "Kluba",
+      "primerEquipo": "Lehen taldea",
+      "socios": "Bazkideak"
+    }
+  },
+  "equipos": {
+    "title": "Taldeak",
+    "intro": "Futbol federatua eta eskola-futbola.",
+    "federado": "Futbol Federatua",
+    "escolar": "Eskola Futbola",
+    "verEquipo": "Ikusi taldea",
+    "temporada": "Denboraldia"
+  },
+  "socios": {
+    "title": "Bazkideak",
+    "intro": "Izan zaitez C.D. Berrizen familiakide.",
+    "cuotaAnual": "/urtea",
+    "hazteSocio": "Egin zaitez bazkide",
+    "beneficiosTitle": "Bazkide izatearen abantailak",
+    "faqTitle": "Ohiko galderak"
+  },
+  "club": {
+    "infoTitle": "Klubaren informazioa",
+    "datosTitle": "Klubaren datuak",
+    "juntaTitle": "Zuzendaritza Batzordea",
+    "historiaTitle": "Historia",
+    "familiasTitle": "Familiak"
+  },
+  "familias": {
+    "documentosTitle": "Deskargatzeko dokumentuak",
+    "noticiasTitle": "Familientzako albisteak",
+    "faqTitle": "Ohiko galderak",
+    "contactoTitle": "Kontaktua",
+    "descargar": "Deskargatu"
+  },
+  "contacto": {
+    "title": "Kontaktua",
+    "intro": "Zalantzarik baduzu? Idatzi guri.",
+    "nombre": "Izena",
+    "email": "Helbide elektronikoa",
+    "asunto": "Gaia",
+    "mensaje": "Mezua",
+    "enviar": "Bidali",
+    "sponsorTitle": "Egin zaitez babesle",
+    "sponsorText": "Kluba lagundu nahi duzu? Jarri gurekin harremanetan.",
+    "aviso": "Formulario hau maketa bat da; benetako bidalketa geroago konfiguratuko da."
+  },
+  "footer": {
+    "siguenos": "Jarraitu gaitzazu",
+    "navTitle": "Nabigazioa",
+    "contactoTitle": "Kontaktua",
+    "direccion": "Berrizburu Zelaia, 48240 Berriz (Bizkaia)",
+    "derechos": "Eskubide guztiak erreserbatuta."
+  },
+  "notFound": {
+    "title": "Orria ez da aurkitu",
+    "text": "Bilatzen ari zaren orria ez dago edo lekuz aldatu da.",
+    "volver": "Itzuli hasierara"
+  }
+}
