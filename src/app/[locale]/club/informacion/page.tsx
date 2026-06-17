@@ -73,7 +73,7 @@ export default async function InformacionPage({
             </p>
           </div>
           {miembros.length > 0 ? (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="flex flex-wrap justify-center gap-5">
               {miembros.map((m, i) => {
                 const foto = m.foto
                   ? urlForImage(m.foto).width(300).height(300).fit("crop").url()
@@ -81,9 +81,9 @@ export default async function InformacionPage({
                 return (
                   <div
                     key={i}
-                    className="rounded-2xl border border-neutral-200 bg-white p-5 text-center"
+                    className="flex w-40 flex-col items-center rounded-2xl border border-neutral-200 bg-white p-5 text-center sm:w-48"
                   >
-                    <div className="mx-auto mb-3 h-24 w-24 overflow-hidden rounded-full bg-azul-50">
+                    <div className="mb-3 h-24 w-24 overflow-hidden rounded-full bg-azul-50">
                       {foto ? (
                         <Image
                           src={foto}
@@ -98,8 +98,8 @@ export default async function InformacionPage({
                         </div>
                       )}
                     </div>
-                    <p className="font-bold text-neutral-900">{m.nombre}</p>
-                    <p className="text-sm text-neutral-500">
+                    <p className="font-bold leading-snug text-neutral-900">{m.nombre}</p>
+                    <p className="mt-1 text-sm text-neutral-500">
                       {pickLocale(m.cargo, locale)}
                     </p>
                   </div>
