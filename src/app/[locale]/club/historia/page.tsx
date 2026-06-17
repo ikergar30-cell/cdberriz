@@ -191,10 +191,21 @@ export default async function HistoriaPage({
           </p>
         </section>
 
-        {/* Lema */}
-        <p className="border-t border-neutral-200 pt-8 text-center font-display text-xl font-extrabold uppercase text-rojo">
-          50 urte ilusioak elkarbanatuz
-        </p>
+        {/* Logo 50 aniversario + lema */}
+        <section className="rounded-3xl bg-azul-900 px-6 py-12 text-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo-50urte.svg"
+            alt={tx(
+              "50 aniversario del C.D. Berriz (1973–2023)",
+              "C.D. Berrizen 50. urteurrena (1973–2023)",
+            )}
+            className="mx-auto w-56 md:w-64"
+          />
+          <p className="mt-6 font-display text-xl font-extrabold uppercase tracking-tight text-dorado">
+            50 urte ilusioak elkarbanatuz
+          </p>
+        </section>
       </article>
     </>
   );

@@ -44,6 +44,13 @@ export function Footer() {
           <p className="mt-2 text-sm font-semibold text-dorado">
             {t("home.heroTagline")}
           </p>
+          {/* Sello del 50 aniversario */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo-50urte.svg"
+            alt="50 urte · C.D. Berriz"
+            className="mt-5 w-24 opacity-90"
+          />
         </div>
 
         <div>

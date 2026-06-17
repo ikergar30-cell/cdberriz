@@ -157,12 +157,21 @@ export default async function HomePage({
       {/* CONOCE EL CLUB (historia) */}
       <section className="bg-neutral-50 py-16 md:py-20">
         <div className="container grid items-center gap-8 md:grid-cols-2">
-          <div className="relative aspect-[3/2] overflow-hidden rounded-2xl shadow-lg">
-            <Image
-              src="/historia/accion-bn.jpg"
-              alt={tx("Historia del C.D. Berriz", "C.D. Berrizen historia")}
-              fill
-              className="object-cover"
+          <div className="relative">
+            <div className="relative aspect-[3/2] overflow-hidden rounded-2xl shadow-lg">
+              <Image
+                src="/historia/accion-bn.jpg"
+                alt={tx("Historia del C.D. Berriz", "C.D. Berrizen historia")}
+                fill
+                className="object-cover"
+              />
+            </div>
+            {/* Sello del 50 aniversario */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo-50urte.svg"
+              alt="50 urte · C.D. Berriz"
+              className="absolute -bottom-5 -right-4 w-24 drop-shadow-xl md:w-28"
             />
           </div>
           <div>
