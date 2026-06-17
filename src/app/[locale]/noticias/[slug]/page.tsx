@@ -1,7 +1,8 @@
 import { setRequestLocale, getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import Image from "next/image";
-import { PortableText } from "@portabletext/react";
+import { PortableText, type PortableTextComponents } from "@portabletext/react";
+import type { SanityImageSource } from "@sanity/image-url/lib/types/types";
 import { Link } from "@/i18n/routing";
 import { sanityFetch } from "@/sanity/lib/sanityFetch";
 import { noticiaPorSlugQuery } from "@/sanity/lib/queries";
@@ -11,6 +12,21 @@ import { urlForImage } from "@/sanity/image";
 import { CATEGORIA_KEY } from "@/lib/categorias";
 
 type PortableBlock = Parameters<typeof PortableText>[0]["value"];
+
+// Renderizado del cuerpo: las imágenes del artículo se muestran enteras,
+// con su proporción original (sin recortar).
+const ptComponents: PortableTextComponents = {
+  types: {
+    image: ({ value }: { value: SanityImageSource & { alt?: string } }) => (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={urlForImage(value).width(1200).url()}
+        alt={value.alt ?? ""}
+        className="my-6 w-full rounded-xl"
+      />
+    ),
+  },
+};
 
 export default async function NoticiaDetalle({
   params: { locale, slug },
@@ -27,15 +43,19 @@ export default async function NoticiaDetalle({
   );
   if (!noticia) notFound();
 
+  // Portada a tamaño generoso SIN recortar (conserva la proporción original).
   const img = noticia.portada
-    ? urlForImage(noticia.portada).width(1200).height(630).fit("crop").url()
+    ? urlForImage(noticia.portada).width(1600).url()
     : null;
   const fecha = new Date(noticia.fecha).toLocaleDateString(
     locale === "eu" ? "eu" : "es-ES",
     { day: "numeric", month: "long", year: "numeric" },
   );
-  const cuerpo = (noticia.cuerpo?.[locale === "eu" ? "eu" : "es"] ??
-    []) as PortableBlock;
+  // Cuerpo en el idioma elegido; si no existe (p. ej. noticias migradas solo en
+  // castellano), se muestra el artículo COMPLETO en el otro idioma como respaldo.
+  const cuerpo = (noticia.cuerpo?.[locale === "eu" ? "eu" : "es"]?.length
+    ? noticia.cuerpo[locale === "eu" ? "eu" : "es"]
+    : (noticia.cuerpo?.es ?? noticia.cuerpo?.eu ?? [])) as PortableBlock;
 
   return (
     <article className="container max-w-3xl py-10 md:py-14">
@@ -54,19 +74,20 @@ export default async function NoticiaDetalle({
       <p className="mt-2 text-neutral-500">{fecha}</p>
 
       {img && (
-        <div className="relative my-8 aspect-[1200/630] overflow-hidden rounded-2xl">
-          <Image
-            src={img}
-            alt={noticia.portada?.alt ?? ""}
-            fill
-            className="object-cover"
-          />
-        </div>
+        <Image
+          src={img}
+          alt={noticia.portada?.alt ?? pickLocale(noticia.titulo, locale)}
+          width={noticia.portadaDims?.width ?? 1600}
+          height={noticia.portadaDims?.height ?? 900}
+          className="my-8 w-full rounded-2xl"
+          sizes="(max-width: 768px) 100vw, 768px"
+          priority
+        />
       )}
 
       <div className="space-y-4 leading-relaxed text-neutral-700">
         {Array.isArray(cuerpo) && cuerpo.length > 0 ? (
-          <PortableText value={cuerpo} />
+          <PortableText value={cuerpo} components={ptComponents} />
         ) : (
           <p>{pickLocale(noticia.extracto, locale)}</p>
         )}

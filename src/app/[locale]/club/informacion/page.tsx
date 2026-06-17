@@ -23,16 +23,16 @@ export default async function InformacionPage({
   );
   const miembros = junta?.miembros ?? [];
 
+  const eu = locale === "eu";
   const datos = [
-    { label: locale === "eu" ? "Izena" : "Nombre", value: club.nombre },
-    {
-      label: locale === "eu" ? "Sorrera" : "Fundación",
-      value: String(club.fundacion),
-    },
-    {
-      label: locale === "eu" ? "Helbidea" : "Dirección",
-      value: club.direccion,
-    },
+    { label: eu ? "Izena" : "Nombre", value: club.nombre },
+    { label: eu ? "Sorrera-urtea" : "Año de fundación", value: String(club.fundacion) },
+    { label: eu ? "Zelaia" : "Estadio", value: club.estadio },
+    { label: eu ? "Neurriak" : "Medidas", value: club.medidas },
+    { label: eu ? "Jokalekua" : "Terreno de juego", value: eu ? club.terreno.eu : club.terreno.es },
+    { label: eu ? "Inaugurazioa" : "Inauguración del estadio", value: club.inauguracion },
+    { label: eu ? "Helbidea" : "Dirección", value: club.direccion },
+    { label: eu ? "Telefonoa" : "Teléfono", value: club.telefono },
     { label: "Email", value: club.email },
   ];
 
@@ -60,6 +60,18 @@ export default async function InformacionPage({
           <h2 className="mb-6 font-display text-2xl font-extrabold uppercase tracking-tight text-azul-700">
             {t("juntaTitle")}
           </h2>
+          <div className="mb-8 max-w-3xl space-y-4 text-lg leading-relaxed text-neutral-700">
+            <p>
+              {eu
+                ? "C.D. Berrizek gaur egun Zuzendaritza Batzorde konprometitu bat du, kluba hazten jarraitzeko, gizarte-oinarria sendotzeko eta osatzen duten pertsona guztiak zaintzeko: jokalariak, familiak, bazkideak eta laguntzaileak."
+                : "El C.D. Berriz cuenta actualmente con una Junta Directiva comprometida con seguir impulsando el crecimiento del club, reforzar su base social y cuidar de todas las personas que lo forman: jugadores, familias, socios y colaboradores."}
+            </p>
+            <p>
+              {eu
+                ? "Batzorde honek bere eginkizunak gardentasunetik, hurbiltasunetik eta eguneroko ahaleginetik abiatuta hartzen ditu, C.D. Berrizen orainaren eta etorkizunaren alde."
+                : "Esta Junta asume sus funciones con el compromiso de trabajar desde la transparencia, la cercanía y el esfuerzo diario por el presente y el futuro del C.D. Berriz."}
+            </p>
+          </div>
           {miembros.length > 0 ? (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
               {miembros.map((m, i) => {

@@ -27,7 +27,16 @@ export default async function ContactoPage({
               C.D. Berriz
             </h2>
             <p className="mt-3 text-neutral-600">{club.direccion}</p>
-            <p className="mt-1 text-neutral-600">{club.email}</p>
+            <p className="mt-1 text-neutral-600">
+              <a href={`tel:${club.telefono.replace(/\s/g, "")}`} className="hover:text-azul">
+                {club.telefono}
+              </a>
+            </p>
+            <p className="mt-1 text-neutral-600">
+              <a href={`mailto:${club.email}`} className="hover:text-azul">
+                {club.email}
+              </a>
+            </p>
           </div>
 
           <div className="rounded-2xl border border-rojo-200 bg-rojo-50 p-6">

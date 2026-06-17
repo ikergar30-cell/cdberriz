@@ -12,7 +12,8 @@ export const todasNoticiasQuery = `
 
 export const noticiaPorSlugQuery = `
 *[_type == "noticia" && slug.current == $slug][0]{
-  _id, titulo, "slug": slug.current, categoria, fecha, extracto, portada, cuerpo
+  _id, titulo, "slug": slug.current, categoria, fecha, extracto, cuerpo,
+  portada, "portadaDims": portada.asset->metadata.dimensions
 }`;
 
 export const eventosProximosQuery = `

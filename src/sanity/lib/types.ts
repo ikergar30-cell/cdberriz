@@ -11,6 +11,7 @@ export type Noticia = {
   fecha: string;
   extracto?: LocaleText;
   portada?: SanityImageSource & { alt?: string };
+  portadaDims?: { width: number; height: number; aspectRatio: number };
   cuerpo?: { es?: unknown[]; eu?: unknown[] };
 };
 

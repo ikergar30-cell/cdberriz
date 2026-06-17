@@ -2,8 +2,16 @@
 export const club = {
   nombre: "C.D. Berriz",
   fundacion: 1973,
-  direccion: "Berrizburu Zelaia, 48240 Berriz (Bizkaia)",
-  email: "coordinacioncdberriz@gmail.com",
+  // Estadio
+  estadio: "Berrizburu",
+  medidas: "100 × 63 m",
+  // Terreno de juego (bilingüe)
+  terreno: { es: "Hierba artificial", eu: "Belar artifiziala" },
+  inauguracion: "31/8/1974",
+  direccion: "Learreta-Markina Kalea 28, 48240 Berriz (Bizkaia)",
+  telefono: "692 076 167",
+  // Email público del club (el formulario de contacto va aparte, a coordinación)
+  email: "infocdberriz@gmail.com",
   // Tienda oficial (Fútbol Emotion) — se abre en pestaña nueva
   tiendaUrl:
     "https://www.futbolemotion.com/es/categoria/colectivos/equipaciones-cd-berriz",
