@@ -1,5 +1,6 @@
 import { setRequestLocale, getTranslations } from "next-intl/server";
 import Image from "next/image";
+import { Link } from "@/i18n/routing";
 import { LinkButton } from "@/components/ui/Button";
 import { NoticiaCard } from "@/components/sections/NoticiaCard";
 import { sanityFetch } from "@/sanity/lib/sanityFetch";
@@ -7,10 +8,12 @@ import {
   noticiasRecientesQuery,
   eventosProximosQuery,
   paginaInicioQuery,
+  sponsorsQuery,
 } from "@/sanity/lib/queries";
-import type { Noticia, Evento, PaginaInicio } from "@/sanity/lib/types";
+import type { Noticia, Evento, PaginaInicio, Sponsor } from "@/sanity/lib/types";
 import { pickLocale } from "@/lib/locale";
 import { urlForImage } from "@/sanity/image";
+import { club } from "@/config/club";
 
 export default async function HomePage({
   params: { locale },
@@ -20,11 +23,14 @@ export default async function HomePage({
   setRequestLocale(locale);
   const t = await getTranslations("home");
   const tNot = await getTranslations("noticias");
+  const eu = locale === "eu";
+  const tx = (es: string, e: string) => (eu ? e : es);
 
-  const [inicio, noticias, eventos] = await Promise.all([
+  const [inicio, noticias, eventos, sponsors] = await Promise.all([
     sanityFetch<PaginaInicio | null>(paginaInicioQuery, {}, null),
     sanityFetch<Noticia[]>(noticiasRecientesQuery, {}, []),
     sanityFetch<Evento[]>(eventosProximosQuery, {}, []),
+    sanityFetch<Sponsor[]>(sponsorsQuery, {}, []),
   ]);
 
   const heroImg = inicio?.heroImagen
@@ -33,11 +39,19 @@ export default async function HomePage({
   const heroTitulo = pickLocale(inicio?.heroTitulo, locale) || "C.D. Berriz";
   const heroSubtitulo =
     pickLocale(inicio?.heroSubtitulo, locale) || t("heroTagline");
+  const anios = new Date().getFullYear() - club.fundacion;
 
+  // Las dos primeras tarjetas llevan a contacto; la tercera, a socios.
   const cards = [
-    { title: t("card1Title"), text: t("card1Text"), href: "/equipos", variant: "primary" as const },
-    { title: t("card2Title"), text: t("card2Text"), href: "/equipos", variant: "secondary" as const },
+    { title: t("card1Title"), text: t("card1Text"), href: "/contacto", variant: "primary" as const },
+    { title: t("card2Title"), text: t("card2Text"), href: "/contacto", variant: "secondary" as const },
     { title: t("card3Title"), text: t("card3Text"), href: "/socios", variant: "primary" as const },
+  ];
+
+  const stats = [
+    { num: String(club.fundacion), label: tx("Año de fundación", "Sorrera-urtea") },
+    { num: `${anios}+`, label: tx("Años de historia", "Urteko historia") },
+    { num: tx("Fútbol · Baloncesto", "Futbola · Saskibaloia"), label: tx("Secciones del club", "Klubaren sailak") },
   ];
 
   return (
@@ -69,9 +83,17 @@ export default async function HomePage({
           <p className="max-w-2xl text-lg font-semibold text-dorado md:text-xl">
             {heroSubtitulo}
           </p>
-          <LinkButton href="/socios" variant="light" className="mt-2">
-            {t("heroCta")}
-          </LinkButton>
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
+            <LinkButton href="/socios" variant="light">
+              {t("heroCta")}
+            </LinkButton>
+            <Link
+              href="/contacto"
+              className="inline-flex items-center justify-center rounded-full border border-white/70 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white hover:text-azul-700"
+            >
+              {tx("Contacto", "Kontaktua")}
+            </Link>
+          </div>
         </div>
       </section>
 
@@ -95,8 +117,22 @@ export default async function HomePage({
         ))}
       </section>
 
+      {/* CIFRAS DEL CLUB */}
+      <section className="container py-14 md:py-16">
+        <div className="grid gap-6 rounded-3xl bg-azul-900 px-6 py-10 text-center text-white sm:grid-cols-3 md:px-12">
+          {stats.map((s) => (
+            <div key={s.label}>
+              <p className="font-display text-3xl font-extrabold text-dorado md:text-4xl">
+                {s.num}
+              </p>
+              <p className="mt-1 text-sm font-medium text-azul-100">{s.label}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* NOTICIAS RECIENTES */}
-      <section className="container py-16 md:py-20">
+      <section className="container pb-16 md:pb-20">
         <div className="mb-8 flex items-end justify-between gap-4">
           <h2 className="font-display text-3xl font-extrabold uppercase tracking-tight text-neutral-900">
             {t("noticiasTitle")}
@@ -118,44 +154,122 @@ export default async function HomePage({
         )}
       </section>
 
-      {/* PRÓXIMOS EVENTOS */}
+      {/* CONOCE EL CLUB (historia) */}
       <section className="bg-neutral-50 py-16 md:py-20">
-        <div className="container">
-          <h2 className="mb-8 font-display text-3xl font-extrabold uppercase tracking-tight text-neutral-900">
-            {t("eventosTitle")}
-          </h2>
-          {eventos.length > 0 ? (
-            <ul className="space-y-3">
-              {eventos.map((e) => {
-                const fecha = new Date(e.fecha).toLocaleDateString(
-                  locale === "eu" ? "eu" : "es-ES",
-                  { weekday: "long", day: "numeric", month: "long" },
-                );
-                return (
-                  <li
-                    key={e._id}
-                    className="flex flex-col gap-1 rounded-xl border border-neutral-200 bg-white p-5 sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <div>
-                      <p className="font-display text-lg font-bold text-azul-700">
-                        {pickLocale(e.titulo, locale)}
-                      </p>
-                      {e.lugar && (
-                        <p className="text-sm text-neutral-500">{e.lugar}</p>
-                      )}
-                    </div>
-                    <p className="text-sm font-semibold capitalize text-rojo">
-                      {fecha}
-                    </p>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : (
-            <p className="rounded-xl border border-dashed border-neutral-300 bg-white p-10 text-center text-neutral-500">
-              {t("eventosEmpty")}
+        <div className="container grid items-center gap-8 md:grid-cols-2">
+          <div className="relative aspect-[3/2] overflow-hidden rounded-2xl shadow-lg">
+            <Image
+              src="/historia/accion-bn.jpg"
+              alt={tx("Historia del C.D. Berriz", "C.D. Berrizen historia")}
+              fill
+              className="object-cover"
+            />
+          </div>
+          <div>
+            <h2 className="font-display text-3xl font-extrabold uppercase tracking-tight text-neutral-900">
+              {tx("Más de 50 años de club", "50 urte baino gehiagoko kluba")}
+            </h2>
+            <p className="mt-4 text-lg leading-relaxed text-neutral-600">
+              {tx(
+                "Desde 1973, el C.D. Berriz ha crecido como una gran familia: fútbol federado y escolar, baloncesto y, sobre todo, comunidad. Conoce nuestra historia.",
+                "1973az geroztik, C.D. Berriz familia handi bat bezala hazi da: futbol federatua eta eskolakoa, saskibaloia eta, batez ere, komunitatea. Ezagutu gure historia.",
+              )}
             </p>
-          )}
+            <LinkButton href="/club/historia" variant="secondary" className="mt-6">
+              {tx("Nuestra historia", "Gure historia")}
+            </LinkButton>
+          </div>
+        </div>
+      </section>
+
+      {/* PRÓXIMOS EVENTOS */}
+      <section className="container py-16 md:py-20">
+        <h2 className="mb-8 font-display text-3xl font-extrabold uppercase tracking-tight text-neutral-900">
+          {t("eventosTitle")}
+        </h2>
+        {eventos.length > 0 ? (
+          <ul className="space-y-3">
+            {eventos.map((e) => {
+              const fecha = new Date(e.fecha).toLocaleDateString(
+                locale === "eu" ? "eu" : "es-ES",
+                { weekday: "long", day: "numeric", month: "long" },
+              );
+              return (
+                <li
+                  key={e._id}
+                  className="flex flex-col gap-1 rounded-xl border border-neutral-200 bg-white p-5 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div>
+                    <p className="font-display text-lg font-bold text-azul-700">
+                      {pickLocale(e.titulo, locale)}
+                    </p>
+                    {e.lugar && <p className="text-sm text-neutral-500">{e.lugar}</p>}
+                  </div>
+                  <p className="text-sm font-semibold capitalize text-rojo">{fecha}</p>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="rounded-xl border border-dashed border-neutral-300 bg-white p-10 text-center text-neutral-500">
+            {t("eventosEmpty")}
+          </p>
+        )}
+      </section>
+
+      {/* PATROCINADORES (solo si los hay) */}
+      {sponsors.length > 0 && (
+        <section className="border-t border-neutral-200 py-12">
+          <div className="container">
+            <p className="mb-6 text-center text-sm font-semibold uppercase tracking-wide text-neutral-400">
+              {tx("Con el apoyo de", "Honen babesarekin")}
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-8">
+              {sponsors.slice(0, 8).map((s) =>
+                s.logo ? (
+                  <Image
+                    key={s._id}
+                    src={urlForImage(s.logo).width(240).fit("max").url()}
+                    alt={s.nombre}
+                    width={120}
+                    height={60}
+                    className="h-12 w-auto object-contain opacity-70 grayscale transition hover:opacity-100 hover:grayscale-0"
+                  />
+                ) : null,
+              )}
+            </div>
+            <div className="mt-6 text-center">
+              <Link href="/patrocinadores" className="text-sm font-semibold text-azul hover:underline">
+                {tx("Ver todos los patrocinadores", "Ikusi babesle guztiak")} →
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* LLAMADA FINAL */}
+      <section className="bg-gradient-to-br from-rojo-700 to-azul-800 py-16 text-center text-white md:py-20">
+        <div className="container">
+          <h2 className="font-display text-3xl font-extrabold uppercase tracking-tight md:text-4xl">
+            {tx("Forma parte del C.D. Berriz", "Izan zaitez C.D. Berrizeko parte")}
+          </h2>
+          <p className="mx-auto mt-3 max-w-xl text-white/90">
+            {tx(
+              "Hazte socio/a, apunta a tus hijos e hijas o súmate como voluntario. El club lo hacemos entre todas y todos.",
+              "Egin zaitez bazkide, eman izena zure seme-alabei edo batu zaitez boluntario gisa. Kluba guztion artean egiten dugu.",
+            )}
+          </p>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <LinkButton href="/socios" variant="light">
+              {tx("Hazte socio/a", "Bazkide egin")}
+            </LinkButton>
+            <Link
+              href="/contacto"
+              className="inline-flex items-center justify-center rounded-full border border-white/70 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white hover:text-azul-700"
+            >
+              {tx("Contacto", "Kontaktua")}
+            </Link>
+          </div>
         </div>
       </section>
     </>

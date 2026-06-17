@@ -14,13 +14,6 @@ const FAQ = [
       eu: "Idatzi guri kontaktu-formularioaren bidez eta izen-emate prozesua azalduko dizugu.",
     },
   },
-  {
-    p: { es: "¿Qué incluye la cuota?", eu: "Zer barne hartzen du kuotak?" },
-    r: {
-      es: "Equipación, seguro federativo y participación en la liga durante toda la temporada.",
-      eu: "Ekipamendua, federazio-asegurua eta ligan parte hartzea denboraldi osoan.",
-    },
-  },
 ];
 
 export default async function FamiliasPage({
@@ -40,7 +33,7 @@ export default async function FamiliasPage({
 
   return (
     <>
-      <PageHeader title={t("contactoTitle") /* título genérico de sección */} />
+      <PageHeader title={t("title")} intro={t("intro")} />
       <div className="container space-y-14 py-12">
         {/* Documentos descargables */}
         <section>

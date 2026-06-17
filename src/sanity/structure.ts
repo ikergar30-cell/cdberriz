@@ -27,4 +27,5 @@ export const structure: StructureResolver = (S) =>
       S.documentTypeListItem("jugador").title("Jugadores/as"),
       S.documentTypeListItem("socioTipoAbono").title("Tipos de abono"),
       S.documentTypeListItem("documentoDescargable").title("Documentos"),
+      S.documentTypeListItem("sponsor").title("Patrocinadores"),
     ]);

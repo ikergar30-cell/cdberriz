@@ -40,3 +40,8 @@ export const documentosQuery = `
 *[_type == "documentoDescargable"] | order(fecha desc){
   _id, titulo, categoria, descripcion, fecha, "url": archivo.asset->url
 }`;
+
+export const sponsorsQuery = `
+*[_type == "sponsor" && activo == true] | order(orden asc, nombre asc){
+  _id, nombre, url, nivel, logo
+}`;

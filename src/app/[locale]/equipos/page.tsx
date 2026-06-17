@@ -20,10 +20,12 @@ export default async function EquiposPage({
 }) {
   setRequestLocale(locale);
   const t = await getTranslations("equipos");
+  const eu = locale === "eu";
 
   const equipos = await sanityFetch<Equipo[]>(equiposQuery, {}, []);
   const fed = equipos.filter((e) => e.grupo === "federado");
   const esc = equipos.filter((e) => e.grupo === "escolar");
+  const bal = equipos.filter((e) => e.grupo === "baloncesto");
 
   const toItems = (reales: Equipo[], def: string[]): Item[] =>
     reales.length > 0
@@ -41,17 +43,39 @@ export default async function EquiposPage({
       <div className="container space-y-14 py-12">
         <Grupo titulo={t("federado")} items={toItems(fed, FEDERADO)} />
         <Grupo titulo={t("escolar")} items={toItems(esc, ESCOLAR)} />
+        <Grupo
+          titulo={t("baloncesto")}
+          items={toItems(bal, [])}
+          vacio={
+            eu
+              ? "Laster, saskibaloi-taldeen informazioa."
+              : "Próximamente, la información de los equipos de baloncesto."
+          }
+        />
       </div>
     </>
   );
 }
 
-function Grupo({ titulo, items }: { titulo: string; items: Item[] }) {
+function Grupo({
+  titulo,
+  items,
+  vacio,
+}: {
+  titulo: string;
+  items: Item[];
+  vacio?: string;
+}) {
   return (
     <section>
       <h2 className="mb-6 inline-block border-b-4 border-dorado pb-1 font-display text-2xl font-extrabold uppercase tracking-tight text-azul-700">
         {titulo}
       </h2>
+      {items.length === 0 && vacio ? (
+        <p className="rounded-xl border border-dashed border-neutral-300 p-8 text-center text-neutral-500">
+          {vacio}
+        </p>
+      ) : (
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {items.map((it) => {
           const img = it.foto
@@ -84,6 +108,7 @@ function Grupo({ titulo, items }: { titulo: string; items: Item[] }) {
           );
         })}
       </div>
+      )}
     </section>
   );
 }

@@ -19,6 +19,7 @@ export function Footer() {
     { href: "/noticias", label: t("nav.noticias") },
     { href: "/equipos", label: t("nav.equipos") },
     { href: "/socios", label: t("nav.socios") },
+    { href: "/patrocinadores", label: t("nav.patrocinadores") },
     { href: "/club/informacion", label: t("nav.clubInfo") },
     { href: "/contacto", label: t("nav.contacto") },
   ] as const;

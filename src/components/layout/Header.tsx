@@ -26,6 +26,7 @@ export function Header() {
     { href: "/club/informacion", label: t("clubInfo") },
     { href: "/club/historia", label: t("historia") },
     { href: "/club/familias", label: t("familias") },
+    { href: "/patrocinadores", label: t("patrocinadores") },
   ];
 
   const isActive = (href: string) =>

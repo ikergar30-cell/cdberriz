@@ -14,6 +14,7 @@
     "clubInfo": "Klubaren informazioa",
     "historia": "Historia",
     "familias": "Familiak",
+    "patrocinadores": "Babesleak",
     "abrirMenu": "Menua ireki",
     "cerrarMenu": "Menua itxi"
   },
@@ -50,9 +51,10 @@
   },
   "equipos": {
     "title": "Taldeak",
-    "intro": "Futbol federatua eta eskola-futbola.",
+    "intro": "Futbol federatua, eskola-futbola eta saskibaloia.",
     "federado": "Futbol Federatua",
     "escolar": "Eskola Futbola",
+    "baloncesto": "Saskibaloia",
     "verEquipo": "Ikusi taldea",
     "temporada": "Denboraldia"
   },
@@ -72,6 +74,8 @@
     "familiasTitle": "Familiak"
   },
   "familias": {
+    "title": "Familiak",
+    "intro": "C.D. Berrizeko harrobiko familientzako informazio guztia.",
     "documentosTitle": "Deskargatzeko dokumentuak",
     "noticiasTitle": "Familientzako albisteak",
     "faqTitle": "Ohiko galderak",

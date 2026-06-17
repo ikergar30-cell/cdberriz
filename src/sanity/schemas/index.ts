@@ -9,6 +9,7 @@ import { socioTipoAbono } from "./documents/socioTipoAbono";
 import { evento } from "./documents/evento";
 import { paginaInicio } from "./documents/paginaInicio";
 import { juntaDirectiva } from "./documents/juntaDirectiva";
+import { sponsor } from "./documents/sponsor";
 
 export const schemaTypes = [
   // Objetos reutilizables (traducción es/eu)
@@ -24,4 +25,5 @@ export const schemaTypes = [
   documentoDescargable,
   paginaInicio,
   juntaDirectiva,
+  sponsor,
 ];

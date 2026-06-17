@@ -28,6 +28,7 @@ export const equipo = defineType({
         list: [
           { title: "Fútbol Federado", value: "federado" },
           { title: "Fútbol Escolar", value: "escolar" },
+          { title: "Baloncesto", value: "baloncesto" },
         ],
         layout: "radio",
       },

@@ -26,7 +26,7 @@ export type Equipo = {
   _id: string;
   nombre: LocaleString;
   slug: string;
-  grupo: "federado" | "escolar";
+  grupo: "federado" | "escolar" | "baloncesto";
   categoria: string;
   temporada?: string;
   foto?: SanityImageSource;
@@ -61,4 +61,12 @@ export type PaginaInicio = {
   heroTitulo?: LocaleString;
   heroSubtitulo?: LocaleString;
   heroImagen?: SanityImageSource;
+};
+
+export type Sponsor = {
+  _id: string;
+  nombre: string;
+  url?: string;
+  nivel?: "principal" | "colaborador" | "otro";
+  logo?: SanityImageSource;
 };
