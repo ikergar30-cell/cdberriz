@@ -57,10 +57,10 @@ export default async function InformacionPage({
         </section>
 
         <section>
-          <h2 className="mb-6 font-display text-2xl font-extrabold uppercase tracking-tight text-azul-700">
+          <h2 className="mb-6 text-center font-display text-2xl font-extrabold uppercase tracking-tight text-azul-700">
             {t("juntaTitle")}
           </h2>
-          <div className="mb-8 max-w-3xl space-y-4 text-lg leading-relaxed text-neutral-700">
+          <div className="mx-auto mb-10 max-w-2xl space-y-4 text-center leading-relaxed text-neutral-600">
             <p>
               {eu
                 ? "C.D. Berrizek gaur egun Zuzendaritza Batzorde konprometitu bat du, kluba hazten jarraitzeko, gizarte-oinarria sendotzeko eta osatzen duten pertsona guztiak zaintzeko: jokalariak, familiak, bazkideak eta laguntzaileak."
