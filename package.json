@@ -17,6 +17,7 @@
     "@sanity/vision": "^3.99.0",
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.108.2",
+    "@tailwindcss/typography": "^0.5.20",
     "html5-qrcode": "^2.3.8",
     "next": "14.2.35",
     "next-intl": "^3.26.5",
