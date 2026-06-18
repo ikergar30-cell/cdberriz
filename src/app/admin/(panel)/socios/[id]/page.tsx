@@ -34,9 +34,16 @@ export default async function EditarSocioPage({
         ← Volver a socios
       </Link>
       <div className="mb-6 mt-2 flex items-center justify-between gap-4">
-        <h1 className="font-display text-2xl font-extrabold uppercase text-neutral-900">
-          Socio nº {(socio as Socio).numero_socio}
-        </h1>
+        <div className="flex items-center gap-3">
+          <h1 className="font-display text-2xl font-extrabold uppercase text-neutral-900">
+            Socio nº {(socio as Socio).numero_socio}
+          </h1>
+          {s.carnet_fisico_pedido_en && (
+            <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
+              Carné físico solicitado
+            </span>
+          )}
+        </div>
         <BotonEliminar accion={eliminar} />
       </div>
       <div className="grid gap-8 lg:grid-cols-[1fr_auto]">

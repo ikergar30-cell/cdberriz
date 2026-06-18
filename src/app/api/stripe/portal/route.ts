@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -7,7 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // Seguridad: exige sesión iniciada (enlace mágico). Buscamos el socio por el
 // email AUTENTICADO, no por uno que mande el cliente. Así nadie gestiona la
 // cuota de otro.
-export async function POST(request: NextRequest) {
+export async function POST() {
   const supabase = createClient();
   const {
     data: { user },

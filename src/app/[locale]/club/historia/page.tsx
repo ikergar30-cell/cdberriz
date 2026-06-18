@@ -1,6 +1,7 @@
 import { setRequestLocale, getTranslations } from "next-intl/server";
 import Image from "next/image";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { HistoriaIntro } from "./HistoriaIntro";
 
 export default async function HistoriaPage({
   params: { locale },
@@ -19,6 +20,7 @@ export default async function HistoriaPage({
 
   return (
     <>
+      <HistoriaIntro lema={tx("Más de 50 años de historia", "50 urte baino gehiagoko historia")} />
       <PageHeader
         title={t("historiaTitle")}
         intro={tx(

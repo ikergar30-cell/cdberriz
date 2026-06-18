@@ -45,7 +45,7 @@ export default async function LocaleLayout({
   const messages = await getMessages();
 
   return (
-    <html lang={locale} className={`${inter.variable} ${barlow.variable}`}>
+    <html lang={locale} className={`${inter.variable} ${barlow.variable} scroll-smooth`}>
       <body className="flex min-h-screen flex-col bg-white font-sans text-neutral-900 antialiased">
         <NextIntlClientProvider messages={messages}>
           <Header />

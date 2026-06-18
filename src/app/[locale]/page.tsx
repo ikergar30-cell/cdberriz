@@ -33,9 +33,10 @@ export default async function HomePage({
     sanityFetch<Sponsor[]>(sponsorsQuery, {}, []),
   ]);
 
+  // Imagen del hero: la de Sanity si existe; si no, la foto del campo de Berrizburu.
   const heroImg = inicio?.heroImagen
     ? urlForImage(inicio.heroImagen).width(1920).height(900).fit("crop").url()
-    : null;
+    : "/inicio/campo-berrizburu.jpg";
   const heroTitulo = pickLocale(inicio?.heroTitulo, locale) || "C.D. Berriz";
   const heroSubtitulo =
     pickLocale(inicio?.heroSubtitulo, locale) || t("heroTagline");
@@ -58,16 +59,16 @@ export default async function HomePage({
     <>
       {/* HERO */}
       <section className="relative isolate overflow-hidden">
-        <div className="absolute inset-0 -z-10 bg-gradient-to-br from-azul-800 via-azul-700 to-rojo-700" />
-        {heroImg && (
-          <Image
-            src={heroImg}
-            alt=""
-            fill
-            priority
-            className="absolute inset-0 -z-10 object-cover opacity-25"
-          />
-        )}
+        <Image
+          src={heroImg}
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="absolute inset-0 -z-20 object-cover"
+        />
+        {/* Velo azul para que el escudo y el texto se lean sobre la foto */}
+        <div className="absolute inset-0 -z-10 bg-gradient-to-br from-azul-900/90 via-azul-800/80 to-rojo-800/75" />
         <div className="container flex flex-col items-center gap-6 py-24 text-center text-white md:py-32">
           <Image
             src="/escudo-blanco.png"

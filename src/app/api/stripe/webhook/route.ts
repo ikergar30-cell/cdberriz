@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
         break;
       }
     }
-  } catch (e) {
+  } catch {
     // Error procesando: devolvemos 500 para que Stripe reintente.
     return NextResponse.json({ error: "Error procesando el evento" }, { status: 500 });
   }

@@ -43,6 +43,7 @@ export interface Socio {
   stripe_subscription_id: string | null;
   fecha_alta: string | null;
   notas: string | null;
+  carnet_fisico_pedido_en: string | null;
   created_at: string;
   updated_at: string;
 }

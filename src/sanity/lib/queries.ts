@@ -46,3 +46,8 @@ export const sponsorsQuery = `
 *[_type == "sponsor" && activo == true] | order(orden asc, nombre asc){
   _id, nombre, url, nivel, logo
 }`;
+
+export const documentosSociosQuery = `
+*[_type == "documentoDescargable" && categoria == "socios"] | order(fecha desc)[0...5]{
+  _id, titulo, fecha, "url": archivo.asset->url
+}`;
