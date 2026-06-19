@@ -65,6 +65,12 @@ export default async function SociosPage({
             Exportar CSV
           </a>
           <Link
+            href="/admin/socios/importar"
+            className="rounded-full border border-azul px-4 py-2 text-sm font-semibold text-azul transition hover:bg-azul hover:text-white"
+          >
+            Importar CSV
+          </Link>
+          <Link
             href="/admin/socios/nuevo"
             className="rounded-full bg-rojo px-4 py-2 text-sm font-semibold text-white transition hover:bg-rojo-600"
           >

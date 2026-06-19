@@ -7,9 +7,10 @@ import type { Equipo } from "@/sanity/lib/types";
 import { pickLocale } from "@/lib/locale";
 import { urlForImage } from "@/sanity/image";
 
-// Categorías por defecto (se muestran si aún no hay equipos creados en Sanity)
-const FEDERADO = ["Regional", "Juvenil", "Cadete", "Veteranos"];
-const ESCOLAR = ["Infantil", "Alevín", "Benjamín", "Fut. Eskola"];
+// Equipos por defecto (se muestran mientras no haya datos en Sanity)
+const FEDERADO = ["Regional", "Juvenil A", "Juvenil B", "Cadete A", "Cadete B", "Veteranos"];
+const ESCOLAR = ["Infantil 2013", "Infantil 2014", "Alevín 2015", "Alevín 2016", "Benjamín 2017", "Benjamín 2018", "Fútbol Eskola"];
+const BALONCESTO = ["Minibasket", "Infantil"];
 
 type Item = { key: string; nombre: string; categoria: string; foto: Equipo["foto"] | null };
 
@@ -20,7 +21,6 @@ export default async function EquiposPage({
 }) {
   setRequestLocale(locale);
   const t = await getTranslations("equipos");
-  const eu = locale === "eu";
 
   const equipos = await sanityFetch<Equipo[]>(equiposQuery, {}, []);
   const fed = equipos.filter((e) => e.grupo === "federado");
@@ -43,15 +43,7 @@ export default async function EquiposPage({
       <div className="container space-y-14 py-12">
         <Grupo titulo={t("federado")} items={toItems(fed, FEDERADO)} />
         <Grupo titulo={t("escolar")} items={toItems(esc, ESCOLAR)} />
-        <Grupo
-          titulo={t("baloncesto")}
-          items={toItems(bal, [])}
-          vacio={
-            eu
-              ? "Laster, saskibaloi-taldeen informazioa."
-              : "Próximamente, la información de los equipos de baloncesto."
-          }
-        />
+        <Grupo titulo={t("baloncesto")} items={toItems(bal, BALONCESTO)} />
       </div>
     </>
   );
