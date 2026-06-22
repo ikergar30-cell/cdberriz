@@ -22,6 +22,7 @@ export async function NoticiaCard({
     { day: "numeric", month: "long", year: "numeric" },
   );
   const catLabel = t(`categorias.${CATEGORIA_KEY[noticia.categoria] ?? "club"}`);
+  const esNueva = Date.now() - new Date(noticia.fecha).getTime() < 7 * 24 * 60 * 60 * 1000;
 
   return (
     <Link
@@ -44,6 +45,11 @@ export async function NoticiaCard({
         <span className="absolute left-3 top-3 rounded-full bg-rojo px-2.5 py-1 text-xs font-bold uppercase text-white">
           {catLabel}
         </span>
+        {esNueva && (
+          <span className="absolute right-3 top-3 rounded-full bg-dorado px-2.5 py-1 text-xs font-bold uppercase text-azul-900">
+            {locale === "eu" ? "Berria" : "Nuevo"}
+          </span>
+        )}
       </div>
       <div className="flex flex-1 flex-col p-4">
         <h3 className="font-display text-lg font-bold leading-snug text-neutral-900 transition group-hover:text-azul">
