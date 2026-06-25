@@ -70,6 +70,6 @@ async function protegerAdmin(request: NextRequest) {
 
 export const config = {
   // Todas las rutas EXCEPTO: API, /auth (callback de login), Studio de Sanity,
-  // internos de Next y archivos.
-  matcher: ["/((?!api|auth|studio|_next|_vercel|.*\\..*).*)"],
+  // intranet de empleados (hub público sin idioma), internos de Next y archivos.
+  matcher: ["/((?!api|auth|studio|intranet|_next|_vercel|.*\\..*).*)"],
 };
