@@ -1,6 +1,7 @@
 import { localeString } from "./objects/localeString";
 import { localeText } from "./objects/localeText";
 import { localeBlockContent } from "./objects/localeBlockContent";
+import { youtube } from "./objects/youtube";
 import { noticia } from "./documents/noticia";
 import { equipo } from "./documents/equipo";
 import { jugador } from "./documents/jugador";
@@ -16,6 +17,7 @@ export const schemaTypes = [
   localeString,
   localeText,
   localeBlockContent,
+  youtube,
   // Documentos
   noticia,
   evento,

@@ -13,8 +13,19 @@ import { CATEGORIA_KEY } from "@/lib/categorias";
 
 type PortableBlock = Parameters<typeof PortableText>[0]["value"];
 
+// Extrae el ID de un vídeo de YouTube de cualquier formato de enlace
+// (watch?v=…, youtu.be/…, embed/…, shorts/…).
+function youtubeId(url?: string): string | null {
+  if (!url) return null;
+  const m = url.match(
+    /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/,
+  );
+  return m ? m[1] : null;
+}
+
 // Renderizado del cuerpo: las imágenes del artículo se muestran enteras,
-// con su proporción original (sin recortar).
+// con su proporción original (sin recortar); los vídeos de YouTube se
+// incrustan en un reproductor responsivo 16:9.
 const ptComponents: PortableTextComponents = {
   types: {
     image: ({ value }: { value: SanityImageSource & { alt?: string } }) => (
@@ -25,6 +36,21 @@ const ptComponents: PortableTextComponents = {
         className="my-6 w-full rounded-xl"
       />
     ),
+    youtube: ({ value }: { value: { url?: string } }) => {
+      const id = youtubeId(value.url);
+      if (!id) return null;
+      return (
+        <div className="my-6 aspect-video overflow-hidden rounded-xl bg-black">
+          <iframe
+            src={`https://www.youtube-nocookie.com/embed/${id}`}
+            title="Vídeo de YouTube"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+            className="h-full w-full"
+          />
+        </div>
+      );
+    },
   },
 };
 

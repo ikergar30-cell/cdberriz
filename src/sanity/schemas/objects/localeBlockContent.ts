@@ -3,6 +3,7 @@ import { defineType, defineField, defineArrayMember } from "sanity";
 const contenido = [
   defineArrayMember({ type: "block" }),
   defineArrayMember({ type: "image", options: { hotspot: true } }),
+  defineArrayMember({ type: "youtube" }),
 ];
 
 // Contenido enriquecido traducible (castellano y euskera).
