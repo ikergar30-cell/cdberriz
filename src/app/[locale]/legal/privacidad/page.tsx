@@ -28,7 +28,7 @@ export default async function PrivacidadPage({
           <ul>
             <li><strong>Identidad:</strong> Club Deportivo Berriz</li>
             <li><strong>CIF:</strong> G48309108</li>
-            <li><strong>Domicilio:</strong> Learreta-Markina Kalea 28, 48240 Berriz (Bizkaia)</li>
+            <li><strong>Domicilio:</strong> Calle Legaño 6, 48240 Berriz (Bizkaia)</li>
             <li><strong>Contacto:</strong> <a href="mailto:infocdberriz@gmail.com">infocdberriz@gmail.com</a></li>
             <li><strong>Teléfono:</strong> 692 076 167</li>
           </ul>

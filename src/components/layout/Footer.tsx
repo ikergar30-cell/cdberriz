@@ -106,7 +106,7 @@ export function Footer() {
 
       <div className="border-t border-white/10">
         <div className="container flex flex-col items-center gap-2 py-5 text-center text-xs sm:flex-row sm:justify-between">
-          <span>© {year} C.D. Berriz · CIF G48309108 · {t("footer.derechos")}</span>
+          <span>© {year} C.D. Berriz · {t("footer.derechos")}</span>
           <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-azul-300">
             <Link href="/legal/aviso-legal" className="hover:text-white transition">Aviso Legal</Link>
             <Link href="/legal/privacidad" className="hover:text-white transition">Privacidad</Link>
