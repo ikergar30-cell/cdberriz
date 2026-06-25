@@ -30,11 +30,39 @@ export default async function PanelLayout({
     redirect("/admin/login");
   }
 
+  // Layout simplificado para verificadores: solo header mínimo, sin sidebar.
+  if (perfil.rol === "verificador") {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <header className="flex items-center justify-between border-b border-neutral-200 bg-white px-5 py-4">
+          <div className="flex items-center gap-2.5">
+            <Image src="/escudo.png" alt="" width={32} height={32} className="h-8 w-8 object-contain" />
+            <span className="font-display text-sm font-extrabold uppercase text-azul-700">
+              C.D. Berriz
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-neutral-500">{perfil.nombre}</span>
+            <LogoutButton />
+          </div>
+        </header>
+        <main className="flex-1">{children}</main>
+      </div>
+    );
+  }
+
+  // Nav completo para admin y empleado.
   const nav = [
     { href: "/admin", label: "Resumen" },
     { href: "/admin/socios", label: "Socios" },
     { href: "/admin/cuotas", label: "Cuotas" },
     { href: "/admin/verificar", label: "Verificar carné" },
+    ...(perfil.rol === "admin"
+      ? [
+          { href: "/admin/empleados", label: "Empleados" },
+          { href: "https://cdberriz.vercel.app/studio", label: "Studio →", target: "_blank" },
+        ]
+      : []),
   ];
 
   return (
@@ -52,6 +80,7 @@ export default async function PanelLayout({
             <Link
               key={i.href}
               href={i.href}
+              target={"target" in i ? i.target : undefined}
               className="block rounded-lg px-3 py-2 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-100 hover:text-azul"
             >
               {i.label}

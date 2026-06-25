@@ -12,12 +12,46 @@ async function contarPorEstado(estado: EstadoSocio) {
   return count ?? 0;
 }
 
+// Socios dados de alta en el mes actual.
+async function contarAltasMes() {
+  const supabase = createClient();
+  const ahora = new Date();
+  const primerDiaMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1).toISOString();
+  const { count } = await supabase
+    .from("socios")
+    .select("*", { count: "exact", head: true })
+    .gte("created_at", primerDiaMes);
+  return count ?? 0;
+}
+
+// Contactos suscritos al newsletter via Resend.
+async function contarSuscriptores(): Promise<string> {
+  const apiKey = process.env.RESEND_API_KEY;
+  const audienceId = process.env.RESEND_AUDIENCE_ID;
+  if (!apiKey || !audienceId) return "—";
+  try {
+    const res = await fetch(`https://api.resend.com/audiences/${audienceId}/contacts`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      next: { revalidate: 3600 },
+    });
+    if (!res.ok) return "—";
+    const json = await res.json();
+    // La API devuelve { data: [...] }
+    const lista = json?.data ?? [];
+    return String(lista.length);
+  } catch {
+    return "—";
+  }
+}
+
 export default async function ResumenPage() {
-  const [activos, pendientes, morosos, bajas] = await Promise.all([
+  const [activos, pendientes, morosos, bajas, altasMes, suscriptores] = await Promise.all([
     contarPorEstado("activo"),
     contarPorEstado("pendiente"),
     contarPorEstado("moroso"),
     contarPorEstado("baja"),
+    contarAltasMes(),
+    contarSuscriptores(),
   ]);
 
   const tarjetas = [
@@ -25,6 +59,8 @@ export default async function ResumenPage() {
     { label: "Pendientes", valor: pendientes, color: "text-amber-600" },
     { label: "Morosos", valor: morosos, color: "text-rojo" },
     { label: "Bajas", valor: bajas, color: "text-neutral-400" },
+    { label: "Altas este mes", valor: altasMes, color: "text-azul" },
+    { label: "Suscriptores newsletter", valor: suscriptores, color: "text-purple-600" },
   ];
 
   return (
@@ -41,7 +77,7 @@ export default async function ResumenPage() {
         </Link>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {tarjetas.map((t) => (
           <div key={t.label} className="rounded-2xl border border-neutral-200 bg-white p-5">
             <p className="text-sm font-medium text-neutral-500">{t.label}</p>
@@ -55,6 +91,18 @@ export default async function ResumenPage() {
       <p className="mt-8 text-sm text-neutral-500">
         Total de socios: <strong>{activos + pendientes + morosos + bajas}</strong>
       </p>
+
+      {/* Acceso rápido a Sanity Studio */}
+      <div className="mt-8">
+        <a
+          href="/studio"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 rounded-full bg-azul px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-azul-700"
+        >
+          ✏️ Publicar noticia en Sanity Studio →
+        </a>
+      </div>
     </div>
   );
 }

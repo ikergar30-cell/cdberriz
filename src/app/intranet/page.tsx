@@ -6,6 +6,7 @@ const herramientas = [
     titulo: "Gestión de socios",
     descripcion: "Altas, bajas, cuotas, carné digital y domiciliaciones SEPA.",
     href: "/admin/socios",
+    externo: false,
     icono: (
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -19,6 +20,7 @@ const herramientas = [
     titulo: "Panel completo",
     descripcion: "Acceso al panel de administración con todas las secciones.",
     href: "/admin",
+    externo: false,
     icono: (
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
         <rect x="3" y="3" width="7" height="7" rx="1" />
@@ -32,6 +34,7 @@ const herramientas = [
     titulo: "Verificar carné",
     descripcion: "Comprueba la validez del carné digital de un socio.",
     href: "/verificar",
+    externo: false,
     icono: (
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
         <rect x="3" y="4" width="18" height="16" rx="2" />
@@ -39,7 +42,18 @@ const herramientas = [
         <path d="M13 10h5M13 14h5M7 14h2" />
       </svg>
     ),
-    proximamente: false,
+  },
+  {
+    titulo: "Publicar noticia",
+    descripcion: "Accede al editor de contenidos para crear o editar noticias.",
+    href: "/studio",
+    externo: true,
+    icono: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+      </svg>
+    ),
   },
 ];
 
@@ -86,26 +100,49 @@ export default function IntranetPage() {
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {herramientas.map((h) => (
-            <Link
-              key={h.href}
-              href={h.href}
-              className="group relative flex flex-col gap-4 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm transition hover:border-azul hover:shadow-md"
-            >
-              <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-azul-50 text-azul-600 transition group-hover:bg-azul group-hover:text-white">
-                {h.icono}
-              </div>
-              <div>
-                <h2 className="font-display text-base font-bold uppercase tracking-tight text-neutral-900">
-                  {h.titulo}
-                </h2>
-                <p className="mt-1 text-sm text-neutral-500">{h.descripcion}</p>
-              </div>
-              <span className="absolute right-5 top-5 text-neutral-300 transition group-hover:translate-x-1 group-hover:text-azul">
-                →
-              </span>
-            </Link>
-          ))}
+          {herramientas.map((h) =>
+            h.externo ? (
+              <a
+                key={h.href}
+                href={h.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group relative flex flex-col gap-4 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm transition hover:border-azul hover:shadow-md"
+              >
+                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-azul-50 text-azul-600 transition group-hover:bg-azul group-hover:text-white">
+                  {h.icono}
+                </div>
+                <div>
+                  <h2 className="font-display text-base font-bold uppercase tracking-tight text-neutral-900">
+                    {h.titulo}
+                  </h2>
+                  <p className="mt-1 text-sm text-neutral-500">{h.descripcion}</p>
+                </div>
+                <span className="absolute right-5 top-5 text-neutral-300 transition group-hover:translate-x-1 group-hover:text-azul">
+                  →
+                </span>
+              </a>
+            ) : (
+              <Link
+                key={h.href}
+                href={h.href}
+                className="group relative flex flex-col gap-4 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm transition hover:border-azul hover:shadow-md"
+              >
+                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-azul-50 text-azul-600 transition group-hover:bg-azul group-hover:text-white">
+                  {h.icono}
+                </div>
+                <div>
+                  <h2 className="font-display text-base font-bold uppercase tracking-tight text-neutral-900">
+                    {h.titulo}
+                  </h2>
+                  <p className="mt-1 text-sm text-neutral-500">{h.descripcion}</p>
+                </div>
+                <span className="absolute right-5 top-5 text-neutral-300 transition group-hover:translate-x-1 group-hover:text-azul">
+                  →
+                </span>
+              </Link>
+            )
+          )}
         </div>
       </div>
 

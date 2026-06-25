@@ -1,7 +1,7 @@
 // Tipos de la base de datos (espejo de supabase/schema.sql).
 // Si cambias el esquema, actualiza también estos tipos.
 
-export type RolEmpleado = "admin" | "empleado";
+export type RolEmpleado = "admin" | "empleado" | "verificador";
 export type EstadoSocio = "activo" | "pendiente" | "moroso" | "baja";
 export type EstadoPago = "pagado" | "pendiente" | "fallido" | "reembolsado";
 
