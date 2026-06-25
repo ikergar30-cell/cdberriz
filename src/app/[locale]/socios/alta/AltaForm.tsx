@@ -51,6 +51,13 @@ export function AltaForm({ clave }: { clave: ClaveCuota }) {
     aviso: eu
       ? "Ordainketa segurua Striperekin. Txartelez edo banku-helbideratzez (SEPA)."
       : "Pago seguro con Stripe. Con tarjeta o domiciliación bancaria (SEPA).",
+    rgpd: eu
+      ? "Irakurri eta onartzen dut Pribatutasun-politika eta bazkide gisa nire datuak tratatzeko baimena ematen dut."
+      : "He leído y acepto la Política de Privacidad y autorizo el tratamiento de mis datos para la gestión de mi condición de socio/a.",
+    imagen: eu
+      ? "C.D. Berrizek nire irudia erabiltzeko baimena ematen dut bere kanal ofizialetan argitaratutako argazki eta bideo-an (sare sozialak, web, argitalpenak)."
+      : "Autorizo al C.D. Berriz a utilizar mi imagen en fotos y vídeos publicados en sus canales oficiales (redes sociales, web, publicaciones del club).",
+    privacidadLink: eu ? "Pribatutasun-politika" : "Política de Privacidad",
   };
 
   const input =
@@ -113,6 +120,25 @@ export function AltaForm({ clave }: { clave: ClaveCuota }) {
               )} (${CUOTAS[efectiva].precio} €/año). Es lo que se cobrará.`}
         </div>
       )}
+
+      {/* Consentimientos */}
+      <div className="space-y-3 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input type="checkbox" name="acepta_rgpd" required className="mt-0.5 h-4 w-4 shrink-0 accent-azul" />
+          <span className="text-xs text-neutral-600 leading-relaxed">
+            *{" "}{t.rgpd}{" "}
+            <a href={`/${locale}/legal/privacidad`} target="_blank" rel="noopener noreferrer" className="text-azul underline">
+              {t.privacidadLink}
+            </a>
+          </span>
+        </label>
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input type="checkbox" name="autoriza_imagen" className="mt-0.5 h-4 w-4 shrink-0 accent-azul" />
+          <span className="text-xs text-neutral-600 leading-relaxed">
+            {t.imagen}
+          </span>
+        </label>
+      </div>
 
       {error && <p className="text-sm font-semibold text-rojo">{error}</p>}
 

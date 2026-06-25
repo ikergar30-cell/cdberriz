@@ -33,7 +33,7 @@ export default async function AvisoLegalPage({
           <ul>
             <li><strong>Denominación social:</strong> Club Deportivo Berriz</li>
             <li><strong>CIF:</strong> G48309108</li>
-            <li><strong>Domicilio social:</strong> Calle Legaño 6, 48240 Berriz, Bizkaia</li>
+            <li><strong>Domicilio social:</strong> Learreta-Markina Kalea 28, 48240 Berriz (Bizkaia)</li>
             <li><strong>Correo electrónico:</strong> <a href="mailto:infocdberriz@gmail.com">infocdberriz@gmail.com</a></li>
             <li><strong>Teléfono:</strong> 692 076 167</li>
             <li><strong>Sitio web:</strong> www.cdberriz.com</li>

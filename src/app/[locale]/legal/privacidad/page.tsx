@@ -28,7 +28,7 @@ export default async function PrivacidadPage({
           <ul>
             <li><strong>Identidad:</strong> Club Deportivo Berriz</li>
             <li><strong>CIF:</strong> G48309108</li>
-            <li><strong>Domicilio:</strong> Calle Legaño 6, 48240 Berriz, Bizkaia</li>
+            <li><strong>Domicilio:</strong> Learreta-Markina Kalea 28, 48240 Berriz (Bizkaia)</li>
             <li><strong>Contacto:</strong> <a href="mailto:infocdberriz@gmail.com">infocdberriz@gmail.com</a></li>
             <li><strong>Teléfono:</strong> 692 076 167</li>
           </ul>
@@ -60,6 +60,15 @@ export default async function PrivacidadPage({
             Los datos de jugadores menores de edad (nombre, categoría, equipo) solo se recogen y publican
             previa obtención del consentimiento expreso de sus padres o tutores legales, conforme al
             artículo 8 del RGPD y la Ley Orgánica 3/2018.
+          </p>
+
+          <h3>Newsletter y suscriptores</h3>
+          <p>
+            Las personas que se suscriben al boletín de noticias a través del formulario del sitio web
+            facilitan únicamente su dirección de correo electrónico. Estos datos se utilizan exclusivamente
+            para el envío de comunicaciones sobre actividades y noticias del club. La base jurídica es el
+            consentimiento del interesado (art. 6.1.a RGPD). El suscriptor puede darse de baja en cualquier
+            momento a través del enlace habilitado en cada correo.
           </p>
 
           <h2>3. Finalidades y base jurídica del tratamiento</h2>
@@ -94,6 +103,14 @@ export default async function PrivacidadPage({
               </tr>
               <tr>
                 <td>Solicitud y envío del carnet físico</td>
+                <td>Consentimiento del interesado — art. 6.1.a RGPD</td>
+              </tr>
+              <tr>
+                <td>Envío del boletín de noticias (newsletter)</td>
+                <td>Consentimiento del interesado — art. 6.1.a RGPD</td>
+              </tr>
+              <tr>
+                <td>Publicación de imagen en canales oficiales del club</td>
                 <td>Consentimiento del interesado — art. 6.1.a RGPD</td>
               </tr>
             </tbody>
@@ -181,7 +198,24 @@ export default async function PrivacidadPage({
           </p>
           <p>Responderemos a tu solicitud en el plazo máximo de un mes desde su recepción.</p>
 
-          <h2>7. Seguridad</h2>
+          <h2>7. Derechos de imagen</h2>
+          <p>
+            El C.D. Berriz puede publicar fotografías y vídeos en los que aparezcan socios, jugadores y
+            asistentes a actos del club en sus canales oficiales (web, redes sociales, publicaciones
+            impresas), siempre que el interesado haya prestado su consentimiento expreso.
+          </p>
+          <p>
+            En el caso de <strong>menores de edad</strong>, el consentimiento debe ser otorgado por sus
+            padres o tutores legales, de conformidad con la Ley Orgánica 1/1996 de Protección Jurídica del
+            Menor y el art. 8 del RGPD.
+          </p>
+          <p>
+            El consentimiento puede retirarse en cualquier momento comunicándolo a{" "}
+            <a href="mailto:infocdberriz@gmail.com">infocdberriz@gmail.com</a>. La retirada no afectará
+            a la licitud de los usos realizados con anterioridad.
+          </p>
+
+          <h2>8. Seguridad</h2>
           <p>
             El Club Deportivo Berriz aplica medidas técnicas y organizativas adecuadas para proteger los
             datos personales frente al acceso no autorizado, pérdida o alteración, incluyendo:
@@ -193,7 +227,7 @@ export default async function PrivacidadPage({
             <li>Copias de seguridad periódicas de la base de datos.</li>
           </ul>
 
-          <h2>8. Modificaciones</h2>
+          <h2>9. Modificaciones</h2>
           <p>
             El club se reserva el derecho a actualizar esta Política de Privacidad para adaptarla a cambios
             normativos o de servicio. Notificaremos los cambios significativos a los socios por correo
