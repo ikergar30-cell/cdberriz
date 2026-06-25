@@ -112,7 +112,7 @@ export function Footer() {
             <Link href="/legal/privacidad" className="hover:text-white transition">Privacidad</Link>
             <Link href="/legal/cookies" className="hover:text-white transition">Cookies</Link>
             <span className="text-white/20">·</span>
-            <a href="/intranet" className="hover:text-white transition opacity-50 hover:opacity-100">Empleados</a>
+            <a href="/admin/login" className="hover:text-white transition opacity-50 hover:opacity-100">Intranet</a>
           </div>
         </div>
       </div>

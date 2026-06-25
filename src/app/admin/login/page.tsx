@@ -23,8 +23,13 @@ export default function LoginPage() {
       setCargando(false);
       return;
     }
-    // El middleware ya nos llevará al panel; forzamos refresco.
-    router.replace("/admin");
+    // Redirigir según el rol del empleado.
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data: perfil } = user
+      ? await supabase.from("perfiles").select("rol").eq("id", user.id).single()
+      : { data: null };
+    const destino = perfil?.rol === "verificador" ? "/admin/verificar" : "/admin";
+    router.replace(destino);
     router.refresh();
   }
 
