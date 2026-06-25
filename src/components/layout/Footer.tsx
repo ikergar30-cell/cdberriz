@@ -2,6 +2,7 @@ import { useTranslations } from "next-intl";
 import Image from "next/image";
 import { Link } from "@/i18n/routing";
 import { club } from "@/config/club";
+import { NewsletterForm } from "@/components/sections/NewsletterForm";
 
 export function Footer() {
   const t = useTranslations();
@@ -26,8 +27,8 @@ export function Footer() {
 
   return (
     <footer className="bg-azul-900 text-azul-100">
-      <div className="container grid gap-10 py-12 md:grid-cols-4">
-        <div className="md:col-span-2">
+      <div className="container grid gap-10 py-12 md:grid-cols-4 lg:grid-cols-5">
+        <div className="md:col-span-2 lg:col-span-2">
           <div className="flex items-center gap-3">
             <Image
               src="/escudo.png"
@@ -96,6 +97,10 @@ export function Footer() {
               </a>
             ))}
           </div>
+        </div>
+
+        <div className="lg:col-span-2">
+          <NewsletterForm />
         </div>
       </div>
 

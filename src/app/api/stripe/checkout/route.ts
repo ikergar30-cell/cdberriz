@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     mode: "subscription",
     customer: customer.id,
     line_items: [{ price: cuota.stripe_price_id, quantity: 1 }],
-    payment_method_types: ["card", "sepa_debit"],
+    payment_method_types: ["card"],
     locale: locale === "eu" ? "auto" : "es",
     subscription_data: { metadata: meta },
     success_url: `${siteUrl}/${locale}/socios/gracias?session_id={CHECKOUT_SESSION_ID}`,
