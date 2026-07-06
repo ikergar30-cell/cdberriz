@@ -182,3 +182,10 @@ create index if not exists entradas_socio_fecha_idx on entradas (socio_id, fecha
 alter table entradas enable row level security;
 create policy "entradas_empleados" on entradas
   for all using (es_empleado()) with check (es_empleado());
+
+-- ----------------------------------------------------------------------------
+--  PAGOS — enlaces a la factura de Stripe (PDF y página alojada)
+--  Se rellenan desde el webhook al recibir invoice.paid / invoice.payment_failed.
+-- ----------------------------------------------------------------------------
+alter table pagos add column if not exists stripe_hosted_invoice_url text;
+alter table pagos add column if not exists stripe_invoice_pdf text;

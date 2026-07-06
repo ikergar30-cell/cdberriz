@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { Socio, TipoAbono } from "@/lib/supabase/types";
+import type { Pago, Socio, TipoAbono } from "@/lib/supabase/types";
 import { CarnetSocio } from "@/components/CarnetSocio";
 import { SocioForm } from "../SocioForm";
 import { actualizarSocio, eliminarSocio } from "../actions";
 import { BotonEliminar } from "./BotonEliminar";
+import { HistorialPagos } from "./HistorialPagos";
 
 export default async function EditarSocioPage({
   params: { id },
@@ -13,9 +14,10 @@ export default async function EditarSocioPage({
   params: { id: string };
 }) {
   const supabase = createClient();
-  const [{ data: socio }, { data: tipos }] = await Promise.all([
+  const [{ data: socio }, { data: tipos }, { data: pagos }] = await Promise.all([
     supabase.from("socios").select("*").eq("id", id).single(),
     supabase.from("tipos_abono").select("*").eq("activo", true).order("orden"),
+    supabase.from("pagos").select("*").eq("socio_id", id).order("fecha", { ascending: false }),
   ]);
 
   if (!socio) notFound();
@@ -64,6 +66,8 @@ export default async function EditarSocioPage({
           />
         </div>
       </div>
+
+      <HistorialPagos pagos={(pagos as Pago[]) ?? []} />
     </div>
   );
 }

@@ -58,5 +58,7 @@ export interface Pago {
   metodo: string | null;
   temporada: string | null;
   fecha: string;
+  stripe_hosted_invoice_url: string | null;
+  stripe_invoice_pdf: string | null;
   created_at: string;
 }

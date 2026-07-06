@@ -85,6 +85,8 @@ export async function POST(request: NextRequest) {
             estado: "pagado",
             temporada: temporadaActual(),
             fecha: new Date().toISOString(),
+            stripe_hosted_invoice_url: inv.hosted_invoice_url ?? null,
+            stripe_invoice_pdf: inv.invoice_pdf ?? null,
           },
           { onConflict: "stripe_invoice_id" },
         );
@@ -116,6 +118,8 @@ export async function POST(request: NextRequest) {
               estado: "fallido",
               temporada: temporadaActual(),
               fecha: new Date().toISOString(),
+              stripe_hosted_invoice_url: inv.hosted_invoice_url ?? null,
+              stripe_invoice_pdf: inv.invoice_pdf ?? null,
             },
             { onConflict: "stripe_invoice_id" },
           );
