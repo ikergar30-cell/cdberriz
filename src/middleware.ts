@@ -14,8 +14,55 @@ export async function middleware(request: NextRequest) {
     return protegerAdmin(request);
   }
 
+  // Modo mantenimiento: bloquea todo el sitio público mientras se
+  // traspasa el dominio. Se activa con la variable de entorno
+  // MAINTENANCE_MODE=true en Vercel. /admin y /studio quedan libres
+  // para poder seguir gestionando la web durante el traspaso.
+  if (
+    process.env.MAINTENANCE_MODE === "true" &&
+    !pathname.startsWith("/studio")
+  ) {
+    return paginaMantenimiento();
+  }
+
   // Resto del sitio público: gestión de idiomas es/eu.
   return intlMiddleware(request);
+}
+
+function paginaMantenimiento() {
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>C.D. Berriz — En mantenimiento</title>
+<style>
+  html,body{height:100%;margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;}
+  body{display:flex;align-items:center;justify-content:center;background:#0b2447;color:#fff;text-align:center;padding:24px;}
+  .box{max-width:420px;}
+  img{width:72px;height:72px;object-fit:contain;margin-bottom:16px;}
+  h1{font-size:1.5rem;margin:0 0 8px;text-transform:uppercase;letter-spacing:.02em;}
+  p{margin:0;font-size:.95rem;color:#c7d3e8;line-height:1.5;}
+</style>
+</head>
+<body>
+  <div class="box">
+    <img src="/escudo.png" alt="C.D. Berriz" />
+    <h1>Estamos actualizando la web</h1>
+    <p>Volveremos a estar disponibles en breve. Gracias por tu paciencia.</p>
+  </div>
+</body>
+</html>`;
+
+  return new NextResponse(html, {
+    status: 503,
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "X-Robots-Tag": "noindex, nofollow",
+      "Retry-After": "3600",
+    },
+  });
 }
 
 // Refresca la sesión de Supabase y exige login para entrar en /admin.
