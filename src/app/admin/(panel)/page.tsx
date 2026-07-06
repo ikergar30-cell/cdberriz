@@ -93,15 +93,39 @@ export default async function ResumenPage() {
       </p>
 
       {/* Acceso rápido a Sanity Studio */}
-      <div className="mt-8">
-        <a
-          href="/studio"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 rounded-full bg-azul px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-azul-700"
-        >
-          ✏️ Publicar noticia en Sanity Studio →
-        </a>
+      <div className="mt-8 rounded-xl border border-neutral-200 bg-neutral-50 p-5">
+        <h2 className="font-display text-sm font-bold uppercase tracking-wide text-neutral-500">
+          Publicar contenido
+        </h2>
+        <p className="mt-1 text-sm text-neutral-500">
+          Añade noticias y eventos en el gestor de contenidos. No necesitas saber programar.
+        </p>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <a
+            href="/studio/intent/create/type=noticia"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-full bg-azul px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-azul-700"
+          >
+            📰 Publicar noticia →
+          </a>
+          <a
+            href="/studio/intent/create/type=evento"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-full bg-rojo px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-rojo-600"
+          >
+            📅 Publicar evento →
+          </a>
+          <a
+            href="/studio"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-full border border-neutral-300 px-5 py-2.5 text-sm font-semibold text-neutral-600 transition hover:border-azul hover:text-azul"
+          >
+            Ver todo el contenido →
+          </a>
+        </div>
       </div>
     </div>
   );
