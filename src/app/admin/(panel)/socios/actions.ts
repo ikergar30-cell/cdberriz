@@ -142,6 +142,22 @@ export interface ResultadoFila {
 }
 
 export async function importarSocios(filas: FilaImport[]): Promise<ResultadoFila[]> {
+  // Verificar que quien llama es un empleado autenticado. Server actions son
+  // invocables de forma independiente al renderizado de la página, así que no
+  // basta con que el layout del panel las oculte visualmente.
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/admin/login");
+
+  const { data: perfil } = await supabase
+    .from("perfiles")
+    .select("rol")
+    .eq("id", user.id)
+    .single();
+  if (!perfil) redirect("/admin/login");
+
   const admin = createAdminClient();
 
   // Cargar todos los tipos de abono una sola vez

@@ -15,6 +15,13 @@ function temporadaActual(d = new Date()) {
   return d.getMonth() >= 6 ? `${y}-${y + 1}` : `${y - 1}-${y}`;
 }
 
+// El cliente de Supabase no lanza excepción en error, devuelve { error }.
+// Si no comprobamos esto, un fallo al guardar se ignora en silencio y
+// respondemos 200 a Stripe, que entonces no reintenta el evento.
+function comprobar<T>({ error }: { data: T; error: { message: string } | null }) {
+  if (error) throw new Error(error.message);
+}
+
 export async function POST(request: NextRequest) {
   const secret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!secret) {
@@ -45,23 +52,25 @@ export async function POST(request: NextRequest) {
         const customer = (await stripe.customers.retrieve(customerId)) as Stripe.Customer;
         const m = customer.metadata || {};
 
-        await db.from("socios").upsert(
-          {
-            nombre: m.nombre || customer.name || "",
-            apellidos: m.apellidos || "",
-            email: customer.email,
-            telefono: m.telefono || customer.phone || null,
-            direccion: m.direccion || null,
-            dni: m.dni || null,
-            tipo_abono_id: m.tipo_abono_id || null,
-            estado: "activo",
-            metodo_pago: "stripe",
-            fecha_nacimiento: m.fecha_nacimiento || null,
-            stripe_customer_id: customerId,
-            stripe_subscription_id: subscriptionId,
-            fecha_alta: new Date().toISOString().slice(0, 10),
-          },
-          { onConflict: "stripe_customer_id" },
+        comprobar(
+          await db.from("socios").upsert(
+            {
+              nombre: m.nombre || customer.name || "",
+              apellidos: m.apellidos || "",
+              email: customer.email,
+              telefono: m.telefono || customer.phone || null,
+              direccion: m.direccion || null,
+              dni: m.dni || null,
+              tipo_abono_id: m.tipo_abono_id || null,
+              estado: "activo",
+              metodo_pago: "stripe",
+              fecha_nacimiento: m.fecha_nacimiento || null,
+              stripe_customer_id: customerId,
+              stripe_subscription_id: subscriptionId,
+              fecha_alta: new Date().toISOString().slice(0, 10),
+            },
+            { onConflict: "stripe_customer_id" },
+          ),
         );
         break;
       }
@@ -71,28 +80,31 @@ export async function POST(request: NextRequest) {
         const inv = evento.data.object as Stripe.Invoice;
         const customerId = inv.customer as string;
 
-        const { data: socio } = await db
+        const { data: socio, error: errSocio } = await db
           .from("socios")
           .select("id")
           .eq("stripe_customer_id", customerId)
           .maybeSingle();
+        if (errSocio) throw new Error(errSocio.message);
 
-        await db.from("pagos").upsert(
-          {
-            socio_id: socio?.id ?? null,
-            stripe_invoice_id: inv.id,
-            importe_cents: inv.amount_paid,
-            estado: "pagado",
-            temporada: temporadaActual(),
-            fecha: new Date().toISOString(),
-            stripe_hosted_invoice_url: inv.hosted_invoice_url ?? null,
-            stripe_invoice_pdf: inv.invoice_pdf ?? null,
-          },
-          { onConflict: "stripe_invoice_id" },
+        comprobar(
+          await db.from("pagos").upsert(
+            {
+              socio_id: socio?.id ?? null,
+              stripe_invoice_id: inv.id,
+              importe_cents: inv.amount_paid,
+              estado: "pagado",
+              temporada: temporadaActual(),
+              fecha: new Date().toISOString(),
+              stripe_hosted_invoice_url: inv.hosted_invoice_url ?? null,
+              stripe_invoice_pdf: inv.invoice_pdf ?? null,
+            },
+            { onConflict: "stripe_invoice_id" },
+          ),
         );
 
         if (socio?.id) {
-          await db.from("socios").update({ estado: "activo" }).eq("id", socio.id);
+          comprobar(await db.from("socios").update({ estado: "activo" }).eq("id", socio.id));
         }
         break;
       }
@@ -102,26 +114,29 @@ export async function POST(request: NextRequest) {
         const inv = evento.data.object as Stripe.Invoice;
         const customerId = inv.customer as string;
 
-        const { data: socio } = await db
+        const { data: socio, error: errSocio } = await db
           .from("socios")
           .select("id")
           .eq("stripe_customer_id", customerId)
           .maybeSingle();
+        if (errSocio) throw new Error(errSocio.message);
 
         if (socio?.id) {
-          await db.from("socios").update({ estado: "moroso" }).eq("id", socio.id);
-          await db.from("pagos").upsert(
-            {
-              socio_id: socio.id,
-              stripe_invoice_id: inv.id,
-              importe_cents: inv.amount_due,
-              estado: "fallido",
-              temporada: temporadaActual(),
-              fecha: new Date().toISOString(),
-              stripe_hosted_invoice_url: inv.hosted_invoice_url ?? null,
-              stripe_invoice_pdf: inv.invoice_pdf ?? null,
-            },
-            { onConflict: "stripe_invoice_id" },
+          comprobar(await db.from("socios").update({ estado: "moroso" }).eq("id", socio.id));
+          comprobar(
+            await db.from("pagos").upsert(
+              {
+                socio_id: socio.id,
+                stripe_invoice_id: inv.id,
+                importe_cents: inv.amount_due,
+                estado: "fallido",
+                temporada: temporadaActual(),
+                fecha: new Date().toISOString(),
+                stripe_hosted_invoice_url: inv.hosted_invoice_url ?? null,
+                stripe_invoice_pdf: inv.invoice_pdf ?? null,
+              },
+              { onConflict: "stripe_invoice_id" },
+            ),
           );
         }
         break;
@@ -130,10 +145,9 @@ export async function POST(request: NextRequest) {
       // Suscripción cancelada → baja.
       case "customer.subscription.deleted": {
         const sub = evento.data.object as Stripe.Subscription;
-        await db
-          .from("socios")
-          .update({ estado: "baja" })
-          .eq("stripe_subscription_id", sub.id);
+        comprobar(
+          await db.from("socios").update({ estado: "baja" }).eq("stripe_subscription_id", sub.id),
+        );
         break;
       }
     }
