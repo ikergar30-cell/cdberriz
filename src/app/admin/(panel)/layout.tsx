@@ -94,14 +94,18 @@ export default async function PanelLayout({
   ];
 
   return (
-    <div className="flex min-h-screen flex-col bg-neutral-50 md:flex-row">
+    // En escritorio la altura queda fija a la ventana y solo el contenido
+    // central hace scroll, para que la barra lateral se quede anclada. En
+    // móvil (sidebar oculta, cabecera "sticky") el scroll es el normal de la
+    // página.
+    <div className="flex min-h-screen flex-col bg-neutral-50 md:h-screen md:flex-row md:overflow-hidden">
       <NavPanel
         secciones={secciones}
         nombre={perfil.nombre}
         esAdmin={esAdmin}
         logout={<LogoutButton variante="oscuro" />}
       />
-      <main className="flex-1 overflow-x-auto">{children}</main>
+      <main className="flex-1 overflow-x-auto md:overflow-y-auto">{children}</main>
     </div>
   );
 }
