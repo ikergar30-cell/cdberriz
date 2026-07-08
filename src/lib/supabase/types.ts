@@ -49,6 +49,25 @@ export interface Socio {
   updated_at: string;
 }
 
+export type TipoPersonaPago = "arbitro" | "entrenador";
+
+export interface PersonaPago {
+  id: string;
+  nombre: string;
+  dni: string;
+  tipo: TipoPersonaPago;
+  created_at: string;
+}
+
+export interface Resguardo {
+  id: string;
+  persona_id: string;
+  importe_cents: number;
+  concepto: string;
+  fecha: string;
+  created_at: string;
+}
+
 export interface Pago {
   id: string;
   socio_id: string | null;

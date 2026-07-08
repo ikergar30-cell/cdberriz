@@ -189,3 +189,40 @@ create policy "entradas_empleados" on entradas
 -- ----------------------------------------------------------------------------
 alter table pagos add column if not exists stripe_hosted_invoice_url text;
 alter table pagos add column if not exists stripe_invoice_pdf text;
+
+-- ----------------------------------------------------------------------------
+--  RESGUARDOS — recibos de pago a árbitros (por partido) y entrenadores
+--  (dietas/kilometraje mensual). El PDF se genera en la intranet.
+-- ----------------------------------------------------------------------------
+create type tipo_persona_pago as enum ('arbitro', 'entrenador');
+
+create table if not exists personas_pago (
+  id         uuid primary key default gen_random_uuid(),
+  nombre     text not null,
+  dni        text not null,                 -- dato sensible (RGPD)
+  tipo       tipo_persona_pago not null,
+  created_at timestamptz not null default now()
+);
+-- Evita duplicar la misma persona dentro de un tipo (el DNI se normaliza a mayúsculas).
+create unique index if not exists personas_pago_dni_tipo_idx
+  on personas_pago (upper(dni), tipo);
+
+create table if not exists resguardos (
+  id            uuid primary key default gen_random_uuid(),
+  persona_id    uuid not null references personas_pago (id) on delete cascade,
+  importe_cents integer not null check (importe_cents > 0),
+  concepto      text not null,              -- partido (árbitros) o mes (entrenadores)
+  fecha         date not null,              -- fecha del partido / fecha de pago
+  created_at    timestamptz not null default now()
+);
+create index if not exists resguardos_persona_idx on resguardos (persona_id);
+create index if not exists resguardos_fecha_idx on resguardos (fecha desc);
+
+alter table personas_pago enable row level security;
+alter table resguardos    enable row level security;
+
+-- Solo empleados: contienen nombre y DNI (RGPD).
+create policy "personas_pago_empleados" on personas_pago
+  for all using (es_empleado()) with check (es_empleado());
+create policy "resguardos_empleados" on resguardos
+  for all using (es_empleado()) with check (es_empleado());
