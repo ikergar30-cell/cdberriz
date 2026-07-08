@@ -56,7 +56,7 @@ export default async function ResguardosPage({
       <p className="mt-1 max-w-2xl text-sm text-neutral-500">
         {esArbitros
           ? "Genera el recibo de pago del arbitraje de cada partido. Añade varias filas para descargar todos los PDFs de la jornada en un ZIP."
-          : "Genera el recibo mensual de dietas (kilometraje) de cada entrenador. Añade una fila por entrenador y descarga todos los PDFs del mes en un ZIP."}
+          : "Genera el recibo mensual de dietas de cada entrenador. Añade una fila por entrenador y descarga todos los PDFs del mes en un ZIP."}
       </p>
 
       <div className="mt-6">

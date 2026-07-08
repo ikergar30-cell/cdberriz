@@ -95,7 +95,7 @@ function dibujarCopia(
     conceptoEs = `en concepto de arbitraje del partido correspondiente ${datos.concepto}.`;
   } else {
     const mes = mesBilingue(datos.concepto);
-    conceptoEu = `${mes.eu}ri dagokion kilometro ordainagaitik.`;
+    conceptoEu = `${mes.eu}ri dagokion dieta ordainagaitik.`;
     conceptoEs = `en concepto de dietas correspondientes al mes de ${mes.es}.`;
   }
 
