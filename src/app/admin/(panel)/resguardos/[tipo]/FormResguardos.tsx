@@ -46,13 +46,34 @@ export function FormResguardos({
   function cambiar(i: number, campo: keyof Fila, valor: string) {
     setFilas((fs) => {
       const nuevas = fs.map((f, j) => (j === i ? { ...f, [campo]: valor } : f));
-      // Si el nombre coincide con una persona conocida, autorrellenar su DNI.
+      // Si el nombre coincide con una persona conocida, autorrellenar su DNI
+      // y, para entrenadores, su importe mensual fijo.
       if (campo === "nombre") {
         const p = personas.find((x) => x.nombre.toLowerCase() === valor.toLowerCase());
-        if (p) nuevas[i].dni = p.dni;
+        if (p) {
+          nuevas[i].dni = p.dni;
+          if (!esArbitro && p.importe_cents != null) {
+            nuevas[i].importe = String(p.importe_cents / 100).replace(".", ",");
+          }
+        }
       }
       return nuevas;
     });
+  }
+
+  // Entrenadores: crea una fila por cada entrenador registrado, con su DNI e
+  // importe fijo, para el mes actual. Así se genera el mes completo de un clic.
+  function cargarTodos() {
+    if (personas.length === 0) return;
+    setFilas(
+      personas.map((p) => ({
+        nombre: p.nombre,
+        dni: p.dni,
+        importe: p.importe_cents != null ? String(p.importe_cents / 100).replace(".", ",") : "",
+        concepto: mesActual(),
+        fecha: hoy(),
+      })),
+    );
   }
 
   async function generar() {
@@ -181,6 +202,15 @@ export function FormResguardos({
         >
           + Añadir fila
         </button>
+        {!esArbitro && personas.length > 0 && (
+          <button
+            type="button"
+            onClick={cargarTodos}
+            className="rounded-full border border-azul px-4 py-2 text-sm font-semibold text-azul transition hover:bg-azul hover:text-white"
+          >
+            Cargar todos los entrenadores ({personas.length})
+          </button>
+        )}
         <button
           type="button"
           onClick={generar}

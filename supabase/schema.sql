@@ -197,12 +197,19 @@ alter table pagos add column if not exists stripe_invoice_pdf text;
 create type tipo_persona_pago as enum ('arbitro', 'entrenador');
 
 create table if not exists personas_pago (
-  id         uuid primary key default gen_random_uuid(),
-  nombre     text not null,
-  dni        text not null,                 -- dato sensible (RGPD)
-  tipo       tipo_persona_pago not null,
-  created_at timestamptz not null default now()
+  id            uuid primary key default gen_random_uuid(),
+  nombre        text not null,
+  dni           text not null,              -- dato sensible (RGPD)
+  tipo          tipo_persona_pago not null,
+  -- Solo entrenadores: equipo que entrena e importe mensual fijo. Se usan
+  -- para autocompletar el resguardo (los árbitros cobran variable por partido).
+  equipo        text,
+  importe_cents integer,
+  created_at    timestamptz not null default now()
 );
+-- Para instalaciones ya existentes (la tabla se creó sin estas columnas).
+alter table personas_pago add column if not exists equipo text;
+alter table personas_pago add column if not exists importe_cents integer;
 -- Evita duplicar la misma persona dentro de un tipo (el DNI se normaliza a mayúsculas).
 create unique index if not exists personas_pago_dni_tipo_idx
   on personas_pago (upper(dni), tipo);

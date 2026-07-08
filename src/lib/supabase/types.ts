@@ -56,6 +56,8 @@ export interface PersonaPago {
   nombre: string;
   dni: string;
   tipo: TipoPersonaPago;
+  equipo: string | null; // solo entrenadores
+  importe_cents: number | null; // importe mensual fijo (solo entrenadores)
   created_at: string;
 }
 

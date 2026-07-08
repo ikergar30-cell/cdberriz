@@ -19,11 +19,18 @@ export function GestionPersonas({
   const [abierto, setAbierto] = useState(false);
   const [nombre, setNombre] = useState("");
   const [dni, setDni] = useState("");
+  const [equipo, setEquipo] = useState("");
+  const [importe, setImporte] = useState("");
   const [editando, setEditando] = useState<string | null>(null);
   const [editNombre, setEditNombre] = useState("");
   const [editDni, setEditDni] = useState("");
+  const [editEquipo, setEditEquipo] = useState("");
+  const [editImporte, setEditImporte] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
+
+  const importeStr = (cents: number | null) =>
+    cents == null ? "" : String(cents / 100).replace(".", ",");
 
   async function anadir(e: React.FormEvent) {
     e.preventDefault();
@@ -33,9 +40,15 @@ export function GestionPersonas({
       const fd = new FormData();
       fd.set("nombre", nombre);
       fd.set("dni", dni);
+      if (!esArbitro) {
+        fd.set("equipo", equipo);
+        fd.set("importe", importe);
+      }
       await crearPersona(tipo, fd);
       setNombre("");
       setDni("");
+      setEquipo("");
+      setImporte("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo guardar");
     } finally {
@@ -50,6 +63,10 @@ export function GestionPersonas({
       const fd = new FormData();
       fd.set("nombre", editNombre);
       fd.set("dni", editDni);
+      if (!esArbitro) {
+        fd.set("equipo", editEquipo);
+        fd.set("importe", editImporte);
+      }
       await actualizarPersona(id, tipo, fd);
       setEditando(null);
     } catch (err) {
@@ -98,7 +115,14 @@ export function GestionPersonas({
       {abierto && (
         <div className="border-t border-neutral-100 p-5">
           {/* Alta */}
-          <form onSubmit={anadir} className="grid gap-3 sm:grid-cols-[2fr_1fr_auto]">
+          <form
+            onSubmit={anadir}
+            className={`grid gap-3 ${
+              esArbitro
+                ? "sm:grid-cols-[2fr_1fr_auto]"
+                : "sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1.5fr_1fr_auto]"
+            }`}
+          >
             <input
               className={input}
               value={nombre}
@@ -113,6 +137,23 @@ export function GestionPersonas({
               placeholder="DNI"
               required
             />
+            {!esArbitro && (
+              <>
+                <input
+                  className={input}
+                  value={equipo}
+                  onChange={(e) => setEquipo(e.target.value)}
+                  placeholder="Equipo (p. ej. Cadete)"
+                />
+                <input
+                  className={input}
+                  inputMode="decimal"
+                  value={importe}
+                  onChange={(e) => setImporte(e.target.value)}
+                  placeholder="Importe/mes €"
+                />
+              </>
+            )}
             <button
               type="submit"
               disabled={guardando}
@@ -136,6 +177,12 @@ export function GestionPersonas({
                   <tr>
                     <th className="px-4 py-2.5">Nombre y apellidos</th>
                     <th className="px-4 py-2.5">DNI</th>
+                    {!esArbitro && (
+                      <>
+                        <th className="px-4 py-2.5">Equipo</th>
+                        <th className="px-4 py-2.5 text-right">Importe/mes</th>
+                      </>
+                    )}
                     <th className="px-4 py-2.5 text-right">Acciones</th>
                   </tr>
                 </thead>
@@ -158,6 +205,25 @@ export function GestionPersonas({
                               onChange={(e) => setEditDni(e.target.value)}
                             />
                           </td>
+                          {!esArbitro && (
+                            <>
+                              <td className="px-4 py-2">
+                                <input
+                                  className={input}
+                                  value={editEquipo}
+                                  onChange={(e) => setEditEquipo(e.target.value)}
+                                />
+                              </td>
+                              <td className="px-4 py-2">
+                                <input
+                                  className={input}
+                                  inputMode="decimal"
+                                  value={editImporte}
+                                  onChange={(e) => setEditImporte(e.target.value)}
+                                />
+                              </td>
+                            </>
+                          )}
                           <td className="px-4 py-2 text-right whitespace-nowrap">
                             <button
                               onClick={() => guardarEdicion(p.id)}
@@ -180,12 +246,27 @@ export function GestionPersonas({
                             {p.nombre}
                           </td>
                           <td className="px-4 py-2.5 text-neutral-600">{p.dni}</td>
+                          {!esArbitro && (
+                            <>
+                              <td className="px-4 py-2.5 text-neutral-600">{p.equipo ?? "—"}</td>
+                              <td className="px-4 py-2.5 text-right font-semibold text-neutral-800">
+                                {p.importe_cents != null
+                                  ? (p.importe_cents / 100).toLocaleString("es-ES", {
+                                      style: "currency",
+                                      currency: "EUR",
+                                    })
+                                  : "—"}
+                              </td>
+                            </>
+                          )}
                           <td className="px-4 py-2.5 text-right whitespace-nowrap">
                             <button
                               onClick={() => {
                                 setEditando(p.id);
                                 setEditNombre(p.nombre);
                                 setEditDni(p.dni);
+                                setEditEquipo(p.equipo ?? "");
+                                setEditImporte(importeStr(p.importe_cents));
                                 setError(null);
                               }}
                               className="font-semibold text-neutral-500 hover:text-azul"

@@ -27,6 +27,15 @@ function rutaTipo(tipo: TipoPersonaPago) {
   return `/admin/resguardos/${tipo === "arbitro" ? "arbitros" : "entrenadores"}`;
 }
 
+// Convierte "375" o "375,50" (euros) a céntimos, o null si está vacío.
+function parsearImporteCents(v: FormDataEntryValue | null): number | null {
+  const s = String(v ?? "").trim();
+  if (!s) return null;
+  const n = Number(s.replace(",", "."));
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return Math.round(n * 100);
+}
+
 export async function crearPersona(tipo: TipoPersonaPago, formData: FormData) {
   const supabase = await exigirEmpleado();
   const nombre = String(formData.get("nombre") ?? "").trim();
@@ -34,7 +43,16 @@ export async function crearPersona(tipo: TipoPersonaPago, formData: FormData) {
 
   if (!nombre || !dni) throw new Error("Nombre y DNI son obligatorios.");
 
-  const { error } = await supabase.from("personas_pago").insert({ nombre, dni, tipo });
+  // Equipo e importe solo aplican a entrenadores.
+  const extra =
+    tipo === "entrenador"
+      ? {
+          equipo: String(formData.get("equipo") ?? "").trim() || null,
+          importe_cents: parsearImporteCents(formData.get("importe")),
+        }
+      : {};
+
+  const { error } = await supabase.from("personas_pago").insert({ nombre, dni, tipo, ...extra });
   if (error) {
     // El índice único (upper(dni), tipo) evita duplicar la misma persona.
     if (error.code === "23505") {
@@ -57,9 +75,17 @@ export async function actualizarPersona(
 
   if (!nombre || !dni) throw new Error("Nombre y DNI son obligatorios.");
 
+  const extra =
+    tipo === "entrenador"
+      ? {
+          equipo: String(formData.get("equipo") ?? "").trim() || null,
+          importe_cents: parsearImporteCents(formData.get("importe")),
+        }
+      : {};
+
   const { error } = await supabase
     .from("personas_pago")
-    .update({ nombre, dni })
+    .update({ nombre, dni, ...extra })
     .eq("id", id);
   if (error) {
     if (error.code === "23505") {
