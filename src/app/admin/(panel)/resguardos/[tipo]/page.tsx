@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { PersonaPago } from "@/lib/supabase/types";
 import { FormResguardos } from "./FormResguardos";
+import { GestionPersonas } from "./GestionPersonas";
 
 const MESES_ES = [
   "enero", "febrero", "marzo", "abril", "mayo", "junio",
@@ -63,6 +64,10 @@ export default async function ResguardosPage({
           tipo={tipoPersona}
           personas={(personas as PersonaPago[]) ?? []}
         />
+      </div>
+
+      <div className="mt-6">
+        <GestionPersonas tipo={tipoPersona} personas={(personas as PersonaPago[]) ?? []} />
       </div>
 
       <h2 className="mt-10 font-display text-sm font-bold uppercase tracking-wide text-neutral-500">
