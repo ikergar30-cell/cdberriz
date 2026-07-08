@@ -16,7 +16,9 @@ export function GestionPersonas({
   const esArbitro = tipo === "arbitro";
   const singular = esArbitro ? "árbitro" : "entrenador";
 
-  const [abierto, setAbierto] = useState(false);
+  // Abierto por defecto: dar de alta y mantener el listado (con equipo e
+  // importe de cada entrenador) es una tarea habitual, no conviene ocultarla.
+  const [abierto, setAbierto] = useState(true);
   const [nombre, setNombre] = useState("");
   const [dni, setDni] = useState("");
   const [equipo, setEquipo] = useState("");
