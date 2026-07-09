@@ -32,6 +32,10 @@ export interface Socio {
   telefono: string | null;
   dni: string | null;
   direccion: string | null;
+  poblacion: string | null;
+  codigo_postal: string | null;
+  /** Abono familiar: id del socio pagador si este es el 2º titular. */
+  titular_id: string | null;
   fecha_nacimiento: string | null;
   tipo_abono_id: string | null;
   estado: EstadoSocio;

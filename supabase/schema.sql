@@ -60,6 +60,8 @@ create table socios (
   telefono               text,
   dni                    text,                    -- dato sensible (RGPD)
   direccion              text,
+  poblacion              text,
+  codigo_postal          text,
   fecha_nacimiento       date,
   tipo_abono_id          uuid references tipos_abono (id),
   estado                 estado_socio not null default 'pendiente',
@@ -83,6 +85,14 @@ create index socios_email_idx on socios (lower(email));
 -- Única (no parcial) para poder "upsert" por stripe_customer_id. En Postgres los
 -- NULL se consideran distintos, así que admite muchos socios sin Stripe (SEPA/baja).
 alter table socios add constraint socios_stripe_customer_key unique (stripe_customer_id);
+
+-- Población y código postal independientes (antes iban dentro de "direccion").
+alter table socios add column if not exists poblacion text;
+alter table socios add column if not exists codigo_postal text;
+-- Abono familiar: el 2º titular del carnet se enlaza al socio que paga. Si el
+-- pagador se da de baja/borra, el 2º carnet cae con él (on delete cascade).
+alter table socios add column if not exists titular_id uuid references socios (id) on delete cascade;
+create index if not exists socios_titular_idx on socios (titular_id);
 
 comment on table socios is 'Padrón de socios. Datos personales — confidenciales (RGPD).';
 

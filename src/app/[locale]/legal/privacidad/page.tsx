@@ -22,7 +22,7 @@ export default async function PrivacidadPage({
           </div>
         )}
         <div className="prose prose-neutral max-w-none prose-headings:font-display prose-headings:font-extrabold prose-headings:uppercase prose-headings:tracking-tight prose-headings:text-azul-800 prose-a:text-azul prose-a:no-underline hover:prose-a:underline">
-          <p className="text-sm text-neutral-500">Última actualización: junio de 2026</p>
+          <p className="text-sm text-neutral-500">Última actualización: julio de 2026</p>
 
           <h2>1. Responsable del tratamiento</h2>
           <ul>
@@ -39,14 +39,21 @@ export default async function PrivacidadPage({
           <h3>Socios del club</h3>
           <ul>
             <li>Nombre y apellidos</li>
+            <li>DNI / NIE (para identificación inequívoca del socio)</li>
             <li>Correo electrónico</li>
-            <li>Teléfono (opcional)</li>
+            <li>Teléfono</li>
             <li>Fecha de nacimiento (para verificación de cuota por edad)</li>
-            <li>Dirección postal (para envío del carnet físico)</li>
+            <li>Dirección postal, población y código postal (para envío del carnet físico)</li>
             <li>Fotografía del socio (opcional, para el carnet digital)</li>
             <li>Datos de pago gestionados por Stripe (el club no almacena datos bancarios directamente)</li>
             <li>Historial de pagos de cuotas</li>
           </ul>
+          <p>
+            En el <strong>abono familiar</strong> se recogen además el nombre, apellidos, DNI/NIE y
+            fecha de nacimiento del segundo titular del carnet. Quien realiza el alta declara contar
+            con la autorización de dicha persona (o ser su padre/madre/tutor legal si es menor de edad)
+            para facilitar sus datos.
+          </p>
 
           <h3>Formulario de contacto</h3>
           <ul>
@@ -60,6 +67,12 @@ export default async function PrivacidadPage({
             Los datos de jugadores menores de edad (nombre, categoría, equipo) solo se recogen y publican
             previa obtención del consentimiento expreso de sus padres o tutores legales, conforme al
             artículo 8 del RGPD y la Ley Orgánica 3/2018.
+          </p>
+          <p>
+            Conforme al artículo 7 de la LOPDGDD, los <strong>menores de 14 años</strong> no pueden
+            prestar por sí mismos el consentimiento para el tratamiento de sus datos: debe otorgarlo
+            su padre, madre o tutor legal. Los formularios de este sitio web están dirigidos a
+            personas de 14 años o más.
           </p>
 
           <h3>Newsletter y suscriptores</h3>
@@ -110,8 +123,16 @@ export default async function PrivacidadPage({
                 <td>Consentimiento del interesado — art. 6.1.a RGPD</td>
               </tr>
               <tr>
-                <td>Publicación de imagen en canales oficiales del club</td>
+                <td>Publicación individualizada de imagen en canales oficiales del club</td>
                 <td>Consentimiento del interesado — art. 6.1.a RGPD</td>
+              </tr>
+              <tr>
+                <td>Difusión informativa de partidos y actos públicos del club (imágenes de carácter accesorio)</td>
+                <td>Interés legítimo del club — art. 6.1.f RGPD</td>
+              </tr>
+              <tr>
+                <td>Cesión de datos a autoridades u organismos con potestad legal para solicitarlos</td>
+                <td>Obligación legal — art. 6.1.c RGPD</td>
               </tr>
             </tbody>
           </table>
@@ -177,7 +198,12 @@ export default async function PrivacidadPage({
             </tbody>
           </table>
 
-          <p>No cedemos datos personales a terceros salvo obligación legal.</p>
+          <p>
+            No cedemos datos personales a terceros, salvo en caso de que una autoridad u organismo
+            competente (judicial, policial, tributario, federativo u otro con potestad legal para ello)
+            los solicite, en cuyo caso se facilitarán únicamente los datos requeridos y con la base
+            jurídica de la obligación legal (art. 6.1.c RGPD).
+          </p>
 
           <h2>6. Derechos de las personas interesadas</h2>
           <p>
@@ -199,10 +225,24 @@ export default async function PrivacidadPage({
           <p>Responderemos a tu solicitud en el plazo máximo de un mes desde su recepción.</p>
 
           <h2>7. Derechos de imagen</h2>
+          <h3>Fotografías en partidos y actos públicos</h3>
           <p>
-            El C.D. Berriz puede publicar fotografías y vídeos en los que aparezcan socios, jugadores y
-            asistentes a actos del club en sus canales oficiales (web, redes sociales, publicaciones
-            impresas), siempre que el interesado haya prestado su consentimiento expreso.
+            Los partidos, torneos, presentaciones y demás actividades organizadas por el C.D. Berriz
+            son <strong>actos públicos</strong>. Durante su celebración pueden tomarse fotografías y
+            vídeos de carácter general (gradas, celebraciones, ambiente, juego) que el club publica en
+            sus canales oficiales (web, redes sociales, publicaciones impresas) con fines informativos
+            y de difusión de su actividad deportiva. En estas imágenes, la aparición de personas
+            concretas tiene carácter <strong>meramente accesorio</strong> respecto a la información del
+            evento, conforme a la Ley Orgánica 1/1982. La asistencia o participación en estos actos
+            implica conocer esta circunstancia.
+          </p>
+          <h3>Uso individualizado de la imagen</h3>
+          <p>
+            Cuando la imagen de una persona sea la protagonista del contenido (retratos, entrevistas,
+            fotos de carnet, contenidos destacados), el C.D. Berriz solo la publicará si el interesado
+            ha prestado su <strong>consentimiento expreso</strong>, que se solicita de forma separada en
+            el formulario de alta y puede otorgarse o denegarse libremente sin que ello afecte a la
+            condición de socio.
           </p>
           <p>
             En el caso de <strong>menores de edad</strong>, el consentimiento debe ser otorgado por sus

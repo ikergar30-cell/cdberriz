@@ -100,6 +100,14 @@ export function SocioForm({
             <label className={label} htmlFor="direccion">Dirección</label>
             <input id="direccion" name="direccion" defaultValue={socio?.direccion ?? ""} className={input} />
           </div>
+          <div>
+            <label className={label} htmlFor="poblacion">Población</label>
+            <input id="poblacion" name="poblacion" defaultValue={socio?.poblacion ?? ""} className={input} />
+          </div>
+          <div>
+            <label className={label} htmlFor="codigo_postal">Código postal</label>
+            <input id="codigo_postal" name="codigo_postal" defaultValue={socio?.codigo_postal ?? ""} className={input} />
+          </div>
         </div>
       </section>
 

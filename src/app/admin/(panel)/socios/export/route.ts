@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
   let query = supabase
     .from("socios")
     .select(
-      "numero_socio, nombre, apellidos, email, telefono, dni, direccion, fecha_nacimiento, estado, fecha_alta, tipos_abono(nombre)",
+      "numero_socio, nombre, apellidos, email, telefono, dni, direccion, poblacion, codigo_postal, fecha_nacimiento, estado, fecha_alta, tipos_abono(nombre)",
     )
     .order("numero_socio");
   if (estado) query = query.eq("estado", estado);
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
 
   const cabeceras = [
     "Nº socio", "Nombre", "Apellidos", "Email", "Teléfono", "DNI",
-    "Dirección", "Fecha nacimiento", "Cuota", "Estado", "Fecha alta",
+    "Dirección", "Población", "Código postal", "Fecha nacimiento", "Cuota", "Estado", "Fecha alta",
   ];
 
   // Escapa cada celda para CSV (comillas, comas, saltos de línea).
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
   const lineas = filas.map((f) =>
     [
       f.numero_socio, f.nombre, f.apellidos, f.email, f.telefono, f.dni,
-      f.direccion, f.fecha_nacimiento, f.tipos_abono?.nombre ?? "", f.estado, f.fecha_alta,
+      f.direccion, f.poblacion, f.codigo_postal, f.fecha_nacimiento, f.tipos_abono?.nombre ?? "", f.estado, f.fecha_alta,
     ]
       .map(esc)
       .join(";"),

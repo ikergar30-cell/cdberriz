@@ -52,14 +52,17 @@ export async function POST(request: NextRequest) {
         const customer = (await stripe.customers.retrieve(customerId)) as Stripe.Customer;
         const m = customer.metadata || {};
 
-        comprobar(
-          await db.from("socios").upsert(
+        const { data: titular, error: errTitular } = await db
+          .from("socios")
+          .upsert(
             {
               nombre: m.nombre || customer.name || "",
               apellidos: m.apellidos || "",
               email: customer.email,
               telefono: m.telefono || customer.phone || null,
               direccion: m.direccion || null,
+              poblacion: m.poblacion || null,
+              codigo_postal: m.codigo_postal || null,
               dni: m.dni || null,
               tipo_abono_id: m.tipo_abono_id || null,
               estado: "activo",
@@ -70,8 +73,68 @@ export async function POST(request: NextRequest) {
               fecha_alta: new Date().toISOString().slice(0, 10),
             },
             { onConflict: "stripe_customer_id" },
-          ),
-        );
+          )
+          .select("id")
+          .single();
+        if (errTitular) throw new Error(errTitular.message);
+
+        // Abono familiar: segundo carnet enlazado al titular que paga. El
+        // contacto (email/teléfono) va por el titular; la dirección es la
+        // misma. Lleva el mismo subscription_id para que la baja de la
+        // suscripción dé de baja los dos carnets a la vez.
+        if (m.clave === "familiar" && m.nombre2 && m.dni2) {
+          const segundo = {
+            nombre: m.nombre2,
+            apellidos: m.apellidos2 || "",
+            dni: m.dni2,
+            fecha_nacimiento: m.fecha_nacimiento2 || null,
+            direccion: m.direccion || null,
+            poblacion: m.poblacion || null,
+            codigo_postal: m.codigo_postal || null,
+            tipo_abono_id: m.tipo_abono_id || null,
+            estado: "activo" as const,
+            metodo_pago: "stripe",
+            titular_id: titular.id,
+            stripe_subscription_id: subscriptionId,
+            fecha_alta: new Date().toISOString().slice(0, 10),
+          };
+          // Idempotente ante reintentos del webhook: si ya existe el 2º
+          // carnet de este titular, se actualiza en vez de duplicarse.
+          const { data: existente, error: errBusca } = await db
+            .from("socios")
+            .select("id")
+            .eq("titular_id", titular.id)
+            .maybeSingle();
+          if (errBusca) throw new Error(errBusca.message);
+          comprobar(
+            existente
+              ? await db.from("socios").update(segundo).eq("id", existente.id)
+              : await db.from("socios").insert(segundo),
+          );
+        }
+        break;
+      }
+
+      // Sesión de pago caducada sin pagar (24 h): se elimina el cliente en
+      // Stripe para no acumular clientes "falsos". Cada checkout crea un
+      // cliente nuevo, así que solo se borra si nunca llegó a ser socio.
+      case "checkout.session.expired": {
+        const session = evento.data.object as Stripe.Checkout.Session;
+        const customerId = session.customer as string | null;
+        if (!customerId) break;
+
+        const subs = await stripe.subscriptions.list({ customer: customerId, limit: 1 });
+        if (subs.data.length > 0) break;
+
+        const { data: socio, error: errSocio } = await db
+          .from("socios")
+          .select("id")
+          .eq("stripe_customer_id", customerId)
+          .maybeSingle();
+        if (errSocio) throw new Error(errSocio.message);
+        if (socio) break;
+
+        await stripe.customers.del(customerId);
         break;
       }
 
@@ -104,7 +167,13 @@ export async function POST(request: NextRequest) {
         );
 
         if (socio?.id) {
-          comprobar(await db.from("socios").update({ estado: "activo" }).eq("id", socio.id));
+          // Incluye el 2º carnet del abono familiar (titular_id).
+          comprobar(
+            await db
+              .from("socios")
+              .update({ estado: "activo" })
+              .or(`id.eq.${socio.id},titular_id.eq.${socio.id}`),
+          );
         }
         break;
       }
@@ -122,7 +191,13 @@ export async function POST(request: NextRequest) {
         if (errSocio) throw new Error(errSocio.message);
 
         if (socio?.id) {
-          comprobar(await db.from("socios").update({ estado: "moroso" }).eq("id", socio.id));
+          // Incluye el 2º carnet del abono familiar (titular_id).
+          comprobar(
+            await db
+              .from("socios")
+              .update({ estado: "moroso" })
+              .or(`id.eq.${socio.id},titular_id.eq.${socio.id}`),
+          );
           comprobar(
             await db.from("pagos").upsert(
               {

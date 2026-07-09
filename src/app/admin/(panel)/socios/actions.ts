@@ -27,6 +27,8 @@ function leerCampos(formData: FormData) {
     telefono: txt("telefono"),
     dni: txt("dni"),
     direccion: txt("direccion"),
+    poblacion: txt("poblacion"),
+    codigo_postal: txt("codigo_postal"),
     fecha_nacimiento: txt("fecha_nacimiento"),
     tipo_abono_id: txt("tipo_abono_id"),
     estado: (txt("estado") ?? "pendiente") as EstadoSocio,
