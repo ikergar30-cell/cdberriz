@@ -83,6 +83,13 @@ export default async function PrivacidadPage({
             consentimiento del interesado (art. 6.1.a RGPD). El suscriptor puede darse de baja en cualquier
             momento a través del enlace habilitado en cada correo.
           </p>
+          <p>
+            Los <strong>socios</strong> se incluyen automáticamente en este boletín al darse de alta, ya
+            que forma parte de las comunicaciones propias de su condición de socio/a (interés legítimo del
+            club — art. 6.1.f RGPD, informarle de la actividad del club del que forma parte). Puede darse
+            de baja en cualquier momento a través del enlace de cada correo, sin que ello afecte a su
+            condición de socio/a.
+          </p>
 
           <h2>3. Finalidades y base jurídica del tratamiento</h2>
 

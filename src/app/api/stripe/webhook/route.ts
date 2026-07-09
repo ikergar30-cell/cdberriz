@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import type Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { suscribirNewsletter } from "@/lib/newsletter";
 
 // Webhook de Stripe: sincroniza socios y pagos en Supabase.
 // SEGURIDAD: cada evento se VERIFICA con la firma (STRIPE_WEBHOOK_SECRET); un
@@ -52,6 +53,16 @@ export async function POST(request: NextRequest) {
         const customer = (await stripe.customers.retrieve(customerId)) as Stripe.Customer;
         const m = customer.metadata || {};
 
+        // Con tarjeta el pago se confirma al instante (subscription "active"),
+        // pero con SEPA el cobro tarda unos días: la suscripción queda
+        // "incomplete" hasta que Stripe confirma el adeudo. Si no está ya
+        // activa, el socio entra "pendiente" y pasa a "activo" con
+        // "invoice.paid" (o a "moroso" si el adeudo SEPA se devuelve).
+        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+        const estadoInicial = subscription.status === "active" || subscription.status === "trialing"
+          ? "activo"
+          : "pendiente";
+
         const { data: titular, error: errTitular } = await db
           .from("socios")
           .upsert(
@@ -65,7 +76,7 @@ export async function POST(request: NextRequest) {
               codigo_postal: m.codigo_postal || null,
               dni: m.dni || null,
               tipo_abono_id: m.tipo_abono_id || null,
-              estado: "activo",
+              estado: estadoInicial,
               metodo_pago: "stripe",
               fecha_nacimiento: m.fecha_nacimiento || null,
               stripe_customer_id: customerId,
@@ -92,7 +103,7 @@ export async function POST(request: NextRequest) {
             poblacion: m.poblacion || null,
             codigo_postal: m.codigo_postal || null,
             tipo_abono_id: m.tipo_abono_id || null,
-            estado: "activo" as const,
+            estado: estadoInicial,
             metodo_pago: "stripe",
             titular_id: titular.id,
             stripe_subscription_id: subscriptionId,
@@ -111,6 +122,19 @@ export async function POST(request: NextRequest) {
               ? await db.from("socios").update(segundo).eq("id", existente.id)
               : await db.from("socios").insert(segundo),
           );
+        }
+
+        // Alta automática en el boletín del club: ya es socio, así que se
+        // ampara en el interés legítimo de informarle de la actividad del
+        // club (no en consentimiento aparte); puede darse de baja en
+        // cualquier momento desde el enlace de cada envío. No es crítico:
+        // un fallo aquí no debe impedir el alta del socio.
+        if (customer.email) {
+          try {
+            await suscribirNewsletter(customer.email, m.nombre || customer.name || undefined);
+          } catch {
+            /* no bloquea el alta del socio */
+          }
         }
         break;
       }

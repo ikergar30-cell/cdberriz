@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { Resend } from "resend";
+import { suscribirNewsletter } from "@/lib/newsletter";
 
 export async function POST(request: Request) {
   let body: { email?: string; nombre?: string } = {};
@@ -16,23 +16,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Email no válido." }, { status: 400 });
   }
 
-  const apiKey = process.env.RESEND_API_KEY;
-  const audienceId = process.env.RESEND_AUDIENCE_ID;
-
-  if (!apiKey || !audienceId) {
-    return NextResponse.json({ error: "Newsletter no configurada." }, { status: 503 });
-  }
-
   try {
-    const resend = new Resend(apiKey);
-    await resend.contacts.create({
-      audienceId,
-      email,
-      firstName: nombre,
-      unsubscribed: false,
-    });
+    await suscribirNewsletter(email, nombre);
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (err) {
+    if (err instanceof Error && err.message === "Newsletter no configurada.") {
+      return NextResponse.json({ error: err.message }, { status: 503 });
+    }
     return NextResponse.json({ error: "No se pudo completar la suscripción." }, { status: 500 });
   }
 }

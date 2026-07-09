@@ -159,7 +159,10 @@ export async function POST(request: NextRequest) {
     mode: "subscription",
     customer: customer.id,
     line_items: [{ price: cuota.stripe_price_id, quantity: 1 }],
-    payment_method_types: ["card"],
+    // Tarjeta (confirmación inmediata) o domiciliación SEPA (Stripe recoge el
+    // IBAN y el mandato directamente en su página; el cobro tarda unos días
+    // en confirmarse, por eso el webhook no activa al socio hasta "invoice.paid").
+    payment_method_types: ["card", "sepa_debit"],
     locale: locale === "eu" ? "auto" : "es",
     subscription_data: { metadata: meta },
     success_url: `${siteUrl}/${locale}/socios/gracias?session_id={CHECKOUT_SESSION_ID}`,

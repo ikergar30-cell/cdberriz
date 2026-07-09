@@ -37,8 +37,20 @@ export default function LoginPage() {
     "w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-sm outline-none transition focus:border-azul focus:ring-2 focus:ring-azul/20";
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4">
-      <div className="w-full max-w-sm rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm">
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-azul-900 px-4">
+      {/* Foto del campo de fútbol como fondo, difuminada y oscurecida para no
+          competir con el formulario. */}
+      <Image
+        src="/campo-noche.jpg"
+        alt=""
+        fill
+        priority
+        sizes="100vw"
+        className="scale-110 object-cover object-center blur-md"
+      />
+      <div className="absolute inset-0 bg-azul-900/75" />
+
+      <div className="relative w-full max-w-sm rounded-2xl border border-white/10 bg-white/95 p-8 shadow-2xl backdrop-blur-sm">
         <div className="mb-6 flex flex-col items-center text-center">
           <Image
             src="/escudo.png"
@@ -48,7 +60,7 @@ export default function LoginPage() {
             className="h-14 w-14 object-contain"
           />
           <h1 className="mt-3 font-display text-xl font-extrabold uppercase text-azul-700">
-            Gestión de socios
+            Intranet C.D. Berriz
           </h1>
           <p className="mt-1 text-sm text-neutral-500">Acceso para empleados del club</p>
         </div>
