@@ -13,12 +13,14 @@ export function AccionesAbono({
   cancelacionProgramada,
   elegibleReembolso,
   diasRestantesReembolso,
+  fechaFinPeriodo,
 }: {
   socioId: string;
   tieneSuscripcion: boolean;
   cancelacionProgramada: boolean;
   elegibleReembolso: boolean;
   diasRestantesReembolso: number | null;
+  fechaFinPeriodo: string | null;
 }) {
   const [cargando, setCargando] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -87,7 +89,9 @@ export function AccionesAbono({
               ejecutar(
                 "cancelar",
                 () => cancelarRenovacion(socioId),
-                "¿Cancelar la renovación automática? El socio seguirá activo hasta el final del periodo ya pagado y después pasará a baja.",
+                fechaFinPeriodo
+                  ? `¿Cancelar la renovación automática? Stripe dejará de cobrarle, pero el socio seguirá activo hasta el ${fechaFinPeriodo} (fin del periodo ya pagado). Ese día pasará automáticamente a "Baja".`
+                  : "¿Cancelar la renovación automática? El socio seguirá activo hasta el final del periodo ya pagado y después pasará a baja automáticamente.",
               )
             }
             className="rounded-full border border-neutral-300 px-4 py-2 text-sm font-semibold text-neutral-600 transition hover:border-rojo hover:text-rojo disabled:opacity-60"

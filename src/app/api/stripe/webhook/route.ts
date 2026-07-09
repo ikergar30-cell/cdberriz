@@ -3,6 +3,7 @@ import type Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { suscribirNewsletter } from "@/lib/newsletter";
+import { alinearFacturacionATemporada } from "@/lib/stripe/alinearFacturacion";
 
 // Webhook de Stripe: sincroniza socios y pagos en Supabase.
 // SEGURIDAD: cada evento se VERIFICA con la firma (STRIPE_WEBHOOK_SECRET); un
@@ -81,7 +82,9 @@ export async function POST(request: NextRequest) {
               fecha_nacimiento: m.fecha_nacimiento || null,
               stripe_customer_id: customerId,
               stripe_subscription_id: subscriptionId,
-              fecha_alta: new Date().toISOString().slice(0, 10),
+              // La fecha de alta se rellena con el primer pago confirmado
+              // (evento "invoice.paid"), no aquí: con SEPA puede tardar días
+              // en confirmarse y no sería la fecha real del primer cobro.
             },
             { onConflict: "stripe_customer_id" },
           )
@@ -110,7 +113,7 @@ export async function POST(request: NextRequest) {
             metodo_pago: "stripe",
             titular_id: titular.id,
             stripe_subscription_id: subscriptionId,
-            fecha_alta: new Date().toISOString().slice(0, 10),
+            // Igual que el titular: se rellena con el primer "invoice.paid".
           };
           // Idempotente ante reintentos del webhook: si ya existe el 2º
           // carnet de este titular, se actualiza en vez de duplicarse.
@@ -126,6 +129,12 @@ export async function POST(request: NextRequest) {
               : await db.from("socios").insert(segundo),
           );
         }
+
+        // Sincroniza el 2º cobro (y todos los siguientes) al 30 de junio,
+        // para que todos los socios se renueven en la misma fecha. No es
+        // opcional ni "best effort": si falla, dejamos que el webhook
+        // reintente en vez de tragarnos el error en silencio.
+        await alinearFacturacionATemporada(subscriptionId);
 
         // Alta automática en el boletín del club: ya es socio, así que se
         // ampara en el interés legítimo de informarle de la actividad del
@@ -199,6 +208,19 @@ export async function POST(request: NextRequest) {
             await db
               .from("socios")
               .update({ estado: "activo" })
+              .or(`id.eq.${socio.id},titular_id.eq.${socio.id}`),
+          );
+
+          // Fecha de alta = fecha del PRIMER pago confirmado. Solo se rellena
+          // si todavía está vacía, para no pisarla en cada renovación anual.
+          const fechaPago = inv.status_transitions?.paid_at
+            ? new Date(inv.status_transitions.paid_at * 1000).toISOString().slice(0, 10)
+            : new Date().toISOString().slice(0, 10);
+          comprobar(
+            await db
+              .from("socios")
+              .update({ fecha_alta: fechaPago })
+              .is("fecha_alta", null)
               .or(`id.eq.${socio.id},titular_id.eq.${socio.id}`),
           );
         }

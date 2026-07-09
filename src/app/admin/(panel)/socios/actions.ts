@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { crearSuscripcionSEPA } from "@/lib/stripe/sepa";
+import { cambiarCuotaStripe } from "@/lib/stripe/alinearFacturacion";
 import { stripe } from "@/lib/stripe";
 import { REEMBOLSO_DIAS, diasDesde } from "@/config/reembolso";
 import type { EstadoSocio } from "@/lib/supabase/types";
@@ -118,6 +119,35 @@ export async function actualizarSocio(id: string, formData: FormData) {
   }
 
   const supabase = createClient();
+
+  // Si se cambia la cuota manualmente y el socio ya tiene una suscripción de
+  // Stripe, hay que actualizar el precio ahí también y cobrar la diferencia
+  // ahora mismo (no esperar a la próxima renovación).
+  const { data: socioActual, error: errActual } = await supabase
+    .from("socios")
+    .select("tipo_abono_id, stripe_subscription_id")
+    .eq("id", id)
+    .single();
+  if (errActual) throw new Error("No se pudo leer el socio: " + errActual.message);
+
+  if (
+    datos.tipo_abono_id &&
+    datos.tipo_abono_id !== socioActual.tipo_abono_id &&
+    socioActual.stripe_subscription_id
+  ) {
+    const admin = createAdminClient();
+    const { data: cuota, error: errCuota } = await admin
+      .from("tipos_abono")
+      .select("stripe_price_id")
+      .eq("id", datos.tipo_abono_id)
+      .single();
+    if (errCuota) throw new Error("No se pudo leer la nueva cuota: " + errCuota.message);
+    if (!cuota?.stripe_price_id) {
+      throw new Error("La cuota nueva no tiene precio en Stripe configurado.");
+    }
+    await cambiarCuotaStripe(socioActual.stripe_subscription_id, cuota.stripe_price_id);
+  }
+
   const { error } = await supabase.from("socios").update(datos).eq("id", id);
   if (error) throw new Error("No se pudo actualizar: " + error.message);
 

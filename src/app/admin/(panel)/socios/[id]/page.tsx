@@ -231,6 +231,7 @@ export default async function FichaSocioPage({
               cancelacionProgramada={cancelacionProgramada}
               elegibleReembolso={elegibleReembolso}
               diasRestantesReembolso={diasRestantesReembolso}
+              fechaFinPeriodo={proximaRenovacion ? formatearFecha(proximaRenovacion) : null}
             />
           </div>
 
