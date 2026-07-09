@@ -70,6 +70,9 @@ export async function POST(request: NextRequest) {
   const apellidos2 = String(body.apellidos2 ?? "").trim();
   const dni2 = normalizarDni(String(body.dni2 ?? ""));
   const fechaNacimiento2 = String(body.fecha_nacimiento2 ?? "").trim();
+  // Opcional: si el segundo titular quiere su propio acceso al portal de
+  // socios (con su carné digital), necesita un email distinto al del titular.
+  const email2 = String(body.email2 ?? "").trim();
   if (claveFinal === "familiar") {
     if (!nombre2 || !apellidos2) {
       return NextResponse.json(
@@ -92,6 +95,18 @@ export async function POST(request: NextRequest) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaNacimiento2)) {
       return NextResponse.json(
         { error: "Falta la fecha de nacimiento del segundo titular" },
+        { status: 400 },
+      );
+    }
+    if (email2 && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email2)) {
+      return NextResponse.json(
+        { error: "El email del segundo titular no es válido" },
+        { status: 400 },
+      );
+    }
+    if (email2 && email2.toLowerCase() === email.toLowerCase()) {
+      return NextResponse.json(
+        { error: "El segundo titular no puede usar el mismo email que el titular" },
         { status: 400 },
       );
     }
@@ -146,6 +161,7 @@ export async function POST(request: NextRequest) {
     meta.apellidos2 = apellidos2;
     meta.dni2 = dni2;
     meta.fecha_nacimiento2 = fechaNacimiento2;
+    if (email2) meta.email2 = email2;
   }
 
   const customer = await stripe.customers.create({

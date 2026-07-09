@@ -124,8 +124,15 @@ export default async function SociosPage({
   const stats: Array<{ valor: string; label: { es: string; eu: string } }> = [
     { valor: String(club.fundacion), label: { es: "Fundación", eu: "Sorrera" } },
   ];
-  if (numSocios > 0)
-    stats.push({ valor: `+${numSocios}`, label: { es: "Socios/as", eu: "Bazkideak" } });
+  // Cifra provisional: todavía no están en Supabase los socios que pagan de
+  // forma manual (efectivo/transferencia), así que el conteo automático se
+  // queda corto. Con Math.max mostramos al menos 250 mientras se completa la
+  // importación; en cuanto el conteo real la supere, se mostrará solo el real
+  // sin tocar este código.
+  const SOCIOS_MINIMO = 250;
+  const cifraSocios = Math.max(numSocios, SOCIOS_MINIMO);
+  if (cifraSocios > 0)
+    stats.push({ valor: `+${cifraSocios}`, label: { es: "Socios/as", eu: "Bazkideak" } });
   stats.push({ valor: "+200", label: { es: "Jugadores", eu: "Jokalariak" } });
   stats.push({ valor: `${anios}+`, label: { es: "Años de historia", eu: "Urteko historia" } });
 
@@ -146,9 +153,6 @@ export default async function SociosPage({
             </div>
           ))}
         </section>
-
-        {/* Promoción del carnet digital */}
-        <CarnetDigitalPromo locale={locale} />
 
         {/* Tipos de abono */}
         <section id="cuotas" className="grid scroll-mt-24 gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -189,6 +193,9 @@ export default async function SociosPage({
             </div>
           ))}
         </section>
+
+        {/* Promoción del carnet digital */}
+        <CarnetDigitalPromo locale={locale} />
 
         {/* Acceso de socios actuales */}
         <p className="text-center text-sm text-neutral-600">

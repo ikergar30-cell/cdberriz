@@ -1,4 +1,5 @@
-import type { EstadoPago, Pago } from "@/lib/supabase/types";
+import type { EstadoPago } from "@/lib/supabase/types";
+import type { FilaFactura } from "./page";
 
 const BADGE: Record<EstadoPago, string> = {
   pagado: "bg-green-100 text-green-700",
@@ -18,19 +19,33 @@ function formatearImporte(cents: number) {
   return (cents / 100).toLocaleString("es-ES", { style: "currency", currency: "EUR" });
 }
 
-function formatearFecha(fecha: string) {
+function formatearFecha(fecha: number) {
   return new Date(fecha).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-export function HistorialPagos({ pagos }: { pagos: Pago[] }) {
+// Todas las facturas del socio en Stripe (no solo lo que hayamos sincronizado
+// en la tabla local): así se ve siempre el histórico completo de pagos.
+export function HistorialPagos({
+  facturas,
+  tieneStripe,
+}: {
+  facturas: FilaFactura[];
+  tieneStripe: boolean;
+}) {
   return (
     <div className="mt-8">
       <h2 className="font-display text-sm font-bold uppercase tracking-wide text-neutral-500">
-        Historial de pagos
+        Pagos y facturas
       </h2>
 
-      {pagos.length === 0 ? (
-        <p className="mt-3 text-sm text-neutral-500">Este socio todavía no tiene pagos registrados.</p>
+      {!tieneStripe ? (
+        <p className="mt-3 text-sm text-neutral-500">
+          Este socio no tiene pagos por Stripe (método de pago manual / fuera de Stripe).
+        </p>
+      ) : facturas.length === 0 ? (
+        <p className="mt-3 text-sm text-neutral-500">
+          Todavía no hay facturas registradas en Stripe para este socio.
+        </p>
       ) : (
         <div className="mt-3 overflow-x-auto rounded-xl border border-neutral-200">
           <table className="w-full text-left text-sm">
@@ -45,32 +60,42 @@ export function HistorialPagos({ pagos }: { pagos: Pago[] }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
-              {pagos.map((p) => (
-                <tr key={p.id}>
-                  <td className="px-4 py-3 text-neutral-700">{formatearFecha(p.fecha)}</td>
-                  <td className="px-4 py-3 text-neutral-700">{p.temporada ?? "—"}</td>
+              {facturas.map((f) => (
+                <tr key={f.id}>
+                  <td className="px-4 py-3 text-neutral-700">{formatearFecha(f.fecha)}</td>
+                  <td className="px-4 py-3 text-neutral-700">{f.temporada ?? "—"}</td>
                   <td className="px-4 py-3 font-semibold text-neutral-900">
-                    {formatearImporte(p.importe_cents)}
+                    {formatearImporte(f.importe_cents)}
                   </td>
-                  <td className="px-4 py-3 text-neutral-500">{p.metodo ?? "—"}</td>
+                  <td className="px-4 py-3 text-neutral-500">{f.metodo ?? "—"}</td>
                   <td className="px-4 py-3">
-                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${BADGE[p.estado]}`}>
-                      {ETIQUETA[p.estado]}
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${BADGE[f.estado]}`}>
+                      {ETIQUETA[f.estado]}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
-                    {p.stripe_hosted_invoice_url ? (
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    {f.hostedUrl && (
                       <a
-                        href={p.stripe_hosted_invoice_url}
+                        href={f.hostedUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="font-semibold text-azul hover:underline"
                       >
-                        Ver factura
+                        Ver
                       </a>
-                    ) : (
-                      <span className="text-neutral-400">—</span>
                     )}
+                    {f.hostedUrl && f.pdfUrl && <span className="mx-1.5 text-neutral-300">·</span>}
+                    {f.pdfUrl && (
+                      <a
+                        href={f.pdfUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-semibold text-azul hover:underline"
+                      >
+                        PDF
+                      </a>
+                    )}
+                    {!f.hostedUrl && !f.pdfUrl && <span className="text-neutral-400">—</span>}
                   </td>
                 </tr>
               ))}

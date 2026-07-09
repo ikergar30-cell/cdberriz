@@ -64,6 +64,10 @@ export function AltaForm({ clave }: { clave: ClaveCuota }) {
     segundoTitularNota: eu
       ? "Familia-abonuak bi bazkide-txartel ditu. Bete bigarren titularraren datuak."
       : "El abono familiar incluye dos carnets de socio. Rellena los datos del segundo titular.",
+    email2: eu ? "Emaila (aukerakoa)" : "Email (opcional)",
+    email2Nota: eu
+      ? "Jarriz gero, bigarren titularrak bere kontu propioa izango du webgunean bere karnet digitala ikusteko."
+      : "Si lo indicas, el segundo titular podrá entrar con su propia cuenta en la web para ver su carné digital.",
     continuar: eu ? "Ordaintzera joan" : "Ir al pago",
     aviso: eu
       ? "Ordainketa segurua Striperekin. Txartelez edo banku-helbideratzez (SEPA)."
@@ -176,6 +180,11 @@ export function AltaForm({ clave }: { clave: ClaveCuota }) {
                 onChange={(e) => setFechaNac2(e.target.value)}
                 required
               />
+            </div>
+            <div className="sm:col-span-2">
+              <label className={label} htmlFor="email2">{t.email2}</label>
+              <input id="email2" name="email2" type="email" className={input} />
+              <p className="mt-1 text-xs text-neutral-500">{t.email2Nota}</p>
             </div>
           </div>
         </div>

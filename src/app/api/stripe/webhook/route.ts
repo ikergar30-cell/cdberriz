@@ -98,6 +98,9 @@ export async function POST(request: NextRequest) {
             nombre: m.nombre2,
             apellidos: m.apellidos2 || "",
             dni: m.dni2,
+            // Opcional: si el segundo titular dio su propio email, puede
+            // entrar solo con él al portal de socios y ver su propio carné.
+            email: m.email2 || null,
             fecha_nacimiento: m.fecha_nacimiento2 || null,
             direccion: m.direccion || null,
             poblacion: m.poblacion || null,

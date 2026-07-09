@@ -83,7 +83,7 @@ export default async function CuentaPage({
 
   const { data: socio } = await admin
     .from("socios")
-    .select("id, nombre, apellidos, numero_socio, estado, fecha_alta, direccion, carnet_token, foto_url, carnet_fisico_pedido_en, stripe_customer_id, tipos_abono(nombre, precio_cents)")
+    .select("id, nombre, apellidos, numero_socio, estado, fecha_alta, direccion, carnet_token, foto_url, carnet_fisico_pedido_en, stripe_customer_id, titular_id, tipos_abono(nombre, precio_cents)")
     .ilike("email", user.email)
     .maybeSingle();
 
@@ -96,6 +96,13 @@ export default async function CuentaPage({
   const pagos = socio
     ? (await admin.from("pagos").select("id, importe_cents, estado, metodo, temporada, fecha").eq("socio_id", socio.id).order("fecha", { ascending: false }).limit(5)).data ?? []
     : [];
+
+  // 2º carné de un abono familiar: los pagos y la facturación van por la
+  // cuenta del titular, así que lo indicamos para que no extrañe ver el
+  // historial vacío o no tener botón de "gestionar mi cuota".
+  const titular = socio?.titular_id
+    ? (await admin.from("socios").select("nombre, apellidos").eq("id", socio.titular_id).maybeSingle()).data
+    : null;
 
   const tipo = (socio as { tipos_abono?: { nombre: string; precio_cents: number } | null } | null)?.tipos_abono;
   const eventosMostrar = eventos.slice(0, 3);
@@ -126,6 +133,15 @@ export default async function CuentaPage({
                 </span>
               </div>
             </div>
+
+            {/* 2º carné de un abono familiar: la facturación va por el titular */}
+            {titular && (
+              <div className="rounded-xl border border-azul-100 bg-azul-50 px-4 py-3 text-sm text-azul-800">
+                {eu
+                  ? `Familia-abonu baten zati zara (titularra: ${titular.nombre} ${titular.apellidos}). Ordainketak eta fakturazioa haren kontutik kudeatzen dira.`
+                  : `Formas parte de un abono familiar (titular: ${titular.nombre} ${titular.apellidos}). Los pagos y la facturación se gestionan desde su cuenta.`}
+              </div>
+            )}
 
             {/* Grid 2 columnas */}
             <div className="grid grid-cols-1 gap-6 md:grid-cols-[3fr_2fr]">

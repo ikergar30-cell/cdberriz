@@ -22,10 +22,12 @@ export function SocioForm({
   socio,
   tipos,
   accion,
+  cancelarHref = "/admin/socios",
 }: {
   socio?: Socio;
   tipos: TipoAbono[];
   accion: (formData: FormData) => Promise<void>;
+  cancelarHref?: string;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
@@ -262,7 +264,7 @@ export function SocioForm({
               ? "Guardar cambios"
               : "Crear socio"}
         </button>
-        <Link href="/admin/socios" className="text-sm font-semibold text-neutral-500 hover:text-neutral-800">
+        <Link href={cancelarHref} className="text-sm font-semibold text-neutral-500 hover:text-neutral-800">
           Cancelar
         </Link>
       </div>

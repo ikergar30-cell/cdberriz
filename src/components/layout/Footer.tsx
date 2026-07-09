@@ -27,8 +27,8 @@ export function Footer() {
 
   return (
     <footer className="bg-azul-900 text-azul-100">
-      <div className="container grid gap-10 py-12 md:grid-cols-4 lg:grid-cols-5">
-        <div className="md:col-span-2 lg:col-span-2">
+      <div className="container grid gap-10 py-12 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="sm:col-span-2 lg:col-span-2">
           <div className="flex items-center gap-3">
             <Image
               src="/escudo.png"
@@ -83,7 +83,7 @@ export function Footer() {
           <h3 className="font-display text-sm font-bold uppercase tracking-wide text-white">
             {t("footer.siguenos")}
           </h3>
-          <div className="mt-4 flex flex-wrap gap-3">
+          <div className="mt-4 flex flex-wrap gap-2">
             {redes.map((r) => (
               <a
                 key={r.name}
@@ -91,7 +91,7 @@ export function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={r.name}
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-rojo"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-rojo"
               >
                 {r.icon}
               </a>
@@ -99,7 +99,7 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="lg:col-span-2">
+        <div className="sm:col-span-2 lg:col-span-4">
           <NewsletterForm />
         </div>
       </div>

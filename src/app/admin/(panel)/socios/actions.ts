@@ -5,7 +5,22 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { crearSuscripcionSEPA } from "@/lib/stripe/sepa";
+import { stripe } from "@/lib/stripe";
+import { REEMBOLSO_DIAS, diasDesde } from "@/config/reembolso";
 import type { EstadoSocio } from "@/lib/supabase/types";
+
+// Server actions independientes del renderizado de la página: cada una debe
+// re-verificar que quien llama es un empleado autenticado.
+async function exigirEmpleado() {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/admin/login");
+
+  const { data: perfil } = await supabase.from("perfiles").select("rol").eq("id", user.id).single();
+  if (!perfil) redirect("/admin/login");
+}
 
 function leerCampos(formData: FormData) {
   const txt = (k: string) => {
@@ -108,7 +123,7 @@ export async function actualizarSocio(id: string, formData: FormData) {
 
   revalidatePath("/admin/socios");
   revalidatePath(`/admin/socios/${id}`);
-  redirect("/admin/socios");
+  redirect(`/admin/socios/${id}`);
 }
 
 export async function eliminarSocio(id: string) {
@@ -118,6 +133,114 @@ export async function eliminarSocio(id: string) {
 
   revalidatePath("/admin/socios");
   redirect("/admin/socios");
+}
+
+// ─── Cancelación y reembolso de la cuota ────────────────────────────────────
+
+// Cancela la renovación automática pero el socio conserva su condición hasta
+// el final del periodo ya pagado (Stripe deja de cobrar; el webhook
+// "customer.subscription.deleted" pondrá el socio en "baja" cuando ese
+// periodo termine de verdad, sin necesidad de tocar nada más aquí).
+export async function cancelarRenovacion(id: string) {
+  await exigirEmpleado();
+  const admin = createAdminClient();
+
+  const { data: socio, error } = await admin
+    .from("socios")
+    .select("stripe_subscription_id")
+    .eq("id", id)
+    .single();
+  if (error || !socio) throw new Error("Socio no encontrado.");
+  if (!socio.stripe_subscription_id) {
+    throw new Error("Este socio no tiene una suscripción de Stripe que cancelar.");
+  }
+
+  await stripe.subscriptions.update(socio.stripe_subscription_id, { cancel_at_period_end: true });
+
+  revalidatePath(`/admin/socios/${id}`);
+}
+
+// Deshace una cancelación programada (por si se pulsó por error o el socio
+// cambia de opinión antes de que termine el periodo).
+export async function reactivarRenovacion(id: string) {
+  await exigirEmpleado();
+  const admin = createAdminClient();
+
+  const { data: socio, error } = await admin
+    .from("socios")
+    .select("stripe_subscription_id")
+    .eq("id", id)
+    .single();
+  if (error || !socio) throw new Error("Socio no encontrado.");
+  if (!socio.stripe_subscription_id) throw new Error("Este socio no tiene suscripción de Stripe.");
+
+  await stripe.subscriptions.update(socio.stripe_subscription_id, { cancel_at_period_end: false });
+
+  revalidatePath(`/admin/socios/${id}`);
+}
+
+// Reembolsa el último pago (solo si está dentro del plazo, ver
+// src/config/reembolso.ts) y da de baja al socio de inmediato, incluyendo el
+// segundo carné del abono familiar si lo tiene.
+export async function reembolsarYCancelar(id: string) {
+  await exigirEmpleado();
+  const admin = createAdminClient();
+
+  const { data: socio, error: errSocio } = await admin
+    .from("socios")
+    .select("stripe_subscription_id")
+    .eq("id", id)
+    .single();
+  if (errSocio || !socio) throw new Error("Socio no encontrado.");
+
+  const { data: ultimoPago, error: errPago } = await admin
+    .from("pagos")
+    .select("id, stripe_invoice_id, fecha")
+    .eq("socio_id", id)
+    .eq("estado", "pagado")
+    .order("fecha", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (errPago) throw new Error(errPago.message);
+  if (!ultimoPago?.stripe_invoice_id) {
+    throw new Error("Este socio no tiene ningún pago de Stripe que reembolsar.");
+  }
+  if (diasDesde(ultimoPago.fecha) > REEMBOLSO_DIAS) {
+    throw new Error(
+      `Ya han pasado más de ${REEMBOLSO_DIAS} días desde el pago: fuera del plazo de reembolso automático.`,
+    );
+  }
+
+  // Stripe ya no expone "payment_intent" directamente en la factura: hay que
+  // consultar sus InvoicePayments (modelo de facturación actual de la API).
+  const pagosFactura = await stripe.invoicePayments.list({
+    invoice: ultimoPago.stripe_invoice_id,
+    limit: 1,
+  });
+  const pagoStripe = pagosFactura.data[0]?.payment.payment_intent;
+  const paymentIntentId = typeof pagoStripe === "string" ? pagoStripe : pagoStripe?.id;
+  if (!paymentIntentId) throw new Error("No se encontró el cobro en Stripe para reembolsar.");
+
+  await stripe.refunds.create({ payment_intent: paymentIntentId });
+  if (socio.stripe_subscription_id) {
+    await stripe.subscriptions.cancel(socio.stripe_subscription_id);
+  }
+
+  const { error: errUpdatePago } = await admin
+    .from("pagos")
+    .update({ estado: "reembolsado" })
+    .eq("id", ultimoPago.id);
+  if (errUpdatePago) throw new Error(errUpdatePago.message);
+
+  // Incluye el 2º carné del abono familiar (titular_id) — igual que en el webhook.
+  const { error: errBaja } = await admin
+    .from("socios")
+    .update({ estado: "baja" })
+    .or(`id.eq.${id},titular_id.eq.${id}`);
+  if (errBaja) throw new Error(errBaja.message);
+
+  revalidatePath(`/admin/socios/${id}`);
+  revalidatePath("/admin/socios");
 }
 
 // ─── Importación masiva desde CSV ───────────────────────────────────────────

@@ -5,7 +5,14 @@ export function BotonEliminar({ accion }: { accion: () => Promise<void> }) {
     <form
       action={accion}
       onSubmit={(e) => {
-        if (!confirm("¿Eliminar este socio? Esta acción no se puede deshacer.")) {
+        if (
+          !confirm(
+            "¿Eliminar este socio? Esta acción no se puede deshacer y su número de socio " +
+              "quedará hueco para siempre (nunca se reasigna a otro socio).\n\n" +
+              "Si el socio simplemente ha causado baja, usa \"Cancelar renovación\" en su ficha " +
+              "en vez de eliminarlo: así conserva su historial y su número.",
+          )
+        ) {
           e.preventDefault();
         }
       }}
