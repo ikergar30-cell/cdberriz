@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { EstadoSocio } from "@/lib/supabase/types";
+import { camposFaltantes } from "@/lib/socios/camposFaltantes";
 
 const BADGE: Record<EstadoSocio, string> = {
   activo: "bg-green-100 text-green-700",
@@ -24,6 +25,11 @@ type SocioFila = {
   apellidos: string;
   email: string | null;
   telefono: string | null;
+  dni: string | null;
+  direccion: string | null;
+  poblacion: string | null;
+  codigo_postal: string | null;
+  fecha_nacimiento: string | null;
   estado: EstadoSocio;
   tipos_abono: { nombre: string } | null;
 };
@@ -31,22 +37,27 @@ type SocioFila = {
 export default async function SociosPage({
   searchParams,
 }: {
-  searchParams: { q?: string; estado?: string };
+  searchParams: { q?: string; estado?: string; incompletos?: string };
 }) {
   const q = (searchParams.q ?? "").trim();
   const estado = searchParams.estado ?? "";
+  const soloIncompletos = searchParams.incompletos === "1";
 
   const supabase = createClient();
   let query = supabase
     .from("socios")
-    .select("id, numero_socio, nombre, apellidos, email, telefono, estado, tipos_abono(nombre)")
+    .select(
+      "id, numero_socio, nombre, apellidos, email, telefono, dni, direccion, poblacion, codigo_postal, fecha_nacimiento, estado, tipos_abono(nombre)",
+    )
     .order("numero_socio");
 
   if (estado) query = query.eq("estado", estado);
   if (q) query = query.or(`nombre.ilike.%${q}%,apellidos.ilike.%${q}%,email.ilike.%${q}%`);
 
   const { data, error } = await query;
-  const socios = (data as unknown as SocioFila[]) ?? [];
+  const todos = (data as unknown as SocioFila[]) ?? [];
+  const incompletosCount = todos.filter((s) => camposFaltantes(s).length > 0).length;
+  const socios = soloIncompletos ? todos.filter((s) => camposFaltantes(s).length > 0) : todos;
 
   // Conserva el filtro de estado en el enlace de exportar.
   const exportHref = `/admin/socios/export${estado ? `?estado=${estado}` : ""}`;
@@ -93,14 +104,17 @@ export default async function SociosPage({
         </button>
       </form>
 
-      <div className="mb-5 flex flex-wrap gap-2">
+      <div className="mb-5 flex flex-wrap items-center gap-2">
         {FILTROS.map((f) => {
           const activo = estado === f.valor;
-          const href = f.valor ? `/admin/socios?estado=${f.valor}` : "/admin/socios";
+          const params = new URLSearchParams();
+          if (f.valor) params.set("estado", f.valor);
+          if (soloIncompletos) params.set("incompletos", "1");
+          const qs = params.toString();
           return (
             <Link
               key={f.label}
-              href={href}
+              href={`/admin/socios${qs ? `?${qs}` : ""}`}
               className={`rounded-full px-3 py-1.5 text-sm font-semibold transition ${
                 activo ? "bg-azul text-white" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
               }`}
@@ -109,6 +123,30 @@ export default async function SociosPage({
             </Link>
           );
         })}
+
+        {incompletosCount > 0 && (
+          <>
+            <span className="mx-1 h-4 w-px bg-neutral-200" />
+            {(() => {
+              const params = new URLSearchParams();
+              if (estado) params.set("estado", estado);
+              if (!soloIncompletos) params.set("incompletos", "1");
+              const qs = params.toString();
+              return (
+                <Link
+                  href={`/admin/socios${qs ? `?${qs}` : ""}`}
+                  className={`rounded-full px-3 py-1.5 text-sm font-semibold transition ${
+                    soloIncompletos
+                      ? "bg-amber-500 text-white"
+                      : "bg-amber-100 text-amber-800 hover:bg-amber-200"
+                  }`}
+                >
+                  ⚠ Datos incompletos ({incompletosCount})
+                </Link>
+              );
+            })()}
+          </>
+        )}
       </div>
 
       {error ? (
@@ -133,6 +171,7 @@ export default async function SociosPage({
                 <th className="px-4 py-3">Cuota</th>
                 <th className="px-4 py-3">Contacto</th>
                 <th className="px-4 py-3">Estado</th>
+                <th className="px-4 py-3">Datos</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
@@ -152,6 +191,20 @@ export default async function SociosPage({
                     <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${BADGE[s.estado]}`}>
                       {s.estado}
                     </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    {(() => {
+                      const faltan = camposFaltantes(s);
+                      if (faltan.length === 0) return <span className="text-neutral-300">✓</span>;
+                      return (
+                        <span
+                          title={`Falta: ${faltan.join(", ")}`}
+                          className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800"
+                        >
+                          ⚠ {faltan.length}
+                        </span>
+                      );
+                    })()}
                   </td>
                 </tr>
               ))}

@@ -6,6 +6,7 @@ import { stripe } from "@/lib/stripe";
 import { REEMBOLSO_DIAS, diasDesde } from "@/config/reembolso";
 import type { EstadoPago, Pago, Socio, TipoAbono } from "@/lib/supabase/types";
 import { CarnetSocio } from "@/components/CarnetSocio";
+import { camposFaltantes } from "@/lib/socios/camposFaltantes";
 import { HistorialPagos } from "./HistorialPagos";
 import { AccionesAbono } from "./AccionesAbono";
 
@@ -128,6 +129,7 @@ export default async function FichaSocioPage({
     }
   }
 
+  const faltan = camposFaltantes(s);
   const ultimoPago = listaPagos.find((p) => p.estado === "pagado") ?? null;
   const diasTranscurridos = ultimoPago ? diasDesde(ultimoPago.fecha) : Infinity;
   const elegibleReembolso = ultimoPago !== null && diasTranscurridos <= REEMBOLSO_DIAS;
@@ -162,6 +164,15 @@ export default async function FichaSocioPage({
           Editar datos
         </Link>
       </div>
+
+      {faltan.length > 0 && (
+        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+          <strong>Faltan datos por rellenar:</strong> {faltan.join(", ")}.{" "}
+          <Link href={`/admin/socios/${id}/editar`} className="font-semibold underline">
+            Completar ahora
+          </Link>
+        </div>
+      )}
 
       <div className="grid gap-8 lg:grid-cols-[1fr_auto]">
         <div className="space-y-6">

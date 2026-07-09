@@ -4,6 +4,10 @@
     {
       "path": "/api/cron/revisar-cuotas",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/reconciliar-stripe",
+      "schedule": "15 3 * * *"
     }
   ]
 }
