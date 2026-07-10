@@ -230,6 +230,8 @@ export default async function CuentaPage({
                         <li key={n._id} className="py-3 first:pt-0 last:pb-0">
                           <Link
                             href={`/noticias/${n.slug}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="group flex items-start justify-between gap-3"
                           >
                             <div className="min-w-0">
