@@ -83,11 +83,16 @@ export default async function CuentaPage({
 
   const admin = createAdminClient();
 
-  const { data: socio } = await admin
+  // .limit(1) en vez de .maybeSingle(): un email duplicado entre dos socios
+  // (dato antiguo mal cargado) haría que .maybeSingle() lance un error y
+  // deje a esa persona sin poder entrar a su portal.
+  const { data: sociosCoincidentes } = await admin
     .from("socios")
-    .select("id, nombre, apellidos, numero_socio, estado, fecha_alta, direccion, carnet_token, foto_url, carnet_fisico_pedido_en, stripe_customer_id, stripe_subscription_id, titular_id, tipos_abono(nombre, precio_cents)")
+    .select("id, nombre, apellidos, numero_socio, estado, fecha_alta, direccion, carnet_token, foto_url, carnet_fisico_pedido_en, carnet_fisico_entregado_en, stripe_customer_id, stripe_subscription_id, titular_id, tipos_abono(nombre, precio_cents)")
     .ilike("email", user.email)
-    .maybeSingle();
+    .order("numero_socio", { ascending: true })
+    .limit(1);
+  const socio = sociosCoincidentes?.[0] ?? null;
 
   // Estado real de la suscripción en Stripe: si ya hay una cancelación
   // programada, y la fecha en la que dejará de renovarse.
@@ -343,6 +348,7 @@ export default async function CuentaPage({
                 {/* Solicitar carné físico */}
                 <SolicitarCarnet
                   pedidoEn={socio.carnet_fisico_pedido_en ?? null}
+                  entregadoEn={socio.carnet_fisico_entregado_en ?? null}
                   tieneDireccion={!!socio.direccion}
                 />
 

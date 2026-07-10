@@ -18,13 +18,17 @@ export async function POST() {
 
   // El socio puede no tener perfil de empleado; leemos con service_role,
   // pero SOLO su propia ficha (filtrada por su email autenticado).
+  // .limit(1) en vez de .maybeSingle(): un email duplicado entre dos socios
+  // (dato antiguo mal cargado) haría que .maybeSingle() lance un error y
+  // deje a esa persona sin poder gestionar su cuota.
   const admin = createAdminClient();
-  const { data: socio } = await admin
+  const { data: sociosCoincidentes } = await admin
     .from("socios")
     .select("stripe_customer_id")
     .ilike("email", user.email)
     .not("stripe_customer_id", "is", null)
-    .maybeSingle();
+    .limit(1);
+  const socio = sociosCoincidentes?.[0];
 
   if (!socio?.stripe_customer_id) {
     return NextResponse.json(

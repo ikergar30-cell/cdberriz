@@ -49,6 +49,7 @@ export interface Socio {
   notas: string | null;
   iban: string | null;
   carnet_fisico_pedido_en: string | null;
+  carnet_fisico_entregado_en: string | null;
   motivo_baja: string | null;
   comentario_baja: string | null;
   fecha_solicitud_baja: string | null;

@@ -162,8 +162,14 @@ export default async function FichaSocioPage({
             {ESTADO_LABEL[s.estado]}
           </span>
           {s.carnet_fisico_pedido_en && (
-            <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
-              Carné físico solicitado
+            <span
+              className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                s.carnet_fisico_entregado_en
+                  ? "bg-green-100 text-green-700"
+                  : "bg-amber-100 text-amber-800"
+              }`}
+            >
+              {s.carnet_fisico_entregado_en ? "Carné físico listo/entregado" : "Carné físico solicitado"}
             </span>
           )}
         </div>

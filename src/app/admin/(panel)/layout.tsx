@@ -61,6 +61,7 @@ export default async function PanelLayout({
       items: [
         { href: "/admin/socios", label: "Socios" },
         { href: "/admin/cuotas", label: "Cuotas" },
+        { href: "/admin/socios/carnets", label: "Carnés físicos" },
         { href: "/admin/verificar", label: "Verificar carné" },
       ],
     },

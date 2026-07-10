@@ -24,6 +24,17 @@ async function contarAltasMes() {
   return count ?? 0;
 }
 
+// Solicitudes de carné físico todavía sin marcar como listas para recoger.
+async function contarCarnetsPendientes() {
+  const supabase = createClient();
+  const { count } = await supabase
+    .from("socios")
+    .select("*", { count: "exact", head: true })
+    .not("carnet_fisico_pedido_en", "is", null)
+    .is("carnet_fisico_entregado_en", null);
+  return count ?? 0;
+}
+
 // Contactos suscritos al newsletter via Resend.
 async function contarSuscriptores(): Promise<string> {
   const apiKey = process.env.RESEND_API_KEY;
@@ -45,13 +56,14 @@ async function contarSuscriptores(): Promise<string> {
 }
 
 export default async function ResumenPage() {
-  const [activos, pendientes, morosos, bajas, altasMes, suscriptores] = await Promise.all([
+  const [activos, pendientes, morosos, bajas, altasMes, suscriptores, carnetsPendientes] = await Promise.all([
     contarPorEstado("activo"),
     contarPorEstado("pendiente"),
     contarPorEstado("moroso"),
     contarPorEstado("baja"),
     contarAltasMes(),
     contarSuscriptores(),
+    contarCarnetsPendientes(),
   ]);
 
   const tarjetas = [
@@ -76,6 +88,20 @@ export default async function ResumenPage() {
           Gestionar socios
         </Link>
       </div>
+
+      {carnetsPendientes > 0 && (
+        <Link
+          href="/admin/socios/carnets"
+          className="mb-6 flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 transition hover:bg-amber-100"
+        >
+          <span>
+            ⚠ <strong>{carnetsPendientes}</strong> carné{carnetsPendientes === 1 ? "" : "s"} físico
+            {carnetsPendientes === 1 ? "" : "s"} pendiente{carnetsPendientes === 1 ? "" : "s"} de
+            preparar y marcar como listo para recoger.
+          </span>
+          <span className="font-semibold underline">Ver →</span>
+        </Link>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {tarjetas.map((t) => (

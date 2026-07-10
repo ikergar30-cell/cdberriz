@@ -25,12 +25,16 @@ export async function POST(request: Request) {
 
   const admin = createAdminClient();
 
-  // Buscar la ficha del socio por email.
-  const { data: socio, error: errorSocio } = await admin
+  // Buscar la ficha del socio por email. .limit(1) en vez de .maybeSingle():
+  // un email duplicado entre dos socios (dato antiguo mal cargado) haría que
+  // .maybeSingle() lance un error y la solicitud falle sin motivo aparente.
+  const { data: sociosCoincidentes, error: errorSocio } = await admin
     .from("socios")
     .select("id, nombre, apellidos, numero_socio, direccion, carnet_fisico_pedido_en")
     .ilike("email", user.email)
-    .maybeSingle();
+    .order("numero_socio", { ascending: true })
+    .limit(1);
+  const socio = sociosCoincidentes?.[0];
 
   if (errorSocio || !socio) {
     return NextResponse.json(

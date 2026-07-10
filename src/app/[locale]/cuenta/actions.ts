@@ -15,12 +15,17 @@ async function socioDeLaSesion() {
   if (!user?.email) throw new Error("No autorizado.");
 
   const admin = createAdminClient();
-  const { data: socio, error } = await admin
+  // .limit(1) en vez de .maybeSingle(): un email duplicado entre dos socios
+  // (dato antiguo mal cargado) haría que .maybeSingle() lance un error y
+  // rompa el portal entero para esa persona en vez de dejarla entrar.
+  const { data: socios, error } = await admin
     .from("socios")
     .select("id, stripe_subscription_id, titular_id")
     .ilike("email", user.email)
-    .maybeSingle();
+    .order("numero_socio", { ascending: true })
+    .limit(1);
   if (error) throw new Error(error.message);
+  const socio = socios?.[0];
   if (!socio) throw new Error("No encontramos tu ficha de socio.");
   return { admin, socio };
 }

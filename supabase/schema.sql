@@ -101,6 +101,11 @@ alter table socios add column if not exists motivo_baja text;
 alter table socios add column if not exists comentario_baja text;
 alter table socios add column if not exists fecha_solicitud_baja timestamptz;
 
+-- Carné físico: además de la fecha de solicitud (carnet_fisico_pedido_en, ya
+-- existente), la fecha en que un empleado lo marca listo para recoger en
+-- Berrizburu. Dispara un email al socio y es lo que ve en su portal.
+alter table socios add column if not exists carnet_fisico_entregado_en timestamptz;
+
 comment on table socios is 'Padrón de socios. Datos personales — confidenciales (RGPD).';
 
 -- ----------------------------------------------------------------------------

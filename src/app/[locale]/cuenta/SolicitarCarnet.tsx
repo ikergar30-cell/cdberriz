@@ -6,10 +6,11 @@ import { useRouter } from "next/navigation";
 
 interface Props {
   pedidoEn: string | null;
+  entregadoEn: string | null;
   tieneDireccion: boolean;
 }
 
-export function SolicitarCarnet({ pedidoEn, tieneDireccion }: Props) {
+export function SolicitarCarnet({ pedidoEn, entregadoEn, tieneDireccion }: Props) {
   const locale = useLocale();
   const eu = locale === "eu";
   const router = useRouter();
@@ -46,19 +47,40 @@ export function SolicitarCarnet({ pedidoEn, tieneDireccion }: Props) {
     }
   }
 
-  // Ya solicitado — mostrar confirmación.
+  // Ya solicitado — mostrar el estado (solicitado / entregado).
   if (pedidoEn) {
     const fecha = new Date(pedidoEn).toLocaleDateString(eu ? "eu-ES" : "es-ES", {
       day: "numeric",
       month: "long",
       year: "numeric",
     });
+
+    if (entregadoEn) {
+      const fechaEntrega = new Date(entregadoEn).toLocaleDateString(eu ? "eu-ES" : "es-ES", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+      return (
+        <div className="rounded-2xl border border-green-200 bg-green-50 p-6">
+          <p className="font-semibold text-green-800">
+            {eu ? "Karnetaren egoera: Entregatuta" : "Estado del carné: Entregado"}
+          </p>
+          <p className="mt-1 text-sm text-green-700">
+            {eu
+              ? `Berrizburun jasotzeko prest dago ${fechaEntrega}etik.`
+              : `Listo para recoger en Berrizburu desde el ${fechaEntrega}.`}
+          </p>
+        </div>
+      );
+    }
+
     return (
-      <div className="rounded-2xl border border-green-200 bg-green-50 p-6">
-        <p className="font-semibold text-green-800">
-          {eu ? "Karnetaren eskaera jasota" : "Solicitud de carné recibida"}
+      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
+        <p className="font-semibold text-amber-800">
+          {eu ? "Karnetaren egoera: Eskatuta" : "Estado del carné: Solicitado"}
         </p>
-        <p className="mt-1 text-sm text-green-700">
+        <p className="mt-1 text-sm text-amber-700">
           {eu
             ? `${fecha}an eskatu zenuen.`
             : `Solicitado el ${fecha}.`}{" "}
