@@ -14,6 +14,7 @@ export function SolicitarCarnet({ pedidoEn, tieneDireccion }: Props) {
   const eu = locale === "eu";
   const router = useRouter();
 
+  const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [direccion, setDireccion] = useState("");
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,6 +64,48 @@ export function SolicitarCarnet({ pedidoEn, tieneDireccion }: Props) {
             : `Solicitado el ${fecha}.`}{" "}
           {infoEntrega}
         </p>
+      </div>
+    );
+  }
+
+  // Antes de dejar solicitar el físico, animamos a usar el digital.
+  if (!mostrarFormulario) {
+    return (
+      <div className="rounded-2xl border border-azul-200 bg-azul-50/60 p-6">
+        <h2 className="font-display text-lg font-bold text-azul-800">
+          {eu ? "Probatu duzu karnet digitala?" : "¿Ya has probado el carné digital?"}
+        </h2>
+        <ul className="mt-3 space-y-2 text-sm text-neutral-700">
+          <li className="flex items-start gap-2">
+            <span className="text-azul">✓</span>
+            {eu
+              ? "Beti zurekin, mugikorrean — ez duzu ahaztuko."
+              : "Siempre contigo en el móvil — imposible olvidarlo en casa."}
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="text-azul">✓</span>
+            {eu
+              ? "Segurua: QR pertsonala, ezin da faltsutu."
+              : "Seguro: código QR personal, no se puede falsificar."}
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="text-azul">✓</span>
+            {eu
+              ? "Berehalakoa: ez duzu itxaron behar postaz iritsi arte."
+              : "Al instante: no hay que esperar a que llegue por correo."}
+          </li>
+        </ul>
+        <p className="mt-3 text-sm text-neutral-500">
+          {eu
+            ? "Goiko \"Karnet digitala\" atalean duzu jada eskuragarri."
+            : "Ya lo tienes disponible arriba, en \"Carné digital\"."}
+        </p>
+        <button
+          onClick={() => setMostrarFormulario(true)}
+          className="mt-4 text-sm font-semibold text-neutral-500 underline hover:text-neutral-800"
+        >
+          {eu ? "Karnet fisikoa nahi dut hala ere" : "Aun así, quiero el carné físico"}
+        </button>
       </div>
     );
   }
