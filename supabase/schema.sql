@@ -105,6 +105,9 @@ alter table socios add column if not exists fecha_solicitud_baja timestamptz;
 -- existente), la fecha en que un empleado lo marca listo para recoger en
 -- Berrizburu. Dispara un email al socio y es lo que ve en su portal.
 alter table socios add column if not exists carnet_fisico_entregado_en timestamptz;
+-- Mensaje/fecha de recogida que el empleado escribe al marcar el carné listo;
+-- se envía al socio por email y se muestra en su portal.
+alter table socios add column if not exists carnet_fisico_recogida text;
 
 comment on table socios is 'Padrón de socios. Datos personales — confidenciales (RGPD).';
 

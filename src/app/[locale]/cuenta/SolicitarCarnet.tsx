@@ -7,10 +7,11 @@ import { useRouter } from "next/navigation";
 interface Props {
   pedidoEn: string | null;
   entregadoEn: string | null;
+  recogida: string | null;
   tieneDireccion: boolean;
 }
 
-export function SolicitarCarnet({ pedidoEn, entregadoEn, tieneDireccion }: Props) {
+export function SolicitarCarnet({ pedidoEn, entregadoEn, recogida, tieneDireccion }: Props) {
   const locale = useLocale();
   const eu = locale === "eu";
   const router = useRouter();
@@ -20,10 +21,9 @@ export function SolicitarCarnet({ pedidoEn, entregadoEn, tieneDireccion }: Props
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const year = new Date().getFullYear();
-  const infoEntrega = eu
-    ? `Entregazko epea: ${year}ko iraila. Lekua: Berrizburu Futbol Zelaia.`
-    : `Entrega durante el mes de septiembre de ${year} en Berrizburu Futbol Zelaia.`;
+  const avisoEmail = eu
+    ? "Prest dagoenean, emailez abisatuko dizugu jasotzeko."
+    : "Te avisaremos por email en cuanto esté listo para recoger.";
 
   async function solicitar() {
     if (!tieneDireccion && !direccion.trim()) {
@@ -64,13 +64,17 @@ export function SolicitarCarnet({ pedidoEn, entregadoEn, tieneDireccion }: Props
       return (
         <div className="rounded-2xl border border-green-200 bg-green-50 p-6">
           <p className="font-semibold text-green-800">
-            {eu ? "Karnetaren egoera: Entregatuta" : "Estado del carné: Entregado"}
+            {eu ? "Karnetaren egoera: Prest jasotzeko" : "Estado del carné: Listo para recoger"}
           </p>
-          <p className="mt-1 text-sm text-green-700">
-            {eu
-              ? `Berrizburun jasotzeko prest dago ${fechaEntrega}etik.`
-              : `Listo para recoger en Berrizburu desde el ${fechaEntrega}.`}
-          </p>
+          {recogida ? (
+            <p className="mt-1 whitespace-pre-line text-sm text-green-700">{recogida}</p>
+          ) : (
+            <p className="mt-1 text-sm text-green-700">
+              {eu
+                ? `Berrizburun jasotzeko prest dago ${fechaEntrega}etik.`
+                : `Listo para recoger en Berrizburu desde el ${fechaEntrega}.`}
+            </p>
+          )}
         </div>
       );
     }
@@ -84,7 +88,7 @@ export function SolicitarCarnet({ pedidoEn, entregadoEn, tieneDireccion }: Props
           {eu
             ? `${fecha}an eskatu zenuen.`
             : `Solicitado el ${fecha}.`}{" "}
-          {infoEntrega}
+          {avisoEmail}
         </p>
       </div>
     );
@@ -138,7 +142,7 @@ export function SolicitarCarnet({ pedidoEn, entregadoEn, tieneDireccion }: Props
       <h2 className="font-display text-lg font-bold text-neutral-900">
         {eu ? "Karnet fisikoa eskatu" : "Solicitar carné físico"}
       </h2>
-      <p className="mt-1 text-sm text-neutral-600">{infoEntrega}</p>
+      <p className="mt-1 text-sm text-neutral-600">{avisoEmail}</p>
 
       {!tieneDireccion && (
         <div className="mt-4">

@@ -88,7 +88,7 @@ export default async function CuentaPage({
   // deje a esa persona sin poder entrar a su portal.
   const { data: sociosCoincidentes } = await admin
     .from("socios")
-    .select("id, nombre, apellidos, numero_socio, estado, fecha_alta, direccion, carnet_token, foto_url, carnet_fisico_pedido_en, carnet_fisico_entregado_en, stripe_customer_id, stripe_subscription_id, titular_id, tipos_abono(nombre, precio_cents)")
+    .select("id, nombre, apellidos, numero_socio, estado, fecha_alta, direccion, carnet_token, foto_url, carnet_fisico_pedido_en, carnet_fisico_entregado_en, carnet_fisico_recogida, stripe_customer_id, stripe_subscription_id, titular_id, tipos_abono(nombre, precio_cents)")
     .ilike("email", user.email)
     .order("numero_socio", { ascending: true })
     .limit(1);
@@ -349,6 +349,7 @@ export default async function CuentaPage({
                 <SolicitarCarnet
                   pedidoEn={socio.carnet_fisico_pedido_en ?? null}
                   entregadoEn={socio.carnet_fisico_entregado_en ?? null}
+                  recogida={socio.carnet_fisico_recogida ?? null}
                   tieneDireccion={!!socio.direccion}
                 />
 

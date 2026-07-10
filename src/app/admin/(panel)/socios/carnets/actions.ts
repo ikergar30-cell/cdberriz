@@ -20,9 +20,14 @@ async function exigirEmpleado() {
 // Marca el carné físico como listo para recoger en Berrizburu y avisa al
 // socio por email. No es crítico si el email falla: la marca ya ha quedado
 // guardada y se puede reintentar el aviso más adelante.
-export async function marcarCarnetListo(id: string) {
+export async function marcarCarnetListo(id: string, mensaje: string) {
   await exigirEmpleado();
   const admin = createAdminClient();
+
+  const recogida = mensaje.trim().slice(0, 500);
+  if (!recogida) {
+    throw new Error("Escribe la fecha de recogida o un mensaje para el socio.");
+  }
 
   const { data: socio, error: errSocio } = await admin
     .from("socios")
@@ -37,7 +42,7 @@ export async function marcarCarnetListo(id: string) {
   const ahora = new Date().toISOString();
   const { error } = await admin
     .from("socios")
-    .update({ carnet_fisico_entregado_en: ahora })
+    .update({ carnet_fisico_entregado_en: ahora, carnet_fisico_recogida: recogida })
     .eq("id", id);
   if (error) throw new Error(error.message);
 
@@ -65,8 +70,8 @@ export async function marcarCarnetListo(id: string) {
         subject: "Tu carné físico ya está listo para recoger",
         text:
           `Hola ${socio.nombre},\n\n` +
-          `Tu carné físico de socio/a (nº ${socio.numero_socio}) ya está listo para que ` +
-          `pases a recogerlo por Berrizburu Futbol Zelaia.\n\n` +
+          `Tu carné físico de socio/a (nº ${socio.numero_socio}) ya está listo.\n\n` +
+          `${recogida}\n\n` +
           `Un saludo,\nC.D. Berriz`,
       });
     } catch {
