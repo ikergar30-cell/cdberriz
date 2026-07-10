@@ -30,7 +30,7 @@ export async function POST(request: Request) {
   // .maybeSingle() lance un error y la solicitud falle sin motivo aparente.
   const { data: sociosCoincidentes, error: errorSocio } = await admin
     .from("socios")
-    .select("id, nombre, apellidos, numero_socio, direccion, carnet_fisico_pedido_en")
+    .select("id, nombre, apellidos, numero_socio, direccion, carnet_fisico_pedido_en, carnet_fisico_entregado_en")
     .ilike("email", user.email)
     .order("numero_socio", { ascending: true })
     .limit(1);
@@ -43,9 +43,12 @@ export async function POST(request: Request) {
     );
   }
 
-  if (socio.carnet_fisico_pedido_en) {
+  // Solo se bloquea si hay una solicitud EN CURSO (pedida y aún no entregada).
+  // Si la anterior ya se entregó, puede volver a pedirlo (tarjeta perdida,
+  // nueva temporada…) y se registra como una entrada nueva del histórico.
+  if (socio.carnet_fisico_pedido_en && !socio.carnet_fisico_entregado_en) {
     return NextResponse.json(
-      { error: "Ya has solicitado el carné físico." },
+      { error: "Ya tienes una solicitud de carné físico en curso." },
       { status: 409 },
     );
   }
@@ -59,9 +62,12 @@ export async function POST(request: Request) {
     );
   }
 
-  // Actualizar: marcar solicitud y, si procede, guardar la dirección.
+  // Estado actual (última solicitud): marca pedido, limpia entregado por si
+  // es una re-solicitud, y guarda la dirección si faltaba.
+  const ahora = new Date().toISOString();
   const update: Record<string, unknown> = {
-    carnet_fisico_pedido_en: new Date().toISOString(),
+    carnet_fisico_pedido_en: ahora,
+    carnet_fisico_entregado_en: null,
   };
   if (!socio.direccion && direccionNueva) {
     update.direccion = direccionNueva;
@@ -75,6 +81,12 @@ export async function POST(request: Request) {
   if (errorUpdate) {
     return NextResponse.json({ error: "Error al guardar la solicitud." }, { status: 500 });
   }
+
+  // Registro histórico: una fila por cada solicitud.
+  const d = new Date(ahora);
+  const y = d.getFullYear();
+  const temporada = d.getMonth() >= 6 ? `${y}-${y + 1}` : `${y - 1}-${y}`;
+  await admin.from("carnets_fisicos").insert({ socio_id: socio.id, temporada, solicitado_en: ahora });
 
   // Notificar al club por email (no bloqueante: si falla Resend la solicitud queda guardada).
   const apiKey = process.env.RESEND_API_KEY;

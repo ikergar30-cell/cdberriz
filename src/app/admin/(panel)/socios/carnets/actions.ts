@@ -34,11 +34,25 @@ export async function marcarCarnetListo(id: string) {
     throw new Error("Este carné ya estaba marcado como listo.");
   }
 
+  const ahora = new Date().toISOString();
   const { error } = await admin
     .from("socios")
-    .update({ carnet_fisico_entregado_en: new Date().toISOString() })
+    .update({ carnet_fisico_entregado_en: ahora })
     .eq("id", id);
   if (error) throw new Error(error.message);
+
+  // Cierra la solicitud pendiente en el histórico (la más reciente sin entregar).
+  const { data: pendiente } = await admin
+    .from("carnets_fisicos")
+    .select("id")
+    .eq("socio_id", id)
+    .is("entregado_en", null)
+    .order("solicitado_en", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (pendiente) {
+    await admin.from("carnets_fisicos").update({ entregado_en: ahora }).eq("id", pendiente.id);
+  }
 
   const apiKey = process.env.RESEND_API_KEY;
   if (apiKey && socio.email) {

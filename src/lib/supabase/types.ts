@@ -57,6 +57,14 @@ export interface Socio {
   updated_at: string;
 }
 
+export interface CarnetFisico {
+  id: string;
+  socio_id: string;
+  temporada: string | null;
+  solicitado_en: string;
+  entregado_en: string | null;
+}
+
 export type TipoPersonaPago = "arbitro" | "entrenador";
 
 export interface PersonaPago {

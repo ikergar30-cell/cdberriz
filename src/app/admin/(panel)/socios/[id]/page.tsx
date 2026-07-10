@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe";
 import { REEMBOLSO_DIAS, diasDesde } from "@/config/reembolso";
-import type { EstadoPago, Pago, Socio, TipoAbono } from "@/lib/supabase/types";
+import type { CarnetFisico, EstadoPago, Pago, Socio, TipoAbono } from "@/lib/supabase/types";
 import { CarnetSocio } from "@/components/CarnetSocio";
 import { camposFaltantes } from "@/lib/socios/camposFaltantes";
 import { HistorialPagos } from "./HistorialPagos";
@@ -62,10 +62,15 @@ export default async function FichaSocioPage({
   params: { id: string };
 }) {
   const supabase = createClient();
-  const [{ data: socio }, { data: tipos }, { data: pagos }] = await Promise.all([
+  const [{ data: socio }, { data: tipos }, { data: pagos }, { data: carnetsHist }] = await Promise.all([
     supabase.from("socios").select("*").eq("id", id).single(),
     supabase.from("tipos_abono").select("*").eq("activo", true).order("orden"),
     supabase.from("pagos").select("*").eq("socio_id", id).order("fecha", { ascending: false }),
+    supabase
+      .from("carnets_fisicos")
+      .select("id, temporada, solicitado_en, entregado_en")
+      .eq("socio_id", id)
+      .order("solicitado_en", { ascending: false }),
   ]);
 
   if (!socio) notFound();
@@ -73,6 +78,7 @@ export default async function FichaSocioPage({
   const s = socio as Socio;
   const cuota = (tipos as TipoAbono[] | null)?.find((t) => t.id === s.tipo_abono_id) ?? null;
   const listaPagos = (pagos as Pago[]) ?? [];
+  const historialCarnets = (carnetsHist as CarnetFisico[]) ?? [];
 
   // Si es el 2º carné de un abono familiar, mostramos también quién es el titular.
   let titular: Pick<Socio, "id" | "nombre" | "apellidos"> | null = null;
@@ -276,6 +282,49 @@ export default async function FichaSocioPage({
           </div>
 
           <HistorialPagos facturas={facturas} tieneStripe={Boolean(s.stripe_customer_id)} />
+
+          {/* Histórico de carnés físicos */}
+          {historialCarnets.length > 0 && (
+            <div>
+              <h2 className="font-display text-sm font-bold uppercase tracking-wide text-neutral-500">
+                Carnés físicos
+              </h2>
+              <div className="mt-3 overflow-x-auto rounded-xl border border-neutral-200 bg-white">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-neutral-50 text-xs font-semibold uppercase text-neutral-500">
+                    <tr>
+                      <th className="px-4 py-3">Temporada</th>
+                      <th className="px-4 py-3">Solicitado</th>
+                      <th className="px-4 py-3">Entregado</th>
+                      <th className="px-4 py-3">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-100">
+                    {historialCarnets.map((c) => (
+                      <tr key={c.id}>
+                        <td className="px-4 py-3 text-neutral-700">{c.temporada ?? "—"}</td>
+                        <td className="px-4 py-3 text-neutral-600">{formatearFecha(c.solicitado_en)}</td>
+                        <td className="px-4 py-3 text-neutral-600">
+                          {c.entregado_en ? formatearFecha(c.entregado_en) : "—"}
+                        </td>
+                        <td className="px-4 py-3">
+                          {c.entregado_en ? (
+                            <span className="rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-700">
+                              Entregado
+                            </span>
+                          ) : (
+                            <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">
+                              Solicitado
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Carné digital del socio (para ver/imprimir) */}

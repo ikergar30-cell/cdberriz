@@ -255,3 +255,43 @@ create policy "personas_pago_empleados" on personas_pago
   for all using (es_empleado()) with check (es_empleado());
 create policy "resguardos_empleados" on resguardos
   for all using (es_empleado()) with check (es_empleado());
+
+-- ----------------------------------------------------------------------------
+-- CARNÉS FÍSICOS — histórico de solicitudes y entregas por socio
+--   Las columnas socios.carnet_fisico_pedido_en / _entregado_en guardan el
+--   ESTADO ACTUAL (última solicitud); esta tabla guarda el HISTÓRICO completo,
+--   una fila por cada vez que un socio pide el carné físico (temporada nueva,
+--   tarjeta perdida, etc.). Se muestra en la ficha del socio en el panel.
+-- ----------------------------------------------------------------------------
+create table if not exists carnets_fisicos (
+  id            uuid primary key default gen_random_uuid(),
+  socio_id      uuid not null references socios (id) on delete cascade,
+  temporada     text,
+  solicitado_en timestamptz not null default now(),
+  entregado_en  timestamptz
+);
+create index if not exists carnets_fisicos_socio_idx
+  on carnets_fisicos (socio_id, solicitado_en desc);
+
+alter table carnets_fisicos enable row level security;
+create policy "carnets_fisicos_empleados" on carnets_fisicos
+  for all using (es_empleado()) with check (es_empleado());
+
+-- Migración (una vez): pasa el estado actual de los socios que ya tienen un
+-- carné pedido al histórico. Idempotente en la práctica porque ahora mismo no
+-- hay solicitudes en curso; si las hubiera, revisa que no se dupliquen.
+insert into carnets_fisicos (socio_id, temporada, solicitado_en, entregado_en)
+select
+  id,
+  case
+    when extract(month from carnet_fisico_pedido_en) >= 7
+      then extract(year from carnet_fisico_pedido_en)::int || '-' || (extract(year from carnet_fisico_pedido_en)::int + 1)
+    else (extract(year from carnet_fisico_pedido_en)::int - 1) || '-' || extract(year from carnet_fisico_pedido_en)::int
+  end,
+  carnet_fisico_pedido_en,
+  carnet_fisico_entregado_en
+from socios
+where carnet_fisico_pedido_en is not null
+  and not exists (
+    select 1 from carnets_fisicos c where c.socio_id = socios.id
+  );
