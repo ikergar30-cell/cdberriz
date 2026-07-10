@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { Resend } from "resend";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { club } from "@/config/club";
 import type { ActionResult } from "@/lib/actionResult";
 
 async function exigirEmpleado() {
@@ -64,7 +65,7 @@ export async function marcarCarnetListo(id: string, mensaje: string): Promise<Ac
   if (apiKey && socio.email) {
     try {
       const resend = new Resend(apiKey);
-      const from = process.env.CONTACT_FROM || "C.D. Berriz <onboarding@resend.dev>";
+      const from = process.env.CONTACT_FROM || club.remitente;
       await resend.emails.send({
         from,
         to: socio.email,

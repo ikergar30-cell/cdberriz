@@ -42,7 +42,7 @@ export async function POST(request: Request) {
 
   try {
     const resend = new Resend(apiKey);
-    const from = process.env.CONTACT_FROM || "C.D. Berriz <onboarding@resend.dev>";
+    const from = process.env.CONTACT_FROM || club.remitente;
     await resend.emails.send({
       from,
       to,

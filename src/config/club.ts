@@ -12,6 +12,10 @@ export const club = {
   telefono: "692 076 167",
   // Email público del club (el formulario de contacto va aparte, a coordinación)
   email: "infocdberriz@gmail.com",
+  // Remitente de TODOS los emails automáticos de la web (contacto, aviso de
+  // carné, etc.). Requiere que el dominio cdberriz.com esté verificado en
+  // Resend. Se puede sobreescribir con la variable de entorno CONTACT_FROM.
+  remitente: "C.D. Berriz <no-responder@cdberriz.com>",
   // Tienda oficial (Fútbol Emotion) — se abre en pestaña nueva
   tiendaUrl:
     "https://www.futbolemotion.com/es/categoria/colectivos/equipaciones-cd-berriz",
