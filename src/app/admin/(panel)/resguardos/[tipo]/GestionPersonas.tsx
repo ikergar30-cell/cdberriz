@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { PersonaPago, TipoPersonaPago } from "@/lib/supabase/types";
 import { crearPersona, actualizarPersona, eliminarPersona } from "./personas-actions";
+import { ERROR_GENERICO } from "@/lib/actionResult";
 
 // Gestión del padrón de árbitros/entrenadores: alta, edición inline y borrado.
 // Estas personas alimentan el autocompletado del formulario de resguardos.
@@ -46,13 +47,17 @@ export function GestionPersonas({
         fd.set("equipo", equipo);
         fd.set("importe", importe);
       }
-      await crearPersona(tipo, fd);
+      const resultado = await crearPersona(tipo, fd);
+      if (resultado?.error) {
+        setError(resultado.error);
+        return;
+      }
       setNombre("");
       setDni("");
       setEquipo("");
       setImporte("");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo guardar");
+    } catch {
+      setError(ERROR_GENERICO);
     } finally {
       setGuardando(false);
     }
@@ -69,10 +74,14 @@ export function GestionPersonas({
         fd.set("equipo", editEquipo);
         fd.set("importe", editImporte);
       }
-      await actualizarPersona(id, tipo, fd);
+      const resultado = await actualizarPersona(id, tipo, fd);
+      if (resultado?.error) {
+        setError(resultado.error);
+        return;
+      }
       setEditando(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo actualizar");
+    } catch {
+      setError(ERROR_GENERICO);
     } finally {
       setGuardando(false);
     }
@@ -88,9 +97,10 @@ export function GestionPersonas({
     }
     setError(null);
     try {
-      await eliminarPersona(id, tipo);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo eliminar");
+      const resultado = await eliminarPersona(id, tipo);
+      if (resultado?.error) setError(resultado.error);
+    } catch {
+      setError(ERROR_GENERICO);
     }
   }
 

@@ -2,10 +2,17 @@
 
 import { useState } from "react";
 import { marcarCarnetListo } from "./actions";
+import { ERROR_GENERICO } from "@/lib/actionResult";
+
+// Mensaje tipo: se rellena solo al abrir el formulario para agilizar el caso
+// habitual (mismo horario/lugar de siempre). El empleado lo puede editar
+// antes de enviar, p. ej. para poner una fecha concreta.
+const MENSAJE_TIPO =
+  "Ya puedes pasar a recogerlo por Berrizburu Futbol Zelaia, en horario de entrenamientos.";
 
 export function BotonListo({ id }: { id: string }) {
   const [abierto, setAbierto] = useState(false);
-  const [mensaje, setMensaje] = useState("");
+  const [mensaje, setMensaje] = useState(MENSAJE_TIPO);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -13,9 +20,13 @@ export function BotonListo({ id }: { id: string }) {
     setError(null);
     setCargando(true);
     try {
-      await marcarCarnetListo(id, mensaje);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "No se pudo completar.");
+      const resultado = await marcarCarnetListo(id, mensaje);
+      if (resultado?.error) {
+        setError(resultado.error);
+        setCargando(false);
+      }
+    } catch {
+      setError(ERROR_GENERICO);
       setCargando(false);
     }
   }

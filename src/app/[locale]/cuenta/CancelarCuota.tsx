@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useLocale } from "next-intl";
 import { useRouter } from "next/navigation";
 import { cancelarMiCuota, reactivarMiCuota } from "./actions";
+import { ERROR_GENERICO } from "@/lib/actionResult";
 
 const MOTIVOS = [
   { valor: "precio", es: "Es demasiado caro", eu: "Garestiegia da" },
@@ -36,10 +37,14 @@ export function CancelarCuota({
     setCargando(true);
     setError(null);
     try {
-      await reactivarMiCuota();
+      const resultado = await reactivarMiCuota();
+      if (resultado?.error) {
+        setError(resultado.error);
+        return;
+      }
       router.refresh();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "No se pudo reactivar.");
+    } catch {
+      setError(ERROR_GENERICO);
     } finally {
       setCargando(false);
     }
@@ -49,11 +54,15 @@ export function CancelarCuota({
     setCargando(true);
     setError(null);
     try {
-      await cancelarMiCuota(motivo, comentario);
+      const resultado = await cancelarMiCuota(motivo, comentario);
+      if (resultado?.error) {
+        setError(resultado.error);
+        return;
+      }
       setPaso("confirmado");
       router.refresh();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "No se pudo cancelar.");
+    } catch {
+      setError(ERROR_GENERICO);
     } finally {
       setCargando(false);
     }

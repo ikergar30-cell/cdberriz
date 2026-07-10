@@ -6,6 +6,7 @@ import {
   reactivarRenovacion,
   reembolsarYCancelar,
 } from "../actions";
+import { ERROR_GENERICO, type ActionResult } from "@/lib/actionResult";
 
 export function AccionesAbono({
   socioId,
@@ -25,14 +26,15 @@ export function AccionesAbono({
   const [cargando, setCargando] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function ejecutar(nombre: string, accion: () => Promise<void>, confirmacion: string) {
+  async function ejecutar(nombre: string, accion: () => Promise<ActionResult>, confirmacion: string) {
     if (!confirm(confirmacion)) return;
     setError(null);
     setCargando(nombre);
     try {
-      await accion();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "No se pudo completar la acción.");
+      const resultado = await accion();
+      if (resultado?.error) setError(resultado.error);
+    } catch {
+      setError(ERROR_GENERICO);
     } finally {
       setCargando(null);
     }

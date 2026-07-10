@@ -44,16 +44,20 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "No hay carnés que generar." }, { status: 404 });
   }
 
-  const escudo = new Uint8Array(await readFile(path.join(process.cwd(), "public", "escudo.png")));
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-  const pdf = await generarCarnetsPDF(socios, escudo, siteUrl);
+  try {
+    const escudo = new Uint8Array(await readFile(path.join(process.cwd(), "public", "escudo.png")));
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    const pdf = await generarCarnetsPDF(socios, escudo, siteUrl);
 
-  const nombre = socios.length === 1 ? nombreArchivoCarnet(socios[0]) : "carnes-fisicos-imprenta.pdf";
+    const nombre = socios.length === 1 ? nombreArchivoCarnet(socios[0]) : "carnes-fisicos-imprenta.pdf";
 
-  return new NextResponse(Buffer.from(pdf), {
-    headers: {
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${nombre}"`,
-    },
-  });
+    return new NextResponse(Buffer.from(pdf), {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="${nombre}"`,
+      },
+    });
+  } catch {
+    return NextResponse.json({ error: "No se pudo generar el PDF." }, { status: 500 });
+  }
 }

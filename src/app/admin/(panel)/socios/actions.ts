@@ -9,6 +9,7 @@ import { cambiarCuotaStripe } from "@/lib/stripe/alinearFacturacion";
 import { stripe } from "@/lib/stripe";
 import { REEMBOLSO_DIAS, diasDesde } from "@/config/reembolso";
 import type { EstadoSocio } from "@/lib/supabase/types";
+import type { ActionResult } from "@/lib/actionResult";
 
 // Server actions independientes del renderizado de la página: cada una debe
 // re-verificar que quien llama es un empleado autenticado.
@@ -58,11 +59,11 @@ function leerCampos(formData: FormData) {
   };
 }
 
-export async function crearSocio(formData: FormData) {
+export async function crearSocio(formData: FormData): Promise<ActionResult> {
   const { _fecha_inicio_cobro, ...datos } = leerCampos(formData);
 
   if (!datos.nombre || !datos.apellidos) {
-    throw new Error("Nombre y apellidos son obligatorios.");
+    return { error: "Nombre y apellidos son obligatorios." };
   }
 
   let stripeIds: {
@@ -80,7 +81,7 @@ export async function crearSocio(formData: FormData) {
       .single();
 
     if (!cuota?.stripe_price_id) {
-      throw new Error("La cuota seleccionada no tiene precio en Stripe configurado.");
+      return { error: "La cuota seleccionada no tiene precio en Stripe configurado." };
     }
 
     const res = await crearSuscripcionSEPA({
@@ -104,18 +105,18 @@ export async function crearSocio(formData: FormData) {
     ...datos,
     ...stripeIds,
   });
-  if (error) throw new Error("No se pudo crear el socio: " + error.message);
+  if (error) return { error: "No se pudo crear el socio: " + error.message };
 
   revalidatePath("/admin/socios");
   redirect("/admin/socios");
 }
 
-export async function actualizarSocio(id: string, formData: FormData) {
+export async function actualizarSocio(id: string, formData: FormData): Promise<ActionResult> {
   const { _fecha_inicio_cobro, ...datos } = leerCampos(formData);
   void _fecha_inicio_cobro; // en edición no reconfiguramos Stripe automáticamente
 
   if (!datos.nombre || !datos.apellidos) {
-    throw new Error("Nombre y apellidos son obligatorios.");
+    return { error: "Nombre y apellidos son obligatorios." };
   }
 
   const supabase = createClient();
@@ -128,7 +129,7 @@ export async function actualizarSocio(id: string, formData: FormData) {
     .select("tipo_abono_id, stripe_subscription_id")
     .eq("id", id)
     .single();
-  if (errActual) throw new Error("No se pudo leer el socio: " + errActual.message);
+  if (errActual) return { error: "No se pudo leer el socio: " + errActual.message };
 
   if (
     datos.tipo_abono_id &&
@@ -141,25 +142,25 @@ export async function actualizarSocio(id: string, formData: FormData) {
       .select("stripe_price_id")
       .eq("id", datos.tipo_abono_id)
       .single();
-    if (errCuota) throw new Error("No se pudo leer la nueva cuota: " + errCuota.message);
+    if (errCuota) return { error: "No se pudo leer la nueva cuota: " + errCuota.message };
     if (!cuota?.stripe_price_id) {
-      throw new Error("La cuota nueva no tiene precio en Stripe configurado.");
+      return { error: "La cuota nueva no tiene precio en Stripe configurado." };
     }
     await cambiarCuotaStripe(socioActual.stripe_subscription_id, cuota.stripe_price_id);
   }
 
   const { error } = await supabase.from("socios").update(datos).eq("id", id);
-  if (error) throw new Error("No se pudo actualizar: " + error.message);
+  if (error) return { error: "No se pudo actualizar: " + error.message };
 
   revalidatePath("/admin/socios");
   revalidatePath(`/admin/socios/${id}`);
   redirect(`/admin/socios/${id}`);
 }
 
-export async function eliminarSocio(id: string) {
+export async function eliminarSocio(id: string): Promise<ActionResult> {
   const supabase = createClient();
   const { error } = await supabase.from("socios").delete().eq("id", id);
-  if (error) throw new Error("No se pudo eliminar: " + error.message);
+  if (error) return { error: "No se pudo eliminar: " + error.message };
 
   revalidatePath("/admin/socios");
   redirect("/admin/socios");
@@ -171,7 +172,7 @@ export async function eliminarSocio(id: string) {
 // el final del periodo ya pagado (Stripe deja de cobrar; el webhook
 // "customer.subscription.deleted" pondrá el socio en "baja" cuando ese
 // periodo termine de verdad, sin necesidad de tocar nada más aquí).
-export async function cancelarRenovacion(id: string) {
+export async function cancelarRenovacion(id: string): Promise<ActionResult> {
   await exigirEmpleado();
   const admin = createAdminClient();
 
@@ -180,9 +181,9 @@ export async function cancelarRenovacion(id: string) {
     .select("stripe_subscription_id")
     .eq("id", id)
     .single();
-  if (error || !socio) throw new Error("Socio no encontrado.");
+  if (error || !socio) return { error: "Socio no encontrado." };
   if (!socio.stripe_subscription_id) {
-    throw new Error("Este socio no tiene una suscripción de Stripe que cancelar.");
+    return { error: "Este socio no tiene una suscripción de Stripe que cancelar." };
   }
 
   await stripe.subscriptions.update(socio.stripe_subscription_id, { cancel_at_period_end: true });
@@ -192,7 +193,7 @@ export async function cancelarRenovacion(id: string) {
 
 // Deshace una cancelación programada (por si se pulsó por error o el socio
 // cambia de opinión antes de que termine el periodo).
-export async function reactivarRenovacion(id: string) {
+export async function reactivarRenovacion(id: string): Promise<ActionResult> {
   await exigirEmpleado();
   const admin = createAdminClient();
 
@@ -201,8 +202,8 @@ export async function reactivarRenovacion(id: string) {
     .select("stripe_subscription_id")
     .eq("id", id)
     .single();
-  if (error || !socio) throw new Error("Socio no encontrado.");
-  if (!socio.stripe_subscription_id) throw new Error("Este socio no tiene suscripción de Stripe.");
+  if (error || !socio) return { error: "Socio no encontrado." };
+  if (!socio.stripe_subscription_id) return { error: "Este socio no tiene suscripción de Stripe." };
 
   await stripe.subscriptions.update(socio.stripe_subscription_id, { cancel_at_period_end: false });
 
@@ -212,7 +213,7 @@ export async function reactivarRenovacion(id: string) {
 // Reembolsa el último pago (solo si está dentro del plazo, ver
 // src/config/reembolso.ts) y da de baja al socio de inmediato, incluyendo el
 // segundo carné del abono familiar si lo tiene.
-export async function reembolsarYCancelar(id: string) {
+export async function reembolsarYCancelar(id: string): Promise<ActionResult> {
   await exigirEmpleado();
   const admin = createAdminClient();
 
@@ -221,7 +222,7 @@ export async function reembolsarYCancelar(id: string) {
     .select("stripe_subscription_id")
     .eq("id", id)
     .single();
-  if (errSocio || !socio) throw new Error("Socio no encontrado.");
+  if (errSocio || !socio) return { error: "Socio no encontrado." };
 
   const { data: ultimoPago, error: errPago } = await admin
     .from("pagos")
@@ -231,14 +232,14 @@ export async function reembolsarYCancelar(id: string) {
     .order("fecha", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (errPago) throw new Error(errPago.message);
+  if (errPago) return { error: errPago.message };
   if (!ultimoPago?.stripe_invoice_id) {
-    throw new Error("Este socio no tiene ningún pago de Stripe que reembolsar.");
+    return { error: "Este socio no tiene ningún pago de Stripe que reembolsar." };
   }
   if (diasDesde(ultimoPago.fecha) > REEMBOLSO_DIAS) {
-    throw new Error(
-      `Ya han pasado más de ${REEMBOLSO_DIAS} días desde el pago: fuera del plazo de reembolso automático.`,
-    );
+    return {
+      error: `Ya han pasado más de ${REEMBOLSO_DIAS} días desde el pago: fuera del plazo de reembolso automático.`,
+    };
   }
 
   // Stripe ya no expone "payment_intent" directamente en la factura: hay que
@@ -249,7 +250,7 @@ export async function reembolsarYCancelar(id: string) {
   });
   const pagoStripe = pagosFactura.data[0]?.payment.payment_intent;
   const paymentIntentId = typeof pagoStripe === "string" ? pagoStripe : pagoStripe?.id;
-  if (!paymentIntentId) throw new Error("No se encontró el cobro en Stripe para reembolsar.");
+  if (!paymentIntentId) return { error: "No se encontró el cobro en Stripe para reembolsar." };
 
   await stripe.refunds.create({ payment_intent: paymentIntentId });
   if (socio.stripe_subscription_id) {
@@ -260,14 +261,14 @@ export async function reembolsarYCancelar(id: string) {
     .from("pagos")
     .update({ estado: "reembolsado" })
     .eq("id", ultimoPago.id);
-  if (errUpdatePago) throw new Error(errUpdatePago.message);
+  if (errUpdatePago) return { error: errUpdatePago.message };
 
   // Incluye el 2º carné del abono familiar (titular_id) — igual que en el webhook.
   const { error: errBaja } = await admin
     .from("socios")
     .update({ estado: "baja" })
     .or(`id.eq.${id},titular_id.eq.${id}`);
-  if (errBaja) throw new Error(errBaja.message);
+  if (errBaja) return { error: errBaja.message };
 
   revalidatePath(`/admin/socios/${id}`);
   revalidatePath("/admin/socios");

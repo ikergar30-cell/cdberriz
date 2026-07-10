@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { Socio, TipoAbono, EstadoSocio } from "@/lib/supabase/types";
+import { ERROR_GENERICO, type ActionResult } from "@/lib/actionResult";
 
 const ESTADOS: { valor: EstadoSocio; label: string }[] = [
   { valor: "activo", label: "Activo" },
@@ -26,7 +27,7 @@ export function SocioForm({
 }: {
   socio?: Socio;
   tipos: TipoAbono[];
-  accion: (formData: FormData) => Promise<void>;
+  accion: (formData: FormData) => Promise<ActionResult>;
   cancelarHref?: string;
 }) {
   const [error, setError] = useState<string | null>(null);
@@ -37,8 +38,14 @@ export function SocioForm({
     setError(null);
     setGuardando(true);
     try {
-      await accion(formData);
+      const resultado = await accion(formData);
+      if (resultado?.error) {
+        setError(resultado.error);
+        setGuardando(false);
+      }
+      // Sin error: la acción ya ha hecho redirect().
     } catch (e) {
+      // El propio redirect() de Next lanza esta señal interna; no es un error.
       if (
         e &&
         typeof e === "object" &&
@@ -47,7 +54,7 @@ export function SocioForm({
       ) {
         return;
       }
-      setError(e instanceof Error ? e.message : "Error al guardar.");
+      setError(ERROR_GENERICO);
       setGuardando(false);
     }
   }

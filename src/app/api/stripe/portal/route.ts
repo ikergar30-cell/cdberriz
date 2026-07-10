@@ -38,10 +38,13 @@ export async function POST() {
   }
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-  const sesion = await stripe.billingPortal.sessions.create({
-    customer: socio.stripe_customer_id,
-    return_url: `${siteUrl}/`,
-  });
-
-  return NextResponse.json({ url: sesion.url });
+  try {
+    const sesion = await stripe.billingPortal.sessions.create({
+      customer: socio.stripe_customer_id,
+      return_url: `${siteUrl}/`,
+    });
+    return NextResponse.json({ url: sesion.url });
+  } catch {
+    return NextResponse.json({ error: "No se pudo abrir el portal de pago." }, { status: 500 });
+  }
 }

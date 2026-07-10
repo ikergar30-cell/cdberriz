@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { Resend } from "resend";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { ActionResult } from "@/lib/actionResult";
 
 async function exigirEmpleado() {
   const supabase = createClient();
@@ -20,13 +21,13 @@ async function exigirEmpleado() {
 // Marca el carné físico como listo para recoger en Berrizburu y avisa al
 // socio por email. No es crítico si el email falla: la marca ya ha quedado
 // guardada y se puede reintentar el aviso más adelante.
-export async function marcarCarnetListo(id: string, mensaje: string) {
+export async function marcarCarnetListo(id: string, mensaje: string): Promise<ActionResult> {
   await exigirEmpleado();
   const admin = createAdminClient();
 
   const recogida = mensaje.trim().slice(0, 500);
   if (!recogida) {
-    throw new Error("Escribe la fecha de recogida o un mensaje para el socio.");
+    return { error: "Escribe la fecha de recogida o un mensaje para el socio." };
   }
 
   const { data: socio, error: errSocio } = await admin
@@ -34,9 +35,9 @@ export async function marcarCarnetListo(id: string, mensaje: string) {
     .select("nombre, apellidos, email, numero_socio, carnet_fisico_entregado_en")
     .eq("id", id)
     .single();
-  if (errSocio || !socio) throw new Error("Socio no encontrado.");
+  if (errSocio || !socio) return { error: "Socio no encontrado." };
   if (socio.carnet_fisico_entregado_en) {
-    throw new Error("Este carné ya estaba marcado como listo.");
+    return { error: "Este carné ya estaba marcado como listo." };
   }
 
   const ahora = new Date().toISOString();
@@ -44,7 +45,7 @@ export async function marcarCarnetListo(id: string, mensaje: string) {
     .from("socios")
     .update({ carnet_fisico_entregado_en: ahora, carnet_fisico_recogida: recogida })
     .eq("id", id);
-  if (error) throw new Error(error.message);
+  if (error) return { error: error.message };
 
   // Cierra la solicitud pendiente en el histórico (la más reciente sin entregar).
   const { data: pendiente } = await admin
