@@ -35,12 +35,22 @@ export default async function CarnetsFisicosPage() {
       </p>
 
       {/* Pendientes de entregar */}
-      <h2 className="mt-8 font-display text-sm font-bold uppercase tracking-wide text-neutral-500">
-        Pendientes de entregar
-        <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800">
-          {pendientes.length}
-        </span>
-      </h2>
+      <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="font-display text-sm font-bold uppercase tracking-wide text-neutral-500">
+          Pendientes de entregar
+          <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800">
+            {pendientes.length}
+          </span>
+        </h2>
+        {pendientes.length > 0 && (
+          <a
+            href="/api/admin/carnets-pdf"
+            className="rounded-full bg-azul px-4 py-2 text-sm font-semibold text-white transition hover:bg-azul-700"
+          >
+            Descargar PDF para imprenta ({pendientes.length})
+          </a>
+        )}
+      </div>
       {pendientes.length === 0 ? (
         <p className="mt-3 text-sm text-neutral-500">No hay solicitudes pendientes.</p>
       ) : (
@@ -68,7 +78,15 @@ export default async function CarnetsFisicosPage() {
                     {s.carnet_fisico_pedido_en ? formatearFecha(s.carnet_fisico_pedido_en) : "—"}
                   </td>
                   <td className="px-4 py-3">
-                    <BotonListo id={s.id} />
+                    <div className="flex items-center justify-end gap-3">
+                      <a
+                        href={`/api/admin/carnets-pdf?id=${s.id}`}
+                        className="text-xs font-semibold text-azul hover:underline"
+                      >
+                        PDF
+                      </a>
+                      <BotonListo id={s.id} />
+                    </div>
                   </td>
                 </tr>
               ))}
