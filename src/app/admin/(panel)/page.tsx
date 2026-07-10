@@ -35,6 +35,17 @@ async function contarCarnetsPendientes() {
   return count ?? 0;
 }
 
+// Tickets del buzón de contacto sin atender (estado "nuevo", no archivados).
+async function contarTicketsNuevos() {
+  const supabase = createClient();
+  const { count } = await supabase
+    .from("tickets")
+    .select("*", { count: "exact", head: true })
+    .eq("estado", "nuevo")
+    .eq("archivado", false);
+  return count ?? 0;
+}
+
 // Contactos suscritos al newsletter via Resend.
 async function contarSuscriptores(): Promise<string> {
   const apiKey = process.env.RESEND_API_KEY;
@@ -56,7 +67,7 @@ async function contarSuscriptores(): Promise<string> {
 }
 
 export default async function ResumenPage() {
-  const [activos, pendientes, morosos, bajas, altasMes, suscriptores, carnetsPendientes] = await Promise.all([
+  const [activos, pendientes, morosos, bajas, altasMes, suscriptores, carnetsPendientes, ticketsNuevos] = await Promise.all([
     contarPorEstado("activo"),
     contarPorEstado("pendiente"),
     contarPorEstado("moroso"),
@@ -64,6 +75,7 @@ export default async function ResumenPage() {
     contarAltasMes(),
     contarSuscriptores(),
     contarCarnetsPendientes(),
+    contarTicketsNuevos(),
   ]);
 
   const tarjetas = [
@@ -88,6 +100,19 @@ export default async function ResumenPage() {
           Gestionar socios
         </Link>
       </div>
+
+      {ticketsNuevos > 0 && (
+        <Link
+          href="/admin/tickets"
+          className="mb-4 flex items-center justify-between rounded-xl border border-rojo/30 bg-rojo-50 p-4 text-sm text-rojo transition hover:bg-rojo-100"
+        >
+          <span>
+            ✉ <strong>{ticketsNuevos}</strong> mensaje{ticketsNuevos === 1 ? "" : "s"} nuevo
+            {ticketsNuevos === 1 ? "" : "s"} en el buzón de contacto sin atender.
+          </span>
+          <span className="font-semibold underline">Ver →</span>
+        </Link>
+      )}
 
       {carnetsPendientes > 0 && (
         <Link

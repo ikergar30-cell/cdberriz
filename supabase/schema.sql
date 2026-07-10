@@ -298,3 +298,49 @@ where carnet_fisico_pedido_en is not null
   and not exists (
     select 1 from carnets_fisicos c where c.socio_id = socios.id
   );
+
+-- ----------------------------------------------------------------------------
+-- TICKETS — buzón de contacto (formularios de la web) en formato ticket
+--   Cada mensaje del formulario público crea un ticket. Los empleados lo ven
+--   en el panel, lo clasifican, cambian su estado, responden (se envía email
+--   al remitente) y lo archivan. Los archivados quedan consultables aparte.
+-- ----------------------------------------------------------------------------
+create type estado_ticket as enum ('nuevo', 'en_progreso', 'respondido', 'cerrado');
+
+create table if not exists tickets (
+  id         uuid primary key default gen_random_uuid(),
+  nombre     text not null,
+  email      text not null,
+  telefono   text,
+  asunto     text,
+  categoria  text not null default 'general',   -- general | socios | patrocinadores | equipos | otros
+  estado     estado_ticket not null default 'nuevo',
+  archivado  boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+alter table tickets add column if not exists telefono text;
+create index if not exists tickets_estado_idx on tickets (archivado, estado, created_at desc);
+
+-- Hilo de la conversación: el primer mensaje es el del visitante; las
+-- respuestas del club se marcan con del_club = true.
+create table if not exists ticket_mensajes (
+  id         uuid primary key default gen_random_uuid(),
+  ticket_id  uuid not null references tickets (id) on delete cascade,
+  del_club   boolean not null default false,
+  autor      text,                              -- nombre del empleado que responde
+  cuerpo     text not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists ticket_mensajes_ticket_idx on ticket_mensajes (ticket_id, created_at);
+
+create trigger tickets_updated_at
+  before update on tickets
+  for each row execute function set_updated_at();
+
+alter table tickets         enable row level security;
+alter table ticket_mensajes enable row level security;
+create policy "tickets_empleados" on tickets
+  for all using (es_empleado()) with check (es_empleado());
+create policy "ticket_mensajes_empleados" on ticket_mensajes
+  for all using (es_empleado()) with check (es_empleado());

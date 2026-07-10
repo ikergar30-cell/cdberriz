@@ -4,6 +4,29 @@
 export type RolEmpleado = "admin" | "empleado" | "verificador";
 export type EstadoSocio = "activo" | "pendiente" | "moroso" | "baja";
 export type EstadoPago = "pagado" | "pendiente" | "fallido" | "reembolsado";
+export type EstadoTicket = "nuevo" | "en_progreso" | "respondido" | "cerrado";
+
+export interface Ticket {
+  id: string;
+  nombre: string;
+  email: string;
+  telefono: string | null;
+  asunto: string | null;
+  categoria: string;
+  estado: EstadoTicket;
+  archivado: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TicketMensaje {
+  id: string;
+  ticket_id: string;
+  del_club: boolean;
+  autor: string | null;
+  cuerpo: string;
+  created_at: string;
+}
 
 export interface Perfil {
   id: string;

@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { club } from "@/config/club";
+import { createAdminClient } from "@/lib/supabase/admin";
 
-// Endpoint del formulario de contacto. Recibe el mensaje del visitante y lo
-// envía por email al club mediante Resend. No expone credenciales ni datos:
-// la API key se lee de variables de entorno y nunca se registra en logs.
+// Endpoint del formulario de contacto. Crea un ticket en el buzón (para que
+// los empleados lo gestionen desde el panel) y avisa a coordinación por email.
+// No expone credenciales ni datos: la API key se lee de variables de entorno.
 export async function POST(request: Request) {
   let datos: {
     nombre?: string;
     email?: string;
+    telefono?: string;
     asunto?: string;
     mensaje?: string;
   };
@@ -21,45 +23,69 @@ export async function POST(request: Request) {
 
   const nombre = (datos.nombre || "").trim().slice(0, 120);
   const email = (datos.email || "").trim().slice(0, 160);
+  const telefono = (datos.telefono || "").trim().slice(0, 40);
   const asunto = (datos.asunto || "").trim().slice(0, 160);
   const mensaje = (datos.mensaje || "").trim().slice(0, 5000);
 
-  if (!nombre || !email || !mensaje || !email.includes("@")) {
+  // Todos los campos son obligatorios.
+  if (!nombre || !email || !telefono || !asunto || !mensaje || !email.includes("@")) {
     return NextResponse.json(
       { error: "Faltan campos obligatorios o el email no es válido." },
       { status: 400 },
     );
   }
 
-  const apiKey = process.env.RESEND_API_KEY;
-  const to = process.env.CONTACT_EMAIL || club.email;
-  if (!apiKey) {
+  // 1. Crear el ticket en el buzón (fuente de verdad). Si esto falla, no
+  //    seguimos: el mensaje del socio no se puede perder.
+  const admin = createAdminClient();
+  const { data: ticket, error: errTicket } = await admin
+    .from("tickets")
+    .insert({ nombre, email, telefono, asunto })
+    .select("id")
+    .single();
+  if (errTicket || !ticket) {
     return NextResponse.json(
-      { error: "El envío de email aún no está configurado." },
-      { status: 503 },
-    );
-  }
-
-  try {
-    const resend = new Resend(apiKey);
-    const from = process.env.CONTACT_FROM || club.remitente;
-    await resend.emails.send({
-      from,
-      to,
-      replyTo: email,
-      subject: `[Web] ${asunto || "Mensaje de contacto"} — ${nombre}`,
-      text:
-        `Nuevo mensaje desde el formulario de la web:\n\n` +
-        `Nombre: ${nombre}\n` +
-        `Email: ${email}\n` +
-        `Asunto: ${asunto || "—"}\n\n` +
-        `${mensaje}\n`,
-    });
-    return NextResponse.json({ ok: true });
-  } catch {
-    return NextResponse.json(
-      { error: "No se pudo enviar el mensaje. Inténtalo más tarde." },
+      { error: "No se pudo registrar el mensaje. Inténtalo más tarde." },
       { status: 500 },
     );
   }
+  const { error: errMensaje } = await admin
+    .from("ticket_mensajes")
+    .insert({ ticket_id: ticket.id, del_club: false, autor: nombre, cuerpo: mensaje });
+  if (errMensaje) {
+    return NextResponse.json(
+      { error: "No se pudo registrar el mensaje. Inténtalo más tarde." },
+      { status: 500 },
+    );
+  }
+
+  // 2. Avisar a coordinación por email. Es informativo: si Resend falla, el
+  //    ticket ya está guardado, así que respondemos OK igualmente.
+  const apiKey = process.env.RESEND_API_KEY;
+  const to = process.env.CONTACT_EMAIL || "coordinacioncdberriz@gmail.com";
+  if (apiKey) {
+    try {
+      const resend = new Resend(apiKey);
+      const from = process.env.CONTACT_FROM || club.remitente;
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://cdberriz.com";
+      await resend.emails.send({
+        from,
+        to,
+        replyTo: email,
+        subject: `[Buzón web] ${asunto || "Mensaje de contacto"} — ${nombre}`,
+        text:
+          `Nuevo ticket en el buzón de contacto:\n\n` +
+          `Nombre: ${nombre}\n` +
+          `Email: ${email}\n` +
+          `Teléfono: ${telefono}\n` +
+          `Asunto: ${asunto}\n\n` +
+          `${mensaje}\n\n` +
+          `Gestiónalo desde el panel: ${siteUrl}/admin/tickets/${ticket.id}\n`,
+      });
+    } catch {
+      /* el aviso es informativo; el ticket ya está guardado */
+    }
+  }
+
+  return NextResponse.json({ ok: true });
 }

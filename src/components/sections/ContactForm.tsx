@@ -1,13 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations, useLocale } from "next-intl";
+import { useTranslations } from "next-intl";
 
 type Estado = "idle" | "enviando" | "ok" | "error";
 
 export function ContactForm() {
   const t = useTranslations("contacto");
-  const locale = useLocale();
   const [estado, setEstado] = useState<Estado>("idle");
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -33,21 +32,10 @@ export function ContactForm() {
     "w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-sm outline-none transition focus:border-azul focus:ring-2 focus:ring-azul/20";
   const labelCls = "mb-1 block text-sm font-semibold text-neutral-700";
 
-  const msg = {
-    ok:
-      locale === "eu"
-        ? "Eskerrik asko! Mezua bidali da."
-        : "¡Gracias! Tu mensaje se ha enviado.",
-    error:
-      locale === "eu"
-        ? "Ezin izan da bidali. Saiatu berriro edo idatzi g:"
-        : "No se ha podido enviar. Inténtalo de nuevo o escribe a:",
-  };
-
   if (estado === "ok") {
     return (
       <div className="rounded-2xl border border-azul-200 bg-azul-50 p-6 text-azul-800">
-        <p className="font-semibold">✓ {msg.ok}</p>
+        <p className="font-semibold">✓ {t("ok")}</p>
       </div>
     );
   }
@@ -57,13 +45,13 @@ export function ContactForm() {
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label className={labelCls} htmlFor="nombre">
-            {t("nombre")}
+            {t("nombre")} *
           </label>
           <input id="nombre" name="nombre" className={inputCls} required />
         </div>
         <div>
           <label className={labelCls} htmlFor="email">
-            {t("email")}
+            {t("email")} *
           </label>
           <input
             id="email"
@@ -73,18 +61,23 @@ export function ContactForm() {
             required
           />
         </div>
-      </div>
-
-      <div>
-        <label className={labelCls} htmlFor="asunto">
-          {t("asunto")}
-        </label>
-        <input id="asunto" name="asunto" className={inputCls} />
+        <div>
+          <label className={labelCls} htmlFor="telefono">
+            {t("telefono")} *
+          </label>
+          <input id="telefono" name="telefono" type="tel" className={inputCls} required />
+        </div>
+        <div>
+          <label className={labelCls} htmlFor="asunto">
+            {t("asunto")} *
+          </label>
+          <input id="asunto" name="asunto" className={inputCls} required />
+        </div>
       </div>
 
       <div>
         <label className={labelCls} htmlFor="mensaje">
-          {t("mensaje")}
+          {t("mensaje")} *
         </label>
         <textarea
           id="mensaje"
@@ -94,6 +87,8 @@ export function ContactForm() {
           required
         />
       </div>
+
+      <p className="text-xs text-neutral-500">* {t("obligatorios")}</p>
 
       <button
         type="submit"
@@ -105,7 +100,7 @@ export function ContactForm() {
 
       {estado === "error" && (
         <p className="text-sm font-semibold text-rojo">
-          {msg.error}{" "}
+          {t("error")}{" "}
           <a className="underline" href="mailto:coordinacioncdberriz@gmail.com">
             coordinacioncdberriz@gmail.com
           </a>

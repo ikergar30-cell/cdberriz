@@ -66,12 +66,21 @@ export async function marcarCarnetListo(id: string, mensaje: string): Promise<Ac
     try {
       const resend = new Resend(apiKey);
       const from = process.env.CONTACT_FROM || club.remitente;
+      // Bilingüe (eu + es): no guardamos el idioma del socio, así que lo
+      // enviamos en los dos. El mensaje de recogida lo escribe el empleado.
       await resend.emails.send({
         from,
         to: socio.email,
-        subject: "Tu carné físico ya está listo para recoger",
+        subject: "Zure bazkide-txartela prest dago / Tu carné de socio ya está listo",
         text:
-          `Hola ${socio.nombre},\n\n` +
+          `[EUSKARAZ]\n` +
+          `Kaixo ${socio.nombre}:\n\n` +
+          `Zure bazkide-txartel fisikoa (${socio.numero_socio} zk.) prest dago.\n\n` +
+          `${recogida}\n\n` +
+          `Agur bero bat,\nC.D. Berriz\n\n` +
+          `— — —\n\n` +
+          `[EN CASTELLANO]\n` +
+          `Hola ${socio.nombre}:\n\n` +
           `Tu carné físico de socio/a (nº ${socio.numero_socio}) ya está listo.\n\n` +
           `${recogida}\n\n` +
           `Un saludo,\nC.D. Berriz`,

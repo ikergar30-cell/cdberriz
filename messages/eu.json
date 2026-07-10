@@ -87,12 +87,15 @@
     "intro": "Zalantzarik baduzu? Idatzi guri.",
     "nombre": "Izena",
     "email": "Helbide elektronikoa",
+    "telefono": "Telefonoa",
     "asunto": "Gaia",
     "mensaje": "Mezua",
     "enviar": "Bidali",
+    "obligatorios": "Eremu guztiak bete behar dira.",
+    "ok": "Eskerrik asko! Zure mezua jaso dugu eta ahalik eta lasterren erantzungo dizugu emailez.",
+    "error": "Ezin izan da bidali. Saiatu berriro edo idatzi hona:",
     "sponsorTitle": "Egin zaitez babesle",
-    "sponsorText": "Kluba lagundu nahi duzu? Jarri gurekin harremanetan.",
-    "aviso": "Formulario hau maketa bat da; benetako bidalketa geroago konfiguratuko da."
+    "sponsorText": "Kluba lagundu nahi duzu? Jarri gurekin harremanetan."
   },
   "footer": {
     "siguenos": "Jarraitu gaitzazu",

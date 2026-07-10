@@ -55,7 +55,7 @@ export default async function PanelLayout({
   // solo aparecen para el rol admin.
   const esAdmin = perfil.rol === "admin";
   const secciones: SeccionNav[] = [
-    { titulo: null, items: [{ href: "/admin", label: "Resumen" }] },
+    { titulo: null, items: [{ href: "/admin", label: "Resumen" }, { href: "/admin/tickets", label: "Buzón de contacto" }] },
     {
       titulo: "Socios",
       items: [

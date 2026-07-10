@@ -87,12 +87,15 @@
     "intro": "¿Tienes alguna duda? Escríbenos.",
     "nombre": "Nombre",
     "email": "Correo electrónico",
+    "telefono": "Teléfono",
     "asunto": "Asunto",
     "mensaje": "Mensaje",
     "enviar": "Enviar",
+    "obligatorios": "Todos los campos son obligatorios.",
+    "ok": "¡Gracias! Hemos recibido tu mensaje y te responderemos por email lo antes posible.",
+    "error": "No se ha podido enviar. Inténtalo de nuevo o escribe a:",
     "sponsorTitle": "Hazte sponsor",
-    "sponsorText": "¿Quieres apoyar al club? Ponte en contacto con nosotros.",
-    "aviso": "Este formulario es una maqueta; el envío real se configurará más adelante."
+    "sponsorText": "¿Quieres apoyar al club? Ponte en contacto con nosotros."
   },
   "footer": {
     "siguenos": "Síguenos",
