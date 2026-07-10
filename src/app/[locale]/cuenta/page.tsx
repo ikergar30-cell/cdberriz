@@ -3,6 +3,7 @@ import { Link } from "@/i18n/routing";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { stripe } from "@/lib/stripe";
 import { sanityFetch } from "@/sanity/lib/sanityFetch";
 import {
   eventosProximosQuery,
@@ -15,6 +16,7 @@ import { CarnetSocio } from "@/components/CarnetSocio";
 import { CuentaLogin } from "./CuentaLogin";
 import { CuentaAcciones } from "./CuentaAcciones";
 import { SolicitarCarnet } from "./SolicitarCarnet";
+import { CancelarCuota } from "./CancelarCuota";
 
 const ESTADO_LABEL: Record<string, { es: string; eu: string; cls: string }> = {
   activo:    { es: "Activo",          eu: "Aktiboa",         cls: "bg-green-100 text-green-800" },
@@ -83,9 +85,24 @@ export default async function CuentaPage({
 
   const { data: socio } = await admin
     .from("socios")
-    .select("id, nombre, apellidos, numero_socio, estado, fecha_alta, direccion, carnet_token, foto_url, carnet_fisico_pedido_en, stripe_customer_id, titular_id, tipos_abono(nombre, precio_cents)")
+    .select("id, nombre, apellidos, numero_socio, estado, fecha_alta, direccion, carnet_token, foto_url, carnet_fisico_pedido_en, stripe_customer_id, stripe_subscription_id, titular_id, tipos_abono(nombre, precio_cents)")
     .ilike("email", user.email)
     .maybeSingle();
+
+  // Estado real de la suscripción en Stripe: si ya hay una cancelación
+  // programada, y la fecha en la que dejará de renovarse.
+  let cancelacionProgramada = false;
+  let fechaFinPeriodo: string | null = null;
+  if (socio?.stripe_subscription_id) {
+    try {
+      const sub = await stripe.subscriptions.retrieve(socio.stripe_subscription_id);
+      cancelacionProgramada = sub.cancel_at_period_end;
+      const finPeriodo = sub.items.data[0]?.current_period_end;
+      if (finPeriodo) fechaFinPeriodo = formatFecha(new Date(finPeriodo * 1000).toISOString(), locale);
+    } catch {
+      // Suscripción no encontrada en Stripe: no bloquea el portal.
+    }
+  }
 
   const [eventos, noticias, documentos] = await Promise.all([
     sanityFetch<Evento[]>(eventosProximosQuery, {}, []),
@@ -329,6 +346,15 @@ export default async function CuentaPage({
 
                 {/* Gestionar cuota + cerrar sesión */}
                 <CuentaAcciones tienePago={!!socio.stripe_customer_id} />
+
+                {/* Cancelar la cuota: solo el titular que paga (no el 2º
+                    carné del abono familiar) puede cancelarla. */}
+                {socio.stripe_customer_id && !titular && (
+                  <CancelarCuota
+                    cancelacionProgramada={cancelacionProgramada}
+                    fechaFinPeriodo={fechaFinPeriodo}
+                  />
+                )}
 
               </div>
             </div>

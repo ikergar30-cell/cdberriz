@@ -31,6 +31,16 @@ const METODO_LABEL: Record<string, string> = {
   stripe: "Stripe",
 };
 
+// Debe coincidir con las claves usadas en el cuestionario de baja del
+// portal (src/app/[locale]/cuenta/CancelarCuota.tsx).
+const MOTIVO_BAJA_LABEL: Record<string, string> = {
+  precio: "Es demasiado caro",
+  no_uso: "Ya no va a los partidos / no tiene tiempo",
+  mudanza: "Se ha mudado / vive lejos",
+  disconformidad: "No está conforme con el club",
+  otro: "Otro motivo",
+};
+
 function formatearFecha(fecha: string | number) {
   return new Date(fecha).toLocaleDateString("es-ES", { day: "2-digit", month: "long", year: "numeric" });
 }
@@ -235,6 +245,19 @@ export default async function FichaSocioPage({
                 </div>
               )}
             </dl>
+
+            {s.motivo_baja && (
+              <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                <p className="font-semibold">
+                  El socio solicitó cancelar
+                  {s.fecha_solicitud_baja ? ` el ${formatearFecha(s.fecha_solicitud_baja)}` : ""}:{" "}
+                  {MOTIVO_BAJA_LABEL[s.motivo_baja] ?? s.motivo_baja}
+                </p>
+                {s.comentario_baja && (
+                  <p className="mt-1 italic text-amber-700">&ldquo;{s.comentario_baja}&rdquo;</p>
+                )}
+              </div>
+            )}
 
             <AccionesAbono
               socioId={id}

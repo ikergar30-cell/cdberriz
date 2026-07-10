@@ -94,6 +94,13 @@ alter table socios add column if not exists codigo_postal text;
 alter table socios add column if not exists titular_id uuid references socios (id) on delete cascade;
 create index if not exists socios_titular_idx on socios (titular_id);
 
+-- Cuestionario de baja: el socio lo rellena desde su portal al cancelar la
+-- renovación (con intento de retención antes de confirmar). Queda visible en
+-- su ficha del panel para que el club pueda hacer seguimiento.
+alter table socios add column if not exists motivo_baja text;
+alter table socios add column if not exists comentario_baja text;
+alter table socios add column if not exists fecha_solicitud_baja timestamptz;
+
 comment on table socios is 'Padrón de socios. Datos personales — confidenciales (RGPD).';
 
 -- ----------------------------------------------------------------------------
