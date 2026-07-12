@@ -98,6 +98,10 @@ const FAQ = [
   },
 ];
 
+// Página en construcción: no se muestra el contenido real (cuotas, alta,
+// FAQ...) hasta que se reactive. Pon esto en false para volver a publicarla.
+const EN_CONSTRUCCION = true;
+
 export default async function SociosPage({
   params: { locale },
 }: {
@@ -105,6 +109,20 @@ export default async function SociosPage({
 }) {
   setRequestLocale(locale);
   const eu = locale === "eu";
+
+  if (EN_CONSTRUCCION) {
+    return (
+      <PageHeader
+        title={eu ? "Eraikuntzan" : "Página en construcción"}
+        intro={
+          eu
+            ? "Bazkide-atal berria prestatzen ari gara. Laster itzuliko gara."
+            : "Estamos preparando la nueva sección de socios/as. Volvemos enseguida."
+        }
+      />
+    );
+  }
+
   const t = await getTranslations("socios");
 
   // Datos en paralelo: cuotas (Sanity) y nº de socios activos (Supabase, con
