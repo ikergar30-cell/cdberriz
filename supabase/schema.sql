@@ -344,3 +344,48 @@ create policy "tickets_empleados" on tickets
   for all using (es_empleado()) with check (es_empleado());
 create policy "ticket_mensajes_empleados" on ticket_mensajes
   for all using (es_empleado()) with check (es_empleado());
+
+-- ----------------------------------------------------------------------------
+-- ORIGEN DEL SOCIO Y VÍNCULO CON JUGADORES
+--   Hasta ahora "socios" solo sabía registrar pagos. "origen" explica por qué
+--   alguien tiene carné (pagó individual/familiar, o le corresponde por tener
+--   un hijo/a jugando). "jugadores" vincula cada jugador/a con sus padres
+--   (madre/padre), cada uno como fila independiente de "socios".
+-- ----------------------------------------------------------------------------
+do $$ begin
+  create type origen_socio as enum ('individual', 'familiar', 'jugador');
+exception
+  when duplicate_object then null;
+end $$;
+alter table socios add column if not exists origen origen_socio not null default 'individual';
+
+-- Nº de tarjeta del sistema antiguo (compartido entre los dos progenitores),
+-- solo como referencia histórica. El numero_socio real es ahora siempre
+-- propio e independiente por persona.
+alter table socios add column if not exists numero_socio_antiguo integer;
+
+-- Evita que la misma persona (mismo DNI) acabe con dos carnés activos.
+create unique index if not exists socios_dni_unique_idx
+  on socios (upper(dni)) where dni is not null;
+
+create table if not exists jugadores (
+  id                uuid primary key default gen_random_uuid(),
+  nombre            text not null,
+  apellidos         text,
+  equipo            text,
+  temporada         text,
+  fecha_nacimiento  date,
+  madre_socio_id    uuid references socios(id) on delete set null,
+  padre_socio_id    uuid references socios(id) on delete set null,
+  created_at        timestamptz not null default now(),
+  updated_at        timestamptz not null default now()
+);
+create index if not exists jugadores_equipo_idx on jugadores (equipo, temporada);
+
+create trigger jugadores_updated_at
+  before update on jugadores
+  for each row execute function set_updated_at();
+
+alter table jugadores enable row level security;
+create policy "jugadores_empleados" on jugadores
+  for all using (es_empleado()) with check (es_empleado());

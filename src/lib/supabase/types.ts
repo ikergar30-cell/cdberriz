@@ -5,6 +5,20 @@ export type RolEmpleado = "admin" | "empleado" | "verificador";
 export type EstadoSocio = "activo" | "pendiente" | "moroso" | "baja";
 export type EstadoPago = "pagado" | "pendiente" | "fallido" | "reembolsado";
 export type EstadoTicket = "nuevo" | "en_progreso" | "respondido" | "cerrado";
+export type OrigenSocio = "individual" | "familiar" | "jugador";
+
+export interface Jugador {
+  id: string;
+  nombre: string;
+  apellidos: string | null;
+  equipo: string | null;
+  temporada: string | null;
+  fecha_nacimiento: string | null;
+  madre_socio_id: string | null;
+  padre_socio_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
 
 export interface Ticket {
   id: string;
@@ -59,6 +73,9 @@ export interface Socio {
   codigo_postal: string | null;
   /** Abono familiar: id del socio pagador si este es el 2º titular. */
   titular_id: string | null;
+  origen: OrigenSocio;
+  /** Nº de tarjeta del sistema antiguo (compartido), solo histórico. */
+  numero_socio_antiguo: number | null;
   fecha_nacimiento: string | null;
   tipo_abono_id: string | null;
   estado: EstadoSocio;
