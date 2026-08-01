@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import type { EstadoSocio } from "@/lib/supabase/types";
+import type { EstadoSocio, OrigenSocio } from "@/lib/supabase/types";
 import { camposFaltantes } from "@/lib/socios/camposFaltantes";
+import { etiquetaTipoSocio } from "@/config/origenSocio";
 
 const BADGE: Record<EstadoSocio, string> = {
   activo: "bg-green-100 text-green-700",
@@ -31,6 +32,9 @@ type SocioFila = {
   codigo_postal: string | null;
   fecha_nacimiento: string | null;
   estado: EstadoSocio;
+  origen: OrigenSocio;
+  tipo_abono_id: string | null;
+  titular_id: string | null;
   tipos_abono: { nombre: string } | null;
 };
 
@@ -47,7 +51,7 @@ export default async function SociosPage({
   let query = supabase
     .from("socios")
     .select(
-      "id, numero_socio, nombre, apellidos, email, telefono, dni, direccion, poblacion, codigo_postal, fecha_nacimiento, estado, tipos_abono(nombre)",
+      "id, numero_socio, nombre, apellidos, email, telefono, dni, direccion, poblacion, codigo_postal, fecha_nacimiento, estado, origen, tipo_abono_id, titular_id, tipos_abono(nombre)",
     )
     .order("numero_socio");
 
@@ -168,6 +172,7 @@ export default async function SociosPage({
               <tr>
                 <th className="px-4 py-3">Nº</th>
                 <th className="px-4 py-3">Nombre</th>
+                <th className="px-4 py-3">Tipo</th>
                 <th className="px-4 py-3">Cuota</th>
                 <th className="px-4 py-3">Contacto</th>
                 <th className="px-4 py-3">Estado</th>
@@ -175,13 +180,28 @@ export default async function SociosPage({
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
-              {socios.map((s) => (
-                <tr key={s.id} className="transition hover:bg-neutral-50">
+              {socios.map((s) => {
+                const tipo = etiquetaTipoSocio(s.origen, Boolean(s.tipo_abono_id));
+                return (
+                <tr
+                  key={s.id}
+                  className={`transition hover:bg-neutral-50 ${
+                    s.titular_id ? "border-l-2 border-azul-200" : ""
+                  }`}
+                >
                   <td className="px-4 py-3 text-neutral-400">{s.numero_socio}</td>
                   <td className="px-4 py-3">
                     <Link href={`/admin/socios/${s.id}`} className="font-semibold text-azul-700 hover:underline">
                       {s.nombre} {s.apellidos}
                     </Link>
+                    {s.titular_id && (
+                      <div className="text-xs text-neutral-400">↳ bono familiar</div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${tipo.badge}`}>
+                      {tipo.label}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-neutral-600">{s.tipos_abono?.nombre ?? "—"}</td>
                   <td className="px-4 py-3 text-neutral-600">
@@ -207,7 +227,8 @@ export default async function SociosPage({
                     })()}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

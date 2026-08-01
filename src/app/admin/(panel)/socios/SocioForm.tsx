@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import type { Socio, TipoAbono, EstadoSocio } from "@/lib/supabase/types";
+import type { OrigenSocio, Socio, TipoAbono, EstadoSocio } from "@/lib/supabase/types";
 import { ERROR_GENERICO, type ActionResult } from "@/lib/actionResult";
 
 const ESTADOS: { valor: EstadoSocio; label: string }[] = [
@@ -19,20 +19,53 @@ const METODOS = [
   { valor: "manual", label: "Manual / fuera de Stripe" },
 ];
 
+const ORIGENES: { valor: OrigenSocio; label: string }[] = [
+  { valor: "cuota", label: "Paga cuota de socio/a" },
+  { valor: "jugador", label: "Tiene un hijo/a jugando en el club" },
+];
+
+export interface SocioParaTitular {
+  id: string;
+  nombre: string;
+  apellidos: string;
+  numero_socio: number;
+}
+
+function etiquetaTitular(s: SocioParaTitular) {
+  return `${s.nombre} ${s.apellidos} — nº${s.numero_socio}`;
+}
+
 export function SocioForm({
   socio,
   tipos,
   accion,
   cancelarHref = "/admin/socios",
+  sociosParaTitular = [],
 }: {
   socio?: Socio;
   tipos: TipoAbono[];
   accion: (formData: FormData) => Promise<ActionResult>;
   cancelarHref?: string;
+  /** Resto de socios, para poder buscar y vincular como titular de un bono familiar. */
+  sociosParaTitular?: SocioParaTitular[];
 }) {
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [metodoPago, setMetodoPago] = useState(socio?.metodo_pago ?? "");
+
+  const titularActual = sociosParaTitular.find((s) => s.id === socio?.titular_id) ?? null;
+  const [esSegundoTitular, setEsSegundoTitular] = useState(Boolean(socio?.titular_id));
+  const [titularId, setTitularId] = useState(socio?.titular_id ?? "");
+  const [busquedaTitular, setBusquedaTitular] = useState(titularActual ? etiquetaTitular(titularActual) : "");
+
+  const mapaTitular = useMemo(() => {
+    const m = new Map<string, SocioParaTitular>();
+    for (const s of sociosParaTitular) {
+      if (s.id === socio?.id) continue; // no puede ser titular de sí mismo
+      m.set(etiquetaTitular(s), s);
+    }
+    return m;
+  }, [sociosParaTitular, socio?.id]);
 
   async function onSubmit(formData: FormData) {
     setError(null);
@@ -127,18 +160,10 @@ export function SocioForm({
         </h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label className={label} htmlFor="tipo_abono_id">Cuota</label>
-            <select
-              id="tipo_abono_id"
-              name="tipo_abono_id"
-              defaultValue={socio?.tipo_abono_id ?? ""}
-              className={input}
-            >
-              <option value="">— Sin asignar —</option>
-              {tipos.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.nombre} ({(t.precio_cents / 100).toFixed(2)} €)
-                </option>
+            <label className={label} htmlFor="origen">¿Por qué es socio/a?</label>
+            <select id="origen" name="origen" defaultValue={socio?.origen ?? "cuota"} className={input}>
+              {ORIGENES.map((o) => (
+                <option key={o.valor} value={o.valor}>{o.label}</option>
               ))}
             </select>
           </div>
@@ -149,6 +174,28 @@ export function SocioForm({
                 <option key={e.valor} value={e.valor}>{e.label}</option>
               ))}
             </select>
+          </div>
+          <div>
+            <label className={label} htmlFor="tipo_abono_id">Cuota</label>
+            <select
+              id="tipo_abono_id"
+              name="tipo_abono_id"
+              defaultValue={socio?.tipo_abono_id ?? ""}
+              className={input}
+              disabled={esSegundoTitular}
+            >
+              <option value="">— Sin asignar —</option>
+              {tipos.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.nombre} ({(t.precio_cents / 100).toFixed(2)} €)
+                </option>
+              ))}
+            </select>
+            {esSegundoTitular && (
+              <p className="mt-1 text-xs text-neutral-400">
+                Es 2º titular de un bono familiar: paga quien figura como titular.
+              </p>
+            )}
           </div>
           <div>
             <label className={label} htmlFor="fecha_alta">Fecha de alta</label>
@@ -163,7 +210,61 @@ export function SocioForm({
         </div>
       </section>
 
+      {/* ── Bono familiar ── */}
+      <section>
+        <h2 className="mb-4 text-xs font-bold uppercase tracking-wider text-neutral-400">
+          Bono familiar
+        </h2>
+        <label className="flex items-center gap-2 text-sm font-semibold text-neutral-700">
+          <input
+            type="checkbox"
+            checked={esSegundoTitular}
+            onChange={(e) => {
+              const marcado = e.target.checked;
+              setEsSegundoTitular(marcado);
+              if (!marcado) {
+                setTitularId("");
+                setBusquedaTitular("");
+              }
+            }}
+          />
+          Es 2º titular de un bono familiar (paga otro socio/a por él/ella)
+        </label>
+
+        {esSegundoTitular && (
+          <div className="mt-3">
+            <label className={label} htmlFor="titular_busqueda">Titular que paga</label>
+            <input
+              id="titular_busqueda"
+              list="titular-options"
+              placeholder="Escribe el nombre o número de socio…"
+              className={input}
+              value={busquedaTitular}
+              onChange={(e) => {
+                setBusquedaTitular(e.target.value);
+                const match = mapaTitular.get(e.target.value);
+                setTitularId(match?.id ?? "");
+              }}
+            />
+            <datalist id="titular-options">
+              {sociosParaTitular
+                .filter((s) => s.id !== socio?.id)
+                .map((s) => (
+                  <option key={s.id} value={etiquetaTitular(s)} />
+                ))}
+            </datalist>
+            <input type="hidden" name="titular_id" value={titularId} />
+            {busquedaTitular && !titularId && (
+              <p className="mt-1 text-xs font-semibold text-rojo">
+                No coincide con ningún socio/a de la lista. Elige una opción del desplegable.
+              </p>
+            )}
+          </div>
+        )}
+      </section>
+
       {/* ── Pago / Stripe ── */}
+      {!esSegundoTitular && (
       <section>
         <h2 className="mb-4 text-xs font-bold uppercase tracking-wider text-neutral-400">
           Método de pago
@@ -225,6 +326,7 @@ export function SocioForm({
           )}
         </div>
       </section>
+      )}
 
       {/* ── Familia y notas ── */}
       <section>

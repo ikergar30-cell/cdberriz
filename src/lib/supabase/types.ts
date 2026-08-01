@@ -5,7 +5,7 @@ export type RolEmpleado = "admin" | "empleado" | "verificador";
 export type EstadoSocio = "activo" | "pendiente" | "moroso" | "baja";
 export type EstadoPago = "pagado" | "pendiente" | "fallido" | "reembolsado";
 export type EstadoTicket = "nuevo" | "en_progreso" | "respondido" | "cerrado";
-export type OrigenSocio = "individual" | "familiar" | "jugador";
+export type OrigenSocio = "cuota" | "jugador";
 
 export interface Jugador {
   id: string;

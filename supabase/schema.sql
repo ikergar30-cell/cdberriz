@@ -348,16 +348,18 @@ create policy "ticket_mensajes_empleados" on ticket_mensajes
 -- ----------------------------------------------------------------------------
 -- ORIGEN DEL SOCIO Y VÍNCULO CON JUGADORES
 --   Hasta ahora "socios" solo sabía registrar pagos. "origen" explica por qué
---   alguien tiene carné (pagó individual/familiar, o le corresponde por tener
---   un hijo/a jugando). "jugadores" vincula cada jugador/a con sus padres
---   (madre/padre), cada uno como fila independiente de "socios".
+--   alguien tiene carné: paga la cuota ('cuota') o le corresponde por tener
+--   un hijo/a jugando ('jugador') — puede darse a la vez con "tipo_abono_id"
+--   asignado, que es como sabemos si ADEMÁS paga. "jugadores" vincula cada
+--   jugador/a con sus padres (madre/padre), cada uno como fila independiente
+--   de "socios".
 -- ----------------------------------------------------------------------------
 do $$ begin
-  create type origen_socio as enum ('individual', 'familiar', 'jugador');
+  create type origen_socio as enum ('cuota', 'jugador');
 exception
   when duplicate_object then null;
 end $$;
-alter table socios add column if not exists origen origen_socio not null default 'individual';
+alter table socios add column if not exists origen origen_socio not null default 'cuota';
 
 -- Nº de tarjeta del sistema antiguo (compartido entre los dos progenitores),
 -- solo como referencia histórica. El numero_socio real es ahora siempre

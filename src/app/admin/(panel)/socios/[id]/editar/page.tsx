@@ -12,9 +12,10 @@ export default async function EditarSocioPage({
   params: { id: string };
 }) {
   const supabase = createClient();
-  const [{ data: socio }, { data: tipos }] = await Promise.all([
+  const [{ data: socio }, { data: tipos }, { data: sociosParaTitular }] = await Promise.all([
     supabase.from("socios").select("*").eq("id", id).single(),
     supabase.from("tipos_abono").select("*").eq("activo", true).order("orden"),
+    supabase.from("socios").select("id, nombre, apellidos, numero_socio").order("numero_socio"),
   ]);
 
   if (!socio) notFound();
@@ -43,6 +44,7 @@ export default async function EditarSocioPage({
         tipos={(tipos as TipoAbono[]) ?? []}
         accion={actualizar}
         cancelarHref={`/admin/socios/${id}`}
+        sociosParaTitular={sociosParaTitular ?? []}
       />
     </div>
   );

@@ -8,7 +8,7 @@ import { crearSuscripcionSEPA } from "@/lib/stripe/sepa";
 import { cambiarCuotaStripe } from "@/lib/stripe/alinearFacturacion";
 import { stripe } from "@/lib/stripe";
 import { REEMBOLSO_DIAS, diasDesde } from "@/config/reembolso";
-import type { EstadoSocio } from "@/lib/supabase/types";
+import type { EstadoSocio, OrigenSocio } from "@/lib/supabase/types";
 import type { ActionResult } from "@/lib/actionResult";
 
 // Server actions independientes del renderizado de la página: cada una debe
@@ -37,6 +37,8 @@ function leerCampos(formData: FormData) {
     .filter(Boolean)
     .map((nombre) => ({ nombre }));
 
+  const titularId = txt("titular_id");
+
   return {
     nombre: txt("nombre") ?? "",
     apellidos: txt("apellidos") ?? "",
@@ -47,15 +49,20 @@ function leerCampos(formData: FormData) {
     poblacion: txt("poblacion"),
     codigo_postal: txt("codigo_postal"),
     fecha_nacimiento: txt("fecha_nacimiento"),
-    tipo_abono_id: txt("tipo_abono_id"),
+    origen: (txt("origen") ?? "cuota") as OrigenSocio,
+    // Si es 2º titular de un bono familiar, paga quien figura como titular:
+    // ignoramos cualquier dato de cuota/pago que llegara del formulario, no
+    // solo confiamos en que la UI los oculte.
+    tipo_abono_id: titularId ? null : txt("tipo_abono_id"),
     estado: (txt("estado") ?? "pendiente") as EstadoSocio,
     fecha_alta: txt("fecha_alta"),
     notas: txt("notas"),
-    metodo_pago: txt("metodo_pago"),
-    iban: txt("iban"),
+    metodo_pago: titularId ? null : txt("metodo_pago"),
+    iban: titularId ? null : txt("iban"),
+    titular_id: titularId,
     miembros_familia: familia,
     // No es columna de BD — solo se usa para configurar Stripe
-    _fecha_inicio_cobro: txt("fecha_inicio_cobro"),
+    _fecha_inicio_cobro: titularId ? null : txt("fecha_inicio_cobro"),
   };
 }
 

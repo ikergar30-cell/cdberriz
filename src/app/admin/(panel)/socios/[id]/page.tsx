@@ -7,6 +7,7 @@ import { REEMBOLSO_DIAS, diasDesde } from "@/config/reembolso";
 import type { CarnetFisico, EstadoPago, Pago, Socio, TipoAbono } from "@/lib/supabase/types";
 import { CarnetSocio } from "@/components/CarnetSocio";
 import { camposFaltantes } from "@/lib/socios/camposFaltantes";
+import { etiquetaTipoSocio } from "@/config/origenSocio";
 import { HistorialPagos } from "./HistorialPagos";
 import { AccionesAbono } from "./AccionesAbono";
 
@@ -92,6 +93,12 @@ export default async function FichaSocioPage({
     titular = data;
   }
 
+  // Si ES titular, mostramos a quién más le paga el bono familiar.
+  const { data: dependientes } = await supabase
+    .from("socios")
+    .select("id, nombre, apellidos, numero_socio")
+    .eq("titular_id", id);
+
   // Estado real de la suscripción en Stripe (fuente de verdad para la fecha
   // de próxima renovación y si hay una cancelación ya programada).
   let proximaRenovacion: number | null = null;
@@ -167,6 +174,14 @@ export default async function FichaSocioPage({
           <span className={`rounded-full px-3 py-1 text-xs font-semibold ${ESTADO_BADGE[s.estado]}`}>
             {ESTADO_LABEL[s.estado]}
           </span>
+          {(() => {
+            const tipo = etiquetaTipoSocio(s.origen, Boolean(s.tipo_abono_id));
+            return (
+              <span className={`rounded-full px-3 py-1 text-xs font-semibold ${tipo.badge}`}>
+                {tipo.label}
+              </span>
+            );
+          })()}
           {s.carnet_fisico_pedido_en && (
             <span
               className={`rounded-full px-3 py-1 text-xs font-semibold ${
@@ -244,6 +259,14 @@ export default async function FichaSocioPage({
                   {s.metodo_pago ? METODO_LABEL[s.metodo_pago] ?? s.metodo_pago : "Sin asignar"}
                 </dd>
               </div>
+              {s.metodo_pago === "sepa_debit" && s.iban && (
+                <div>
+                  <dt className="text-xs font-semibold uppercase text-neutral-400">Número de cuenta (IBAN)</dt>
+                  <dd className="mt-0.5 text-sm text-neutral-800" style={{ fontFamily: "monospace" }}>
+                    {s.iban}
+                  </dd>
+                </div>
+              )}
               {titular && (
                 <div>
                   <dt className="text-xs font-semibold uppercase text-neutral-400">
@@ -253,6 +276,24 @@ export default async function FichaSocioPage({
                     <Link href={`/admin/socios/${titular.id}`} className="text-azul hover:underline">
                       {titular.nombre} {titular.apellidos}
                     </Link>
+                  </dd>
+                </div>
+              )}
+              {dependientes && dependientes.length > 0 && (
+                <div className="sm:col-span-2">
+                  <dt className="text-xs font-semibold uppercase text-neutral-400">
+                    También paga el carné de
+                  </dt>
+                  <dd className="mt-0.5 space-x-3 text-sm text-neutral-800">
+                    {dependientes.map((d) => (
+                      <Link
+                        key={d.id}
+                        href={`/admin/socios/${d.id}`}
+                        className="text-azul hover:underline"
+                      >
+                        {d.nombre} {d.apellidos} (nº{d.numero_socio})
+                      </Link>
+                    ))}
                   </dd>
                 </div>
               )}
