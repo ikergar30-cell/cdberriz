@@ -57,6 +57,10 @@ export function SocioForm({
   const [esSegundoTitular, setEsSegundoTitular] = useState(Boolean(socio?.titular_id));
   const [titularId, setTitularId] = useState(socio?.titular_id ?? "");
   const [busquedaTitular, setBusquedaTitular] = useState(titularActual ? etiquetaTitular(titularActual) : "");
+  // Si esta persona ya tenía suscripción propia y la conviertes en 2º
+  // titular, hay que cancelarla explícitamente — si no, se le seguiría
+  // cobrando aparte, duplicado con lo que pague el titular nuevo.
+  const tieneSuscripcionPropia = Boolean(socio?.stripe_subscription_id);
 
   const mapaTitular = useMemo(() => {
     const m = new Map<string, SocioParaTitular>();
@@ -259,6 +263,21 @@ export function SocioForm({
                 No coincide con ningún socio/a de la lista. Elige una opción del desplegable.
               </p>
             )}
+          </div>
+        )}
+
+        {esSegundoTitular && tieneSuscripcionPropia && (
+          <div className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+            <p className="font-semibold">Esta persona ya tiene una suscripción de pago activa.</p>
+            <p className="mt-1">
+              Al guardar se cancelará su renovación automática — no se le volverá a cobrar por
+              su cuenta, sigue activa hasta el final del periodo ya pagado. Si el titular nuevo
+              debe pasar a la cuota familiar, cámbiaselo a él por separado en su propia ficha.
+            </p>
+            <label className="mt-2 flex items-center gap-2 font-semibold">
+              <input type="checkbox" name="confirmar_cancelacion_stripe" required />
+              Entendido, cancela su suscripción al guardar
+            </label>
           </div>
         )}
       </section>

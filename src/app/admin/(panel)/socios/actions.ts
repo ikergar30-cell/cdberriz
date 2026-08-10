@@ -156,6 +156,21 @@ export async function actualizarSocio(id: string, formData: FormData): Promise<A
     await cambiarCuotaStripe(socioActual.stripe_subscription_id, cuota.stripe_price_id);
   }
 
+  // Se convierte en 2º titular a alguien que ya tenía suscripción propia:
+  // hay que cancelarla, si no se le seguiría cobrando aparte de lo que pague
+  // el titular nuevo. Lo exigimos también aquí, no solo en el formulario,
+  // por si llega una petición sin pasar por la UI.
+  if (datos.titular_id && socioActual.stripe_subscription_id) {
+    const confirmado = formData.get("confirmar_cancelacion_stripe") === "on";
+    if (!confirmado) {
+      return {
+        error:
+          "Esta persona tiene una suscripción de pago activa. Marca la casilla de confirmación para cancelarla antes de vincularla como 2º titular.",
+      };
+    }
+    await stripe.subscriptions.update(socioActual.stripe_subscription_id, { cancel_at_period_end: true });
+  }
+
   const { error } = await supabase.from("socios").update(datos).eq("id", id);
   if (error) return { error: "No se pudo actualizar: " + error.message };
 
