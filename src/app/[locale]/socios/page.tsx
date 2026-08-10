@@ -1,5 +1,4 @@
 import { setRequestLocale, getTranslations } from "next-intl/server";
-import { Link } from "@/i18n/routing";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { LinkButton } from "@/components/ui/Button";
 import { sanityFetch } from "@/sanity/lib/sanityFetch";
@@ -100,7 +99,7 @@ const FAQ = [
 
 // Página en construcción: no se muestra el contenido real (cuotas, alta,
 // FAQ...) hasta que se reactive. Pon esto en false para volver a publicarla.
-const EN_CONSTRUCCION = true;
+const EN_CONSTRUCCION = false;
 
 export default async function SociosPage({
   params: { locale },
@@ -216,12 +215,19 @@ export default async function SociosPage({
         <CarnetDigitalPromo locale={locale} />
 
         {/* Acceso de socios actuales */}
-        <p className="text-center text-sm text-neutral-600">
-          {eu ? "Dagoeneko bazkidea zara? " : "¿Ya eres socio/a? "}
-          <Link href="/cuenta" className="font-semibold text-azul underline hover:text-rojo">
+        <section className="flex flex-col items-center gap-3 rounded-2xl border border-azul-100 bg-azul-50 px-6 py-8 text-center">
+          <p className="text-base font-semibold text-azul-800">
+            {eu ? "Dagoeneko bazkidea zara?" : "¿Ya eres socio/a?"}
+          </p>
+          <p className="text-sm text-neutral-600">
+            {eu
+              ? "Sartu zure eremu pertsonalean karnet digitala ikusteko eta kuota kudeatzeko."
+              : "Entra en tu área personal para ver tu carné digital y gestionar tu cuota."}
+          </p>
+          <LinkButton href="/cuenta" variant="primary">
             {eu ? "Kudeatu zure kuota" : "Gestiona tu cuota"}
-          </Link>
-        </p>
+          </LinkButton>
+        </section>
 
         {/* Beneficios */}
         <section>

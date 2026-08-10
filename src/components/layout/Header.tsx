@@ -125,6 +125,12 @@ export function Header() {
         <div className="hidden items-center gap-3 lg:flex">
           <LanguageSwitcher />
           <Link
+            href="/cuenta"
+            className="rounded-full border border-neutral-300 px-4 py-2 text-sm font-semibold text-neutral-700 transition hover:border-azul hover:text-azul"
+          >
+            {t("miCuenta")}
+          </Link>
+          <Link
             href="/socios"
             className="rounded-full bg-rojo px-4 py-2 text-sm font-semibold text-white transition hover:bg-rojo-600"
           >
@@ -193,6 +199,14 @@ export function Header() {
               }`}
             >
               {t("contacto")}
+            </Link>
+
+            <Link
+              href="/cuenta"
+              onClick={() => setMenuOpen(false)}
+              className="rounded-lg px-3 py-2.5 font-semibold text-neutral-800"
+            >
+              {t("miCuenta")}
             </Link>
 
             <div className="mt-3 flex items-center justify-between gap-3 px-3">
