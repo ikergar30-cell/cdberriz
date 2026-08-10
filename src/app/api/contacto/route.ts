@@ -13,12 +13,22 @@ export async function POST(request: Request) {
     telefono?: string;
     asunto?: string;
     mensaje?: string;
+    pagina_web?: string;
+    mostradoEn?: string;
   };
 
   try {
     datos = await request.json();
   } catch {
     return NextResponse.json({ error: "Solicitud no válida." }, { status: 400 });
+  }
+
+  // Anti-spam: si el campo trampa viene relleno, o si se envía casi al
+  // instante de mostrarse el formulario, es un bot. Respondemos "ok" sin
+  // guardar nada ni avisar a nadie, para no darle pistas de que ha fallado.
+  const tiempoTranscurrido = Date.now() - Number(datos.mostradoEn || 0);
+  if (datos.pagina_web || !datos.mostradoEn || tiempoTranscurrido < 2500) {
+    return NextResponse.json({ ok: true });
   }
 
   const nombre = (datos.nombre || "").trim().slice(0, 120);

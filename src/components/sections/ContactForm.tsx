@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
 type Estado = "idle" | "enviando" | "ok" | "error";
@@ -8,12 +8,16 @@ type Estado = "idle" | "enviando" | "ok" | "error";
 export function ContactForm() {
   const t = useTranslations("contacto");
   const [estado, setEstado] = useState<Estado>("idle");
+  // Marca de tiempo de cuándo se mostró el formulario: los bots suelen
+  // enviarlo casi al instante, una persona tarda siempre varios segundos.
+  const mostradoEn = useRef(Date.now());
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setEstado("enviando");
     const form = e.currentTarget;
     const data = Object.fromEntries(new FormData(form).entries());
+    data.mostradoEn = String(mostradoEn.current);
     try {
       const res = await fetch("/api/contacto", {
         method: "POST",
@@ -42,6 +46,15 @@ export function ContactForm() {
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
+      {/* Honeypot anti-spam: invisible para personas, los bots lo rellenan igual. */}
+      <div
+        aria-hidden="true"
+        style={{ position: "absolute", left: "-9999px", width: 1, height: 1, overflow: "hidden" }}
+      >
+        <label htmlFor="pagina_web">Página web</label>
+        <input id="pagina_web" name="pagina_web" tabIndex={-1} autoComplete="off" />
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label className={labelCls} htmlFor="nombre">
