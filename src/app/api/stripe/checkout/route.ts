@@ -1,9 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
+import Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { esClaveCuota } from "@/config/cuotas";
 import { cuotaEfectiva, calcularEdad } from "@/lib/edad";
 import { esDniValido, normalizarDni } from "@/lib/dni";
+import { capitalizarPalabras } from "@/lib/texto";
 
 // Inicia el alta de un socio: crea el cliente en Stripe y una sesión de Checkout
 // (suscripción anual, tarjeta o SEPA). El socio se crea en nuestra base de datos
@@ -20,12 +22,12 @@ export async function POST(request: NextRequest) {
   }
 
   const clave = String(body.clave ?? "");
-  const nombre = String(body.nombre ?? "").trim();
-  const apellidos = String(body.apellidos ?? "").trim();
+  const nombre = capitalizarPalabras(String(body.nombre ?? ""));
+  const apellidos = capitalizarPalabras(String(body.apellidos ?? ""));
   const email = String(body.email ?? "").trim();
   const telefono = String(body.telefono ?? "").trim();
   const direccion = String(body.direccion ?? "").trim();
-  const poblacion = String(body.poblacion ?? "").trim();
+  const poblacion = capitalizarPalabras(String(body.poblacion ?? ""));
   const codigoPostal = String(body.codigo_postal ?? "").trim();
   const dni = normalizarDni(String(body.dni ?? ""));
   const fechaNacimiento = String(body.fecha_nacimiento ?? "").trim();
@@ -66,8 +68,8 @@ export async function POST(request: NextRequest) {
 
   // Abono familiar: incluye dos carnets, así que se validan también los
   // datos mínimos del segundo titular.
-  const nombre2 = String(body.nombre2 ?? "").trim();
-  const apellidos2 = String(body.apellidos2 ?? "").trim();
+  const nombre2 = capitalizarPalabras(String(body.nombre2 ?? ""));
+  const apellidos2 = capitalizarPalabras(String(body.apellidos2 ?? ""));
   const dni2 = normalizarDni(String(body.dni2 ?? ""));
   const fechaNacimiento2 = String(body.fecha_nacimiento2 ?? "").trim();
   // Opcional: si el segundo titular quiere su propio acceso al portal de
@@ -177,19 +179,43 @@ export async function POST(request: NextRequest) {
       metadata: meta,
     });
 
-    const session = await stripe.checkout.sessions.create({
-      mode: "subscription",
+    const datosSesion = {
+      mode: "subscription" as const,
       customer: customer.id,
       line_items: [{ price: cuota.stripe_price_id, quantity: 1 }],
-      // Tarjeta (confirmación inmediata) o domiciliación SEPA (Stripe recoge el
-      // IBAN y el mandato directamente en su página; el cobro tarda unos días
-      // en confirmarse, por eso el webhook no activa al socio hasta "invoice.paid").
-      payment_method_types: ["card", "sepa_debit"],
-      locale: locale === "eu" ? "auto" : "es",
+      locale: locale === "eu" ? ("auto" as const) : ("es" as const),
       subscription_data: { metadata: meta },
       success_url: `${siteUrl}/${locale}/socios/gracias?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${siteUrl}/${locale}/socios`,
-    });
+    };
+
+    let session;
+    try {
+      // Tarjeta (confirmación inmediata) o domiciliación SEPA (Stripe recoge
+      // el IBAN y el mandato directamente en su página; el cobro tarda unos
+      // días en confirmarse, por eso el webhook no activa al socio hasta
+      // "invoice.paid").
+      session = await stripe.checkout.sessions.create({
+        ...datosSesion,
+        payment_method_types: ["card", "sepa_debit"],
+      });
+    } catch (e) {
+      // Si SEPA todavía no está activado en la cuenta de Stripe, Stripe
+      // rechaza la petición ENTERA (también bloquearía pagar con tarjeta).
+      // En ese caso concreto, reintentamos solo con tarjeta en vez de dejar
+      // a todo el mundo sin poder pagar; en cuanto se active SEPA en el
+      // Dashboard de Stripe, se volverá a ofrecer sin tocar código.
+      const esFalloSepaNoActivado =
+        e instanceof Stripe.errors.StripeInvalidRequestError && e.param === "payment_method_types";
+      if (!esFalloSepaNoActivado) throw e;
+      console.error(
+        "[stripe/checkout] SEPA no está activado en Stripe todavía; reintentando solo con tarjeta.",
+      );
+      session = await stripe.checkout.sessions.create({
+        ...datosSesion,
+        payment_method_types: ["card"],
+      });
+    }
 
     if (!session.url) {
       return NextResponse.json({ error: "No se pudo iniciar el pago" }, { status: 500 });

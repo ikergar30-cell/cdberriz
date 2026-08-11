@@ -92,8 +92,11 @@ export function AltaForm({ clave }: { clave: ClaveCuota }) {
   };
 
   const input =
-    "w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-sm outline-none transition focus:border-azul focus:ring-2 focus:ring-azul/20";
+    "w-full rounded-lg border border-neutral-300 bg-white px-3 py-2.5 text-sm text-neutral-900 outline-none transition focus:border-azul focus:ring-2 focus:ring-azul/20";
   const label = "mb-1 block text-sm font-semibold text-neutral-700";
+  // Safari/iOS pinta su propio fondo gris en los <input type="date"> si no se
+  // fuerza a que ignore el estilo nativo del sistema.
+  const inputDateStyle = { WebkitAppearance: "none", appearance: "none", colorScheme: "light" } as const;
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
@@ -121,6 +124,7 @@ export function AltaForm({ clave }: { clave: ClaveCuota }) {
             name="fecha_nacimiento"
             type="date"
             className={input}
+            style={inputDateStyle}
             value={fechaNac}
             onChange={(e) => setFechaNac(e.target.value)}
             required
@@ -183,6 +187,7 @@ export function AltaForm({ clave }: { clave: ClaveCuota }) {
                 name="fecha_nacimiento2"
                 type="date"
                 className={input}
+                style={inputDateStyle}
                 value={fechaNac2}
                 onChange={(e) => setFechaNac2(e.target.value)}
                 required

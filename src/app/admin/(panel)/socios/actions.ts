@@ -10,6 +10,8 @@ import { stripe } from "@/lib/stripe";
 import { REEMBOLSO_DIAS, diasDesde } from "@/config/reembolso";
 import type { EstadoSocio, OrigenSocio } from "@/lib/supabase/types";
 import type { ActionResult } from "@/lib/actionResult";
+import { normalizarDni } from "@/lib/dni";
+import { capitalizarPalabras } from "@/lib/texto";
 
 // Server actions independientes del renderizado de la página: cada una debe
 // re-verificar que quien llama es un empleado autenticado.
@@ -39,14 +41,22 @@ function leerCampos(formData: FormData) {
 
   const titularId = txt("titular_id");
 
+  // En la base de datos siempre queda igual, sin importar cómo lo escriba
+  // quien lo teclee: DNI en mayúsculas, nombres/apellidos/población con
+  // inicial mayúscula.
+  const nombreTxt = txt("nombre");
+  const apellidosTxt = txt("apellidos");
+  const dniTxt = txt("dni");
+  const poblacionTxt = txt("poblacion");
+
   return {
-    nombre: txt("nombre") ?? "",
-    apellidos: txt("apellidos") ?? "",
+    nombre: nombreTxt ? capitalizarPalabras(nombreTxt) : "",
+    apellidos: apellidosTxt ? capitalizarPalabras(apellidosTxt) : "",
     email: txt("email"),
     telefono: txt("telefono"),
-    dni: txt("dni"),
+    dni: dniTxt ? normalizarDni(dniTxt) : null,
     direccion: txt("direccion"),
-    poblacion: txt("poblacion"),
+    poblacion: poblacionTxt ? capitalizarPalabras(poblacionTxt) : null,
     codigo_postal: txt("codigo_postal"),
     fecha_nacimiento: txt("fecha_nacimiento"),
     origen: (txt("origen") ?? "cuota") as OrigenSocio,
@@ -355,6 +365,12 @@ export async function importarSocios(filas: FilaImport[]): Promise<ResultadoFila
       if (!fila.nombre || !fila.apellidos) throw new Error("Nombre y apellidos son obligatorios");
       if (!fila.email) throw new Error("Email obligatorio");
 
+      // Mismo criterio que en el resto de altas: en la base de datos siempre
+      // queda igual, sin importar cómo venga escrito en el CSV.
+      const nombre = capitalizarPalabras(fila.nombre);
+      const apellidos = capitalizarPalabras(fila.apellidos);
+      const dni = fila.dni ? normalizarDni(fila.dni) : null;
+
       const cuota = cuotaMap.get(fila.cuota);
       if (!cuota) throw new Error(`Cuota desconocida: "${fila.cuota}"`);
 
@@ -364,8 +380,8 @@ export async function importarSocios(filas: FilaImport[]): Promise<ResultadoFila
       if (fila.iban) {
         if (!cuota.stripe_price_id) throw new Error("La cuota no tiene precio en Stripe");
         const res = await crearSuscripcionSEPA({
-          nombre: fila.nombre,
-          apellidos: fila.apellidos,
+          nombre,
+          apellidos,
           email: fila.email,
           telefono: fila.telefono,
           iban: fila.iban,
@@ -379,11 +395,11 @@ export async function importarSocios(filas: FilaImport[]): Promise<ResultadoFila
       }
 
       const { error } = await admin.from("socios").insert({
-        nombre: fila.nombre,
-        apellidos: fila.apellidos,
+        nombre,
+        apellidos,
         email: fila.email || null,
         telefono: fila.telefono || null,
-        dni: fila.dni || null,
+        dni,
         fecha_nacimiento: fila.fecha_nacimiento || null,
         tipo_abono_id: cuota.id,
         iban: fila.iban || null,
@@ -396,7 +412,7 @@ export async function importarSocios(filas: FilaImport[]): Promise<ResultadoFila
 
       if (error) throw new Error(error.message);
 
-      resultados.push({ ok: true, nombre: fila.nombre, apellidos: fila.apellidos });
+      resultados.push({ ok: true, nombre, apellidos });
     } catch (e) {
       resultados.push({
         ok: false,
