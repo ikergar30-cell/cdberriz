@@ -164,29 +164,42 @@ export async function POST(request: NextRequest) {
     if (email2) meta.email2 = email2;
   }
 
-  const customer = await stripe.customers.create({
-    email,
-    name: `${nombre} ${apellidos}`,
-    phone: telefono || undefined,
-    metadata: meta,
-  });
+  // Cualquier fallo de Stripe (precio mal configurado, teléfono con un
+  // formato que rechaza, corte puntual del servicio...) no debe reventar la
+  // petición sin control: eso deja al navegador del socio sin respuesta que
+  // entender. Lo capturamos, lo dejamos en el log del servidor para poder
+  // investigarlo, y devolvemos siempre un JSON con un mensaje claro.
+  try {
+    const customer = await stripe.customers.create({
+      email,
+      name: `${nombre} ${apellidos}`,
+      phone: telefono || undefined,
+      metadata: meta,
+    });
 
-  const session = await stripe.checkout.sessions.create({
-    mode: "subscription",
-    customer: customer.id,
-    line_items: [{ price: cuota.stripe_price_id, quantity: 1 }],
-    // Tarjeta (confirmación inmediata) o domiciliación SEPA (Stripe recoge el
-    // IBAN y el mandato directamente en su página; el cobro tarda unos días
-    // en confirmarse, por eso el webhook no activa al socio hasta "invoice.paid").
-    payment_method_types: ["card", "sepa_debit"],
-    locale: locale === "eu" ? "auto" : "es",
-    subscription_data: { metadata: meta },
-    success_url: `${siteUrl}/${locale}/socios/gracias?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${siteUrl}/${locale}/socios`,
-  });
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      customer: customer.id,
+      line_items: [{ price: cuota.stripe_price_id, quantity: 1 }],
+      // Tarjeta (confirmación inmediata) o domiciliación SEPA (Stripe recoge el
+      // IBAN y el mandato directamente en su página; el cobro tarda unos días
+      // en confirmarse, por eso el webhook no activa al socio hasta "invoice.paid").
+      payment_method_types: ["card", "sepa_debit"],
+      locale: locale === "eu" ? "auto" : "es",
+      subscription_data: { metadata: meta },
+      success_url: `${siteUrl}/${locale}/socios/gracias?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${siteUrl}/${locale}/socios`,
+    });
 
-  if (!session.url) {
-    return NextResponse.json({ error: "No se pudo iniciar el pago" }, { status: 500 });
+    if (!session.url) {
+      return NextResponse.json({ error: "No se pudo iniciar el pago" }, { status: 500 });
+    }
+    return NextResponse.json({ url: session.url });
+  } catch (e) {
+    console.error("[stripe/checkout] Fallo al crear la sesión de pago:", e);
+    return NextResponse.json(
+      { error: "No se pudo iniciar el pago. Inténtalo de nuevo en unos minutos." },
+      { status: 500 },
+    );
   }
-  return NextResponse.json({ url: session.url });
 }

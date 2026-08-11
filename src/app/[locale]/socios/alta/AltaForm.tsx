@@ -35,17 +35,24 @@ export function AltaForm({ clave }: { clave: ClaveCuota }) {
     setError(null);
     setCargando(true);
     const datos = Object.fromEntries(new FormData(e.currentTarget).entries());
+    const mensajeGenerico = eu
+      ? "Ez da bideratu. Berriz saiatu edo jarri gurekin harremanetan."
+      : "No se pudo continuar. Inténtalo de nuevo o ponte en contacto con nosotros.";
     try {
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...datos, clave, locale }),
       });
-      const json = await res.json();
-      if (!res.ok || !json.url) throw new Error(json.error || "Error");
+      // El servidor siempre responde JSON, pero si algo imprevisto lo
+      // impidiera (caída puntual, proxy, etc.) no queremos enseñar el error
+      // técnico de "res.json()" tal cual — el texto exacto varía incluso
+      // según el navegador y no dice nada útil al socio.
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.url) throw new Error(json?.error || mensajeGenerico);
       window.location.href = json.url;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo continuar.");
+      setError(err instanceof Error ? err.message : mensajeGenerico);
       setCargando(false);
     }
   }
