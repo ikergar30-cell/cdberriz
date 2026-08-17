@@ -8,6 +8,7 @@ import type { CarnetFisico, EstadoPago, Pago, Socio, TipoAbono } from "@/lib/sup
 import { CarnetSocio } from "@/components/CarnetSocio";
 import { camposFaltantes } from "@/lib/socios/camposFaltantes";
 import { etiquetaTipoSocio } from "@/config/origenSocio";
+import { proximoCierreTemporada } from "@/config/facturacion";
 import { HistorialPagos } from "./HistorialPagos";
 import { AccionesAbono } from "./AccionesAbono";
 
@@ -116,6 +117,13 @@ export default async function FichaSocioPage({
       // Suscripción no encontrada/cancelada en Stripe: no bloquea la ficha.
     }
   }
+  // Sin suscripción de Stripe real (domiciliación bancaria, alta manual):
+  // se muestra igualmente la próxima fecha objetivo (1 de julio) como
+  // referencia, para quien esté activo y pague alguna cuota.
+  const proximaRenovacionGenerica =
+    !proximaRenovacion && s.estado === "activo" && cuota
+      ? proximoCierreTemporada(new Date()).getTime()
+      : null;
 
   // "Todos los pagos y facturas de Stripe": la tabla local "pagos" solo se
   // rellena con los eventos de webhook que hemos recibido, así que puede
@@ -252,7 +260,11 @@ export default async function FichaSocioPage({
                   {cancelacionProgramada ? "Se da de baja el" : "Próxima renovación"}
                 </dt>
                 <dd className="mt-0.5 text-sm text-neutral-800">
-                  {proximaRenovacion ? formatearFecha(proximaRenovacion) : "—"}
+                  {proximaRenovacion
+                    ? formatearFecha(proximaRenovacion)
+                    : proximaRenovacionGenerica
+                      ? formatearFecha(proximaRenovacionGenerica)
+                      : "—"}
                   {cancelacionProgramada && (
                     <span className="ml-2 text-xs font-semibold text-rojo">(cancelada)</span>
                   )}
