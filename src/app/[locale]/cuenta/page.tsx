@@ -12,6 +12,7 @@ import {
 } from "@/sanity/lib/queries";
 import type { Evento, Noticia, DocumentoDescargable } from "@/sanity/lib/types";
 import { pickLocale } from "@/lib/locale";
+import { proximoCierreTemporada } from "@/config/facturacion";
 import { CarnetSocio } from "@/components/CarnetSocio";
 import { CuentaLogin } from "./CuentaLogin";
 import { CuentaAcciones } from "./CuentaAcciones";
@@ -89,7 +90,7 @@ export default async function CuentaPage({
   // deje a esa persona sin poder entrar a su portal.
   const { data: sociosCoincidentes } = await admin
     .from("socios")
-    .select("id, nombre, apellidos, numero_socio, estado, fecha_alta, direccion, carnet_token, foto_url, carnet_fisico_pedido_en, carnet_fisico_entregado_en, carnet_fisico_recogida, stripe_customer_id, stripe_subscription_id, titular_id, tipos_abono(nombre, precio_cents)")
+    .select("id, nombre, apellidos, numero_socio, estado, origen, fecha_alta, direccion, carnet_token, foto_url, carnet_fisico_pedido_en, carnet_fisico_entregado_en, carnet_fisico_recogida, stripe_customer_id, stripe_subscription_id, titular_id, tipos_abono(nombre, precio_cents)")
     .ilike("email", user.email)
     .order("numero_socio", { ascending: true })
     .limit(1);
@@ -130,6 +131,15 @@ export default async function CuentaPage({
   const tipo = (socio as { tipos_abono?: { nombre: string; precio_cents: number } | null } | null)?.tipos_abono;
   const eventosMostrar = eventos.slice(0, 3);
 
+  // Todos los socios que pagan cuota se renuevan el mismo 1 de julio (ver
+  // src/config/facturacion.ts). Si todavía no hay una suscripción de Stripe
+  // real que dé la fecha exacta (altas históricas, domiciliación bancaria),
+  // se muestra igualmente la próxima fecha objetivo como referencia.
+  const proximaRenovacionGenerica =
+    socio?.origen === "cuota" && !fechaFinPeriodo
+      ? formatFecha(proximoCierreTemporada(new Date()).toISOString(), locale)
+      : null;
+
   return (
     <>
       <PageHeader title={titulo} />
@@ -160,7 +170,11 @@ export default async function CuentaPage({
                     {eu ? "Kuota" : "Cuota"}
                   </dt>
                   <dd className="mt-0.5 text-sm font-semibold text-neutral-900">
-                    {tipo ? `${tipo.nombre} · ${(tipo.precio_cents / 100).toFixed(0)} €/${eu ? "urte" : "año"}` : "—"}
+                    {tipo
+                      ? `${tipo.nombre} · ${(tipo.precio_cents / 100).toFixed(0)} €/${eu ? "urte" : "año"}`
+                      : socio.origen === "jugador"
+                        ? (eu ? "Seme-alaba jokalaria (kuotarik gabe)" : "Hijo/a jugador/a (sin cuota aparte)")
+                        : "—"}
                   </dd>
                 </div>
                 <div>
@@ -171,13 +185,13 @@ export default async function CuentaPage({
                     {socio.fecha_alta ? formatFecha(socio.fecha_alta, locale) : "—"}
                   </dd>
                 </div>
-                {!titular && (
+                {!titular && (socio.origen === "cuota" || tipo) && (
                   <div>
                     <dt className="text-xs font-semibold uppercase text-neutral-400">
                       {cancelacionProgramada ? (eu ? "Baja" : "Se da de baja") : (eu ? "Hurrengo berritzea" : "Próxima renovación")}
                     </dt>
                     <dd className={`mt-0.5 text-sm font-semibold ${cancelacionProgramada ? "text-rojo" : "text-neutral-900"}`}>
-                      {fechaFinPeriodo ?? "—"}
+                      {fechaFinPeriodo ?? proximaRenovacionGenerica ?? "—"}
                     </dd>
                   </div>
                 )}

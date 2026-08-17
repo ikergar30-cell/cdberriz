@@ -207,7 +207,9 @@ export default async function SociosPage({
                       {tipo.label}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-neutral-600">{s.tipos_abono?.nombre ?? "—"}</td>
+                  <td className="px-4 py-3 text-neutral-600">
+                    {s.tipos_abono?.nombre ?? (s.origen === "jugador" ? "Hijo/a jugador/a" : "—")}
+                  </td>
                   <td className="px-4 py-3 text-neutral-600">
                     {s.email ?? s.telefono ?? "—"}
                   </td>

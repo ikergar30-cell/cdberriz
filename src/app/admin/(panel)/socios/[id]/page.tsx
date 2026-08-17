@@ -233,7 +233,11 @@ export default async function FichaSocioPage({
               <div>
                 <dt className="text-xs font-semibold uppercase text-neutral-400">Cuota</dt>
                 <dd className="mt-0.5 text-sm text-neutral-800">
-                  {cuota ? `${cuota.nombre} (${(cuota.precio_cents / 100).toFixed(2)} €/año)` : "Sin asignar"}
+                  {cuota
+                    ? `${cuota.nombre} (${(cuota.precio_cents / 100).toFixed(2)} €/año)`
+                    : s.origen === "jugador"
+                      ? "Hijo/a jugador/a (sin cuota aparte)"
+                      : "Sin asignar"}
                 </dd>
               </div>
               <div>
