@@ -35,6 +35,12 @@ export async function reAlinearRenovacion(
     trial_end: objetivo,
     proration_behavior: "none",
   });
+  // "trial_end" retrasa el cobro sin cobrar de más ahora, pero en el modo de
+  // facturación de esta cuenta ("flexible") no reinicia por sí solo la fecha
+  // ancla al terminar la prueba: el cobro final saldría prorrateado (de
+  // menos) en vez del precio completo. Por eso el cron
+  // "ajustar-ancla-cuotas" corrige la fecha ancla justo el día que termina
+  // cada prueba (ver src/app/api/cron/ajustar-ancla-cuotas/route.ts).
   return "actualizada";
 }
 

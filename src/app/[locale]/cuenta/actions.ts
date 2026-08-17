@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe";
 import type { ActionResult } from "@/lib/actionResult";
+import { REEMBOLSO_DIAS, diasDesde } from "@/config/reembolso";
 
 type SocioSesion = {
   id: string;
@@ -41,9 +42,36 @@ async function socioDeLaSesion(): Promise<ResultadoSesion> {
   return { ok: true, admin, socio };
 }
 
-// Cancela la renovación (el socio sigue activo hasta el final del periodo ya
-// pagado, igual que cuando lo hace un empleado desde el panel) y guarda el
-// motivo en su ficha para que el club pueda hacer seguimiento.
+// ¿Puede este socio acogerse al derecho de desistimiento (devolución del
+// último pago + baja inmediata)? Solo dentro de los 14 días desde el pago Y
+// sin haber usado ya el carné (cada entrada válida en el control de acceso
+// queda registrada en "entradas") — igual que la versión del panel de admin.
+async function elegibleDesistimiento(
+  admin: ReturnType<typeof createAdminClient>,
+  socioId: string,
+): Promise<{ elegible: boolean; ultimoPago: { id: string; stripe_invoice_id: string | null; fecha: string } | null }> {
+  const { data: ultimoPago } = await admin
+    .from("pagos")
+    .select("id, stripe_invoice_id, fecha")
+    .eq("socio_id", socioId)
+    .eq("estado", "pagado")
+    .order("fecha", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!ultimoPago?.stripe_invoice_id || diasDesde(ultimoPago.fecha) > REEMBOLSO_DIAS) {
+    return { elegible: false, ultimoPago: ultimoPago ?? null };
+  }
+  const { count: entradasUsadas } = await admin
+    .from("entradas")
+    .select("id", { count: "exact", head: true })
+    .eq("socio_id", socioId);
+  return { elegible: (entradasUsadas ?? 0) === 0, ultimoPago };
+}
+
+// Cancela la cuota. Si está dentro del plazo de desistimiento (14 días y sin
+// haber usado el carné), se devuelve el último pago y se da de baja de
+// inmediato. Si no, sigue activo hasta el final del periodo ya pagado, como
+// siempre (Stripe deja de cobrarle a partir de ahí).
 export async function cancelarMiCuota(motivo: string, comentario: string): Promise<ActionResult> {
   const sesion = await socioDeLaSesion();
   if (!sesion.ok) return { error: sesion.error };
@@ -59,6 +87,32 @@ export async function cancelarMiCuota(motivo: string, comentario: string): Promi
   }
   if (!motivo) {
     return { error: "Indica el motivo de la baja." };
+  }
+
+  const { elegible, ultimoPago } = await elegibleDesistimiento(admin, socio.id);
+
+  if (elegible && ultimoPago?.stripe_invoice_id) {
+    const pagosFactura = await stripe.invoicePayments.list({
+      invoice: ultimoPago.stripe_invoice_id,
+      limit: 1,
+    });
+    const pagoStripe = pagosFactura.data[0]?.payment.payment_intent;
+    const paymentIntentId = typeof pagoStripe === "string" ? pagoStripe : pagoStripe?.id;
+    if (paymentIntentId) {
+      await stripe.refunds.create({ payment_intent: paymentIntentId });
+    }
+    await stripe.subscriptions.cancel(socio.stripe_subscription_id);
+    const { error } = await admin
+      .from("socios")
+      .update({
+        estado: "baja",
+        motivo_baja: motivo,
+        comentario_baja: comentario || null,
+        fecha_solicitud_baja: new Date().toISOString(),
+      })
+      .eq("id", socio.id);
+    if (error) return { error: error.message };
+    return;
   }
 
   await stripe.subscriptions.update(socio.stripe_subscription_id, { cancel_at_period_end: true });

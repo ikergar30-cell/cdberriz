@@ -304,6 +304,16 @@ export async function reembolsarYCancelar(id: string): Promise<ActionResult> {
     };
   }
 
+  // Derecho de desistimiento condicionado a no haber empezado a usar el
+  // servicio: si ya ha entrado con el carné, no es reembolsable.
+  const { count: entradasUsadas } = await admin
+    .from("entradas")
+    .select("id", { count: "exact", head: true })
+    .eq("socio_id", id);
+  if ((entradasUsadas ?? 0) > 0) {
+    return { error: "Este socio ya ha usado el carné (hay entradas registradas): no es reembolsable." };
+  }
+
   // Stripe ya no expone "payment_intent" directamente en la factura: hay que
   // consultar sus InvoicePayments (modelo de facturación actual de la API).
   const pagosFactura = await stripe.invoicePayments.list({

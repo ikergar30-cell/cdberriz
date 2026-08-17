@@ -15,6 +15,7 @@ export function AccionesAbono({
   elegibleReembolso,
   diasRestantesReembolso,
   fechaFinPeriodo,
+  haUsadoCarnet,
 }: {
   socioId: string;
   tieneSuscripcion: boolean;
@@ -22,6 +23,7 @@ export function AccionesAbono({
   elegibleReembolso: boolean;
   diasRestantesReembolso: number | null;
   fechaFinPeriodo: string | null;
+  haUsadoCarnet: boolean;
 }) {
   const [cargando, setCargando] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -66,6 +68,11 @@ export function AccionesAbono({
           >
             {cargando === "reembolsar" ? "Reembolsando…" : "Reembolsar y dar de baja"}
           </button>
+        )}
+        {!elegibleReembolso && haUsadoCarnet && (
+          <p className="text-xs text-neutral-400">
+            No es elegible para reembolso: ya ha usado el carné (control de acceso).
+          </p>
         )}
 
         {cancelacionProgramada ? (

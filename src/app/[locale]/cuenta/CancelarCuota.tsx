@@ -19,9 +19,11 @@ type Paso = "cerrado" | "motivo" | "retencion" | "confirmado";
 export function CancelarCuota({
   cancelacionProgramada,
   fechaFinPeriodo,
+  elegibleDevolucion,
 }: {
   cancelacionProgramada: boolean;
   fechaFinPeriodo: string | null;
+  elegibleDevolucion: boolean;
 }) {
   const locale = useLocale();
   const eu = locale === "eu";
@@ -175,11 +177,22 @@ export function CancelarCuota({
             </li>
             <li className="flex items-start gap-2">
               <span className="text-azul">✓</span>
-              {eu
-                ? "Baja ematen baduzu, zure bazkide zenbakia ez da inori esleituko."
-                : "Si cancelas, seguirás activo/a hasta el final del periodo que ya has pagado — no pierdes nada de lo abonado."}
+              {elegibleDevolucion
+                ? eu
+                  ? "14 egun baino gutxiago daramatzazu eta ez duzu karneta erabili: baja ematen baduzu, azken ordainketa itzuliko dizugu eta berehala emango zaitugu baja."
+                  : "Llevas menos de 14 días y todavía no has usado el carné: si cancelas ahora, te devolvemos el último pago y causas baja de inmediato."
+                : eu
+                  ? "Baja ematen baduzu, ordaindutako epearen amaieran arte aktibo jarraituko duzu — ez duzu ezer galduko ordaindutakotik."
+                  : "Si cancelas, seguirás activo/a hasta el final del periodo que ya has pagado — no pierdes nada de lo abonado."}
             </li>
           </ul>
+
+          <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+            {eu
+              ? "Ez ireki inolako erreklamaziorik zure bankuan edo Striperen bidez: horrek klubari 20 € kostatzen dio, eta beste 20 € gehiago erreklamazioari erantzuteko. Auzia irabaziz gero, gastu horiek zuri kobratuko dizkizugu. Baja emateko bide egokia hau da, edo idatzi iezaguzu."
+              : "No abras ninguna reclamación/disputa en tu banco o en Stripe: le cuesta al club 20 € solo por abrirla, y otros 20 € más por responderla. Si el club gana la disputa, esos gastos te los repercutiremos a ti. La forma correcta de darte de baja es esta, o escribiéndonos directamente."}
+          </div>
+
           <p className="mt-3 text-xs text-neutral-500">
             {eu
               ? "Kontaktua: "
@@ -205,7 +218,15 @@ export function CancelarCuota({
               disabled={cargando}
               className="rounded-full border border-rojo px-5 py-2 text-sm font-semibold text-rojo transition hover:bg-rojo hover:text-white disabled:opacity-60"
             >
-              {cargando ? "…" : eu ? "Hala ere, baja eman" : "Aun así, cancelar"}
+              {cargando
+                ? "…"
+                : elegibleDevolucion
+                  ? eu
+                    ? "Baja eman eta dirua itzuli"
+                    : "Cancelar y recuperar el pago"
+                  : eu
+                    ? "Hala ere, baja eman"
+                    : "Aun así, cancelar"}
             </button>
           </div>
         </>
@@ -213,9 +234,13 @@ export function CancelarCuota({
 
       {paso === "confirmado" && (
         <p className="text-sm text-neutral-700">
-          {eu
-            ? "Zure berritzea bertan behera utzi da. Dagoeneko ordaindutako epea amaitu arte aktibo jarraituko duzu."
-            : "Tu renovación ha quedado cancelada. Seguirás activo/a hasta el final del periodo ya pagado."}
+          {elegibleDevolucion
+            ? eu
+              ? "Baja eman zara eta azken ordainketa itzuli dizugu. Eskerrik asko izandako denboragatik."
+              : "Has causado baja y te hemos devuelto el último pago. Gracias por el tiempo que has sido socio/a."
+            : eu
+              ? "Zure berritzea bertan behera utzi da. Dagoeneko ordaindutako epea amaitu arte aktibo jarraituko duzu."
+              : "Tu renovación ha quedado cancelada. Seguirás activo/a hasta el final del periodo ya pagado."}
         </p>
       )}
     </div>

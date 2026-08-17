@@ -164,7 +164,15 @@ export default async function FichaSocioPage({
   const faltan = camposFaltantes(s);
   const ultimoPago = listaPagos.find((p) => p.estado === "pagado") ?? null;
   const diasTranscurridos = ultimoPago ? diasDesde(ultimoPago.fecha) : Infinity;
-  const elegibleReembolso = ultimoPago !== null && diasTranscurridos <= REEMBOLSO_DIAS;
+  // Derecho de desistimiento (14 días): además del plazo, el socio no debe
+  // haber usado ya el carné (cada entrada válida en el control de acceso
+  // queda registrada en "entradas").
+  const { count: entradasUsadas } = await supabase
+    .from("entradas")
+    .select("id", { count: "exact", head: true })
+    .eq("socio_id", id);
+  const haUsadoCarnet = (entradasUsadas ?? 0) > 0;
+  const elegibleReembolso = ultimoPago !== null && diasTranscurridos <= REEMBOLSO_DIAS && !haUsadoCarnet;
   const diasRestantesReembolso = elegibleReembolso
     ? Math.max(0, Math.ceil(REEMBOLSO_DIAS - diasTranscurridos))
     : null;
@@ -336,6 +344,7 @@ export default async function FichaSocioPage({
               elegibleReembolso={elegibleReembolso}
               diasRestantesReembolso={diasRestantesReembolso}
               fechaFinPeriodo={proximaRenovacion ? formatearFecha(proximaRenovacion) : null}
+              haUsadoCarnet={haUsadoCarnet}
             />
           </div>
 

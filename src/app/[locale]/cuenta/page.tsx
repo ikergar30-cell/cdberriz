@@ -13,6 +13,7 @@ import {
 import type { Evento, Noticia, DocumentoDescargable } from "@/sanity/lib/types";
 import { pickLocale } from "@/lib/locale";
 import { proximoCierreTemporada } from "@/config/facturacion";
+import { REEMBOLSO_DIAS, diasDesde } from "@/config/reembolso";
 import { CarnetSocio } from "@/components/CarnetSocio";
 import { CuentaLogin } from "./CuentaLogin";
 import { CuentaAcciones } from "./CuentaAcciones";
@@ -121,6 +122,21 @@ export default async function CuentaPage({
   const pagos = socio
     ? (await admin.from("pagos").select("id, importe_cents, estado, metodo, temporada, fecha, stripe_hosted_invoice_url").eq("socio_id", socio.id).order("fecha", { ascending: false }).limit(5)).data ?? []
     : [];
+
+  // Derecho de desistimiento: 14 días desde el último pago Y sin haber usado
+  // ya el carné (cada entrada válida en el control de acceso se registra en
+  // "entradas") — misma regla que en el panel de admin.
+  let elegibleDevolucion = false;
+  if (socio) {
+    const ultimoPago = pagos.find((p) => p.estado === "pagado") ?? null;
+    if (ultimoPago && diasDesde(ultimoPago.fecha) <= REEMBOLSO_DIAS) {
+      const { count } = await admin
+        .from("entradas")
+        .select("id", { count: "exact", head: true })
+        .eq("socio_id", socio.id);
+      elegibleDevolucion = (count ?? 0) === 0;
+    }
+  }
 
   // 2º carné de un abono familiar: los pagos y la facturación van por la
   // cuenta del titular, así que lo indicamos para que no extrañe ver el
@@ -418,6 +434,7 @@ export default async function CuentaPage({
                   <CancelarCuota
                     cancelacionProgramada={cancelacionProgramada}
                     fechaFinPeriodo={fechaFinPeriodo}
+                    elegibleDevolucion={elegibleDevolucion}
                   />
                 )}
 
