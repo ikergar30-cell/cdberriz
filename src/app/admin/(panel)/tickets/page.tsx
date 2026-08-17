@@ -10,20 +10,23 @@ function formatearFecha(fecha: string) {
 export default async function TicketsPage({
   searchParams,
 }: {
-  searchParams: { estado?: string; categoria?: string; archivados?: string };
+  searchParams: { estado?: string; categoria?: string; archivados?: string; papelera?: string };
 }) {
   const estado = searchParams.estado ?? "";
   const categoria = searchParams.categoria ?? "";
   const archivados = searchParams.archivados === "1";
+  const papelera = searchParams.papelera === "1";
 
   const supabase = createClient();
   let query = supabase
     .from("tickets")
-    .select("id, nombre, email, asunto, categoria, estado, archivado, created_at, updated_at")
-    .eq("archivado", archivados)
+    .select("id, nombre, email, asunto, categoria, estado, archivado, eliminado_en, created_at, updated_at")
     .order("created_at", { ascending: false });
-  if (estado) query = query.eq("estado", estado);
-  if (categoria) query = query.eq("categoria", categoria);
+  // La papelera es un cajón aparte: no se cruza con archivado/estado, y el
+  // resto de vistas nunca muestran lo eliminado.
+  query = papelera ? query.not("eliminado_en", "is", null) : query.is("eliminado_en", null).eq("archivado", archivados);
+  if (!papelera && estado) query = query.eq("estado", estado);
+  if (!papelera && categoria) query = query.eq("categoria", categoria);
 
   const { data } = await query;
   const tickets = (data as Ticket[]) ?? [];
@@ -31,7 +34,13 @@ export default async function TicketsPage({
   // Enlace que conserva los filtros vigentes al cambiar uno.
   const con = (cambios: Record<string, string | undefined>) => {
     const p = new URLSearchParams();
-    const base = { estado, categoria, archivados: archivados ? "1" : "", ...cambios };
+    const base = {
+      estado,
+      categoria,
+      archivados: archivados ? "1" : "",
+      papelera: papelera ? "1" : "",
+      ...cambios,
+    };
     for (const [k, v] of Object.entries(base)) if (v) p.set(k, v);
     const qs = p.toString();
     return `/admin/tickets${qs ? `?${qs}` : ""}`;
@@ -53,41 +62,56 @@ export default async function TicketsPage({
 
       {/* Filtros por estado */}
       <div className="mt-6 flex flex-wrap items-center gap-2">
-        <Link href={con({ estado: "" })} className={chip(!estado)}>
+        <Link href={con({ estado: "", papelera: "" })} className={chip(!estado && !papelera)}>
           Todos
         </Link>
         {ESTADOS_TICKET.map((e) => (
-          <Link key={e.valor} href={con({ estado: e.valor })} className={chip(estado === e.valor)}>
+          <Link key={e.valor} href={con({ estado: e.valor, papelera: "" })} className={chip(estado === e.valor && !papelera)}>
             {e.label}
           </Link>
         ))}
         <span className="mx-1 h-4 w-px bg-neutral-200" />
         <Link
-          href={con({ archivados: archivados ? "" : "1", estado: "" })}
+          href={con({ archivados: archivados ? "" : "1", estado: "", papelera: "" })}
           className={`rounded-full px-3 py-1.5 text-sm font-semibold transition ${
-            archivados ? "bg-neutral-700 text-white" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+            archivados && !papelera ? "bg-neutral-700 text-white" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
           }`}
         >
           🗄 Archivados
         </Link>
+        <Link
+          href={con({ papelera: papelera ? "" : "1", estado: "", categoria: "", archivados: "" })}
+          className={`rounded-full px-3 py-1.5 text-sm font-semibold transition ${
+            papelera ? "bg-rojo text-white" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+          }`}
+        >
+          🗑 Papelera
+        </Link>
       </div>
 
       {/* Filtro por categoría */}
-      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-        <span className="text-neutral-400">Categoría:</span>
-        <Link href={con({ categoria: "" })} className={chip(!categoria) + " !text-xs !py-1"}>
-          Todas
-        </Link>
-        {CATEGORIAS_TICKET.map((c) => (
-          <Link key={c.valor} href={con({ categoria: c.valor })} className={chip(categoria === c.valor) + " !text-xs !py-1"}>
-            {c.label}
+      {!papelera && (
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+          <span className="text-neutral-400">Categoría:</span>
+          <Link href={con({ categoria: "" })} className={chip(!categoria) + " !text-xs !py-1"}>
+            Todas
           </Link>
-        ))}
-      </div>
+          {CATEGORIAS_TICKET.map((c) => (
+            <Link key={c.valor} href={con({ categoria: c.valor })} className={chip(categoria === c.valor) + " !text-xs !py-1"}>
+              {c.label}
+            </Link>
+          ))}
+        </div>
+      )}
+      {papelera && (
+        <p className="mt-3 text-xs text-neutral-500">
+          Tickets eliminados. Entra en uno para restaurarlo o borrarlo definitivamente.
+        </p>
+      )}
 
       {tickets.length === 0 ? (
         <p className="mt-6 rounded-xl border border-neutral-200 bg-white p-8 text-center text-sm text-neutral-500">
-          No hay {archivados ? "tickets archivados" : "mensajes"} con esos criterios.
+          No hay {papelera ? "tickets en la papelera" : archivados ? "tickets archivados" : "mensajes"} con esos criterios.
         </p>
       ) : (
         <div className="mt-5 overflow-hidden rounded-xl border border-neutral-200 bg-white">

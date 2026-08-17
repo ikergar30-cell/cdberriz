@@ -52,6 +52,11 @@ export default async function TicketPage({ params: { id } }: { params: { id: str
             Archivado
           </span>
         )}
+        {t.eliminado_en && (
+          <span className="rounded-full bg-rojo-50 px-3 py-1 text-xs font-semibold text-rojo">
+            En la papelera
+          </span>
+        )}
       </div>
 
       <div className="grid gap-8 lg:grid-cols-[1fr_18rem]">
@@ -99,6 +104,7 @@ export default async function TicketPage({ params: { id } }: { params: { id: str
           estado={t.estado}
           categoria={t.categoria}
           archivado={t.archivado}
+          eliminadoEn={t.eliminado_en}
         />
       </div>
     </div>

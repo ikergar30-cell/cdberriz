@@ -29,6 +29,7 @@ export interface Ticket {
   categoria: string;
   estado: EstadoTicket;
   archivado: boolean;
+  eliminado_en: string | null;
   created_at: string;
   updated_at: string;
 }

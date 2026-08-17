@@ -320,7 +320,11 @@ create table if not exists tickets (
   updated_at timestamptz not null default now()
 );
 alter table tickets add column if not exists telefono text;
+-- Borrado en dos pasos: primero pasa a la papelera (recuperable), y solo
+-- desde ahí se puede borrar definitivamente (con confirmación aparte).
+alter table tickets add column if not exists eliminado_en timestamptz;
 create index if not exists tickets_estado_idx on tickets (archivado, estado, created_at desc);
+create index if not exists tickets_eliminado_idx on tickets (eliminado_en);
 
 -- Hilo de la conversación: el primer mensaje es el del visitante; las
 -- respuestas del club se marcan con del_club = true.

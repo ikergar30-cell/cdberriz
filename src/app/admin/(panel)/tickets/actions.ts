@@ -115,3 +115,68 @@ export async function archivarTicket(id: string, archivar: boolean): Promise<Act
   revalidatePath("/admin/tickets");
   revalidatePath("/admin");
 }
+
+// ─── Papelera ────────────────────────────────────────────────────────────
+
+// Mueve el ticket a la papelera (no lo borra). Se puede deshacer en
+// cualquier momento con restaurarTicket.
+export async function eliminarTicket(id: string): Promise<ActionResult> {
+  const sesion = await exigirEmpleado();
+  if (!sesion.ok) return { error: sesion.error };
+
+  const { error } = await sesion.admin
+    .from("tickets")
+    .update({ eliminado_en: new Date().toISOString() })
+    .eq("id", id);
+  if (error) return { error: error.message };
+
+  revalidatePath(`/admin/tickets/${id}`);
+  revalidatePath("/admin/tickets");
+  revalidatePath("/admin");
+  redirect("/admin/tickets");
+}
+
+export async function restaurarTicket(id: string): Promise<ActionResult> {
+  const sesion = await exigirEmpleado();
+  if (!sesion.ok) return { error: sesion.error };
+
+  const { error } = await sesion.admin.from("tickets").update({ eliminado_en: null }).eq("id", id);
+  if (error) return { error: error.message };
+
+  revalidatePath(`/admin/tickets/${id}`);
+  revalidatePath("/admin/tickets");
+  revalidatePath("/admin");
+}
+
+// Palabra de confirmación para el borrado definitivo — no es una contraseña
+// real (no protege nada por sí sola, solo evita un clic accidental), la
+// comprobación de que quien llama es empleado ya la hace exigirEmpleado().
+const CONFIRMACION_BORRADO_DEFINITIVO = "webcdberriz@gmail.com";
+
+// Borra el ticket y su hilo de mensajes PARA SIEMPRE. Solo se puede hacer
+// desde la papelera, y solo si se escribe la palabra de confirmación exacta.
+export async function eliminarTicketDefinitivo(id: string, confirmacion: string): Promise<ActionResult> {
+  const sesion = await exigirEmpleado();
+  if (!sesion.ok) return { error: sesion.error };
+
+  if (confirmacion.trim() !== CONFIRMACION_BORRADO_DEFINITIVO) {
+    return { error: "El texto de confirmación no coincide." };
+  }
+
+  const { data: ticket, error: errTicket } = await sesion.admin
+    .from("tickets")
+    .select("eliminado_en")
+    .eq("id", id)
+    .single();
+  if (errTicket || !ticket) return { error: "Ticket no encontrado." };
+  if (!ticket.eliminado_en) {
+    return { error: "Este ticket no está en la papelera. Elimínalo primero." };
+  }
+
+  const { error } = await sesion.admin.from("tickets").delete().eq("id", id);
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/tickets");
+  revalidatePath("/admin");
+  redirect("/admin/tickets");
+}

@@ -35,6 +35,17 @@ async function contarCarnetsPendientes() {
   return count ?? 0;
 }
 
+// Socios importados del padrón histórico que necesitan una revisión manual
+// (p. ej. nombre repetido en el carné antiguo, sin aclarar si eran 1 o 2 personas).
+async function contarSociosARevisar() {
+  const supabase = createClient();
+  const { count } = await supabase
+    .from("socios")
+    .select("*", { count: "exact", head: true })
+    .ilike("notas", "%⚠ IMPORTACIÓN%");
+  return count ?? 0;
+}
+
 // Tickets del buzón de contacto sin atender (estado "nuevo", no archivados).
 async function contarTicketsNuevos() {
   const supabase = createClient();
@@ -42,7 +53,8 @@ async function contarTicketsNuevos() {
     .from("tickets")
     .select("*", { count: "exact", head: true })
     .eq("estado", "nuevo")
-    .eq("archivado", false);
+    .eq("archivado", false)
+    .is("eliminado_en", null);
   return count ?? 0;
 }
 
@@ -67,7 +79,7 @@ async function contarSuscriptores(): Promise<string> {
 }
 
 export default async function ResumenPage() {
-  const [activos, pendientes, morosos, bajas, altasMes, suscriptores, carnetsPendientes, ticketsNuevos] = await Promise.all([
+  const [activos, pendientes, morosos, bajas, altasMes, suscriptores, carnetsPendientes, ticketsNuevos, sociosARevisar] = await Promise.all([
     contarPorEstado("activo"),
     contarPorEstado("pendiente"),
     contarPorEstado("moroso"),
@@ -76,6 +88,7 @@ export default async function ResumenPage() {
     contarSuscriptores(),
     contarCarnetsPendientes(),
     contarTicketsNuevos(),
+    contarSociosARevisar(),
   ]);
 
   const tarjetas = [
@@ -111,6 +124,20 @@ export default async function ResumenPage() {
             {ticketsNuevos === 1 ? "" : "s"} en el buzón de contacto sin atender.
           </span>
           <span className="font-semibold underline">Ver →</span>
+        </Link>
+      )}
+
+      {sociosARevisar > 0 && (
+        <Link
+          href="/admin/socios"
+          className="mb-6 flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 transition hover:bg-amber-100"
+        >
+          <span>
+            ⚠ <strong>{sociosARevisar}</strong> socio{sociosARevisar === 1 ? "" : "s"} del padrón histórico
+            necesita{sociosARevisar === 1 ? "" : "n"} revisión manual (nombre repetido en el carné antiguo). Mira su
+            ficha, apartado &quot;Notas&quot;.
+          </span>
+          <span className="font-semibold underline">Ver socios →</span>
         </Link>
       )}
 
