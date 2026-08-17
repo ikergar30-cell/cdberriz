@@ -38,6 +38,7 @@ type SocioFila = {
   tipo_abono_id: string | null;
   titular_id: string | null;
   tipos_abono: { nombre: string } | null;
+  titular: { numero_socio: number; nombre: string; apellidos: string } | null;
 };
 
 export default async function SociosPage({
@@ -53,7 +54,7 @@ export default async function SociosPage({
   let query = supabase
     .from("socios")
     .select(
-      "id, numero_socio, nombre, apellidos, email, telefono, dni, direccion, poblacion, codigo_postal, fecha_nacimiento, estado, origen, tipo_abono_id, titular_id, tipos_abono(nombre)",
+      "id, numero_socio, nombre, apellidos, email, telefono, dni, direccion, poblacion, codigo_postal, fecha_nacimiento, estado, origen, tipo_abono_id, titular_id, tipos_abono(nombre), titular:titular_id(numero_socio, nombre, apellidos)",
     )
     .order("numero_socio");
 
@@ -64,6 +65,17 @@ export default async function SociosPage({
   const todos = (data as unknown as SocioFila[]) ?? [];
   const incompletosCount = todos.filter((s) => camposFaltantes(s).length > 0).length;
   const socios = soloIncompletos ? todos.filter((s) => camposFaltantes(s).length > 0) : todos;
+
+  // Para que el titular también vea a quién le paga el 2º carné (no solo al
+  // revés). Se calcula sobre "todos", no sobre el filtro activo, para no
+  // perder el dato si la búsqueda oculta a uno de los dos.
+  const dependientesPorTitular = new Map<string, SocioFila[]>();
+  todos.forEach((s) => {
+    if (!s.titular_id) return;
+    const lista = dependientesPorTitular.get(s.titular_id) ?? [];
+    lista.push(s);
+    dependientesPorTitular.set(s.titular_id, lista);
+  });
 
   // Conserva el filtro de estado en el enlace de exportar.
   const exportHref = `/admin/socios/export${estado ? `?estado=${estado}` : ""}`;
@@ -199,7 +211,29 @@ export default async function SociosPage({
                       {s.nombre} {s.apellidos}
                     </Link>
                     {s.titular_id && (
-                      <div className="text-xs text-neutral-400">↳ bono familiar</div>
+                      <div className="text-xs text-neutral-400">
+                        ↳ bono familiar de{" "}
+                        {s.titular ? (
+                          <Link href={`/admin/socios/${s.titular_id}`} className="text-azul-600 hover:underline">
+                            {s.titular.nombre} {s.titular.apellidos} (nº {s.titular.numero_socio})
+                          </Link>
+                        ) : (
+                          "—"
+                        )}
+                      </div>
+                    )}
+                    {!s.titular_id && dependientesPorTitular.has(s.id) && (
+                      <div className="text-xs text-neutral-400">
+                        ↳ 2º carné:{" "}
+                        {dependientesPorTitular.get(s.id)!.map((d, i) => (
+                          <span key={d.id}>
+                            {i > 0 && ", "}
+                            <Link href={`/admin/socios/${d.id}`} className="text-azul-600 hover:underline">
+                              {d.nombre} {d.apellidos} (nº {d.numero_socio})
+                            </Link>
+                          </span>
+                        ))}
+                      </div>
                     )}
                   </td>
                   <td className="px-4 py-3">
