@@ -3,7 +3,7 @@ import type Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { suscribirNewsletter } from "@/lib/newsletter";
-import { alinearFacturacionATemporada } from "@/lib/stripe/alinearFacturacion";
+import { reAlinearRenovacion } from "@/lib/stripe/alinearFacturacion";
 
 // Webhook de Stripe: sincroniza socios y pagos en Supabase.
 // SEGURIDAD: cada evento se VERIFICA con la firma (STRIPE_WEBHOOK_SECRET); un
@@ -130,11 +130,10 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        // Sincroniza el 2º cobro (y todos los siguientes) al 1 de julio,
-        // para que todos los socios se renueven en la misma fecha. No es
-        // opcional ni "best effort": si falla, dejamos que el webhook
-        // reintente en vez de tragarnos el error en silencio.
-        await alinearFacturacionATemporada(subscriptionId);
+        // La sincronización del 2º cobro (y siguientes) al 1 de julio se
+        // hace en "invoice.paid", nunca aquí: en un alta por SEPA el primer
+        // cobro todavía está pendiente de confirmar en este punto, y tocar
+        // la suscripción ahora podría interferir con él.
 
         // Alta automática en el boletín del club: ya es socio, así que se
         // ampara en el interés legítimo de informarle de la actividad del
@@ -223,6 +222,21 @@ export async function POST(request: NextRequest) {
               .is("fecha_alta", null)
               .or(`id.eq.${socio.id},titular_id.eq.${socio.id}`),
           );
+        }
+
+        // Red de seguridad: en cada pago (alta o renovación) comprueba que la
+        // fecha de renovación sigue apuntando a la temporada actual. No
+        // cobra ni devuelve nada (proration_behavior: none); si alguna vez
+        // cambia la política de facturación, esto va corrigiendo solo a
+        // todo el mundo sin depender de que alguien pulse el botón manual.
+        const subscriptionRef = inv.parent?.subscription_details?.subscription;
+        const subscriptionId = typeof subscriptionRef === "string" ? subscriptionRef : subscriptionRef?.id;
+        if (subscriptionId) {
+          try {
+            await reAlinearRenovacion(subscriptionId);
+          } catch (e) {
+            console.error("[stripe/webhook] No se pudo resincronizar la renovación:", e);
+          }
         }
         break;
       }

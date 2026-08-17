@@ -1,5 +1,4 @@
 import { stripe } from "@/lib/stripe";
-import { alinearFacturacionATemporada } from "@/lib/stripe/alinearFacturacion";
 
 export interface DatosSEPA {
   nombre: string;
@@ -68,14 +67,9 @@ export async function crearSuscripcionSEPA(datos: DatosSEPA) {
 
     const subscription = await stripe.subscriptions.create(subParams);
 
-    // Sincroniza el 2º cobro (y siguientes) al 1 de julio, igual que en el
-    // alta pública. Si el empleado fijó una fecha de primer cobro futura
-    // (trial_end), no tocamos nada aquí: ese primer cobro todavía no ha
-    // ocurrido, así que la fecha de sincronización se calculará más
-    // adelante si el empleado cambia la cuota o desde una revisión manual.
-    if (!subParams.trial_end) {
-      await alinearFacturacionATemporada(subscription.id);
-    }
+    // La sincronización del 2º cobro (y siguientes) al 1 de julio la hace el
+    // webhook de "invoice.paid" en cuanto se confirme el primer pago (sea
+    // inmediato o diferido con trial_end) — no hace falta tocarla aquí.
 
     return {
       stripe_customer_id: customer.id,
