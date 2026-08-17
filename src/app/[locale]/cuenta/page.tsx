@@ -137,37 +137,51 @@ export default async function CuentaPage({
         {socio ? (
           <div className="space-y-6">
             {/* Banner bienvenida */}
-            <div className="rounded-2xl bg-azul px-6 py-5">
-              <p className="text-sm text-white/70">{eu ? "Ongi etorri," : "Bienvenido/a,"}</p>
-              <p className="font-display text-xl font-bold text-white">
-                {socio.nombre} {socio.apellidos}
-              </p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <span className="rounded-full bg-white/15 px-3 py-0.5 text-xs text-white">
-                  {eu ? "Bazkide nº" : "Socio nº"} {socio.numero_socio}
-                </span>
-                {socio.fecha_alta && (
-                  <span className="rounded-full bg-white/15 px-3 py-0.5 text-xs text-white">
-                    {eu ? "Bazkide" : "Socio/a desde"} {formatFecha(socio.fecha_alta, locale)}
-                  </span>
-                )}
-                {tipo && (
-                  <span className="rounded-full bg-white/15 px-3 py-0.5 text-xs text-white">
-                    {tipo.nombre} · {(tipo.precio_cents / 100).toFixed(0)} €/{eu ? "urte" : "año"}
-                  </span>
-                )}
-                <span className={`rounded-full px-3 py-0.5 text-xs font-semibold ${ESTADO_LABEL[socio.estado]?.cls ?? "bg-white/15 text-white"}`}>
-                  {ESTADO_LABEL[socio.estado]?.[eu ? "eu" : "es"] ?? socio.estado}
-                </span>
-                {fechaFinPeriodo && !titular && (
-                  <span className="rounded-full bg-white/15 px-3 py-0.5 text-xs text-white">
-                    {cancelacionProgramada
-                      ? (eu ? "Baja: " : "Se da de baja: ")
-                      : (eu ? "Hurrengo berritzea: " : "Próxima renovación: ")}
-                    {fechaFinPeriodo}
-                  </span>
-                )}
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-azul px-6 py-5">
+              <div>
+                <p className="text-sm text-white/70">{eu ? "Ongi etorri," : "Bienvenido/a,"}</p>
+                <p className="font-display text-xl font-bold text-white">
+                  {socio.nombre} {socio.apellidos}
+                </p>
+                <p className="mt-1 text-sm text-white/70">
+                  {eu ? "Bazkide zk." : "Socio nº"} {socio.numero_socio}
+                </p>
               </div>
+              <span className={`rounded-full px-3 py-1 text-xs font-semibold ${ESTADO_LABEL[socio.estado]?.cls ?? "bg-white/15 text-white"}`}>
+                {ESTADO_LABEL[socio.estado]?.[eu ? "eu" : "es"] ?? socio.estado}
+              </span>
+            </div>
+
+            {/* Datos del abono */}
+            <div className="rounded-2xl border border-neutral-200 bg-white p-6">
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-4">
+                <div>
+                  <dt className="text-xs font-semibold uppercase text-neutral-400">
+                    {eu ? "Kuota" : "Cuota"}
+                  </dt>
+                  <dd className="mt-0.5 text-sm font-semibold text-neutral-900">
+                    {tipo ? `${tipo.nombre} · ${(tipo.precio_cents / 100).toFixed(0)} €/${eu ? "urte" : "año"}` : "—"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-semibold uppercase text-neutral-400">
+                    {eu ? "Bazkide honetatik" : "Socio/a desde"}
+                  </dt>
+                  <dd className="mt-0.5 text-sm font-semibold text-neutral-900">
+                    {socio.fecha_alta ? formatFecha(socio.fecha_alta, locale) : "—"}
+                  </dd>
+                </div>
+                {!titular && (
+                  <div>
+                    <dt className="text-xs font-semibold uppercase text-neutral-400">
+                      {cancelacionProgramada ? (eu ? "Baja" : "Se da de baja") : (eu ? "Hurrengo berritzea" : "Próxima renovación")}
+                    </dt>
+                    <dd className={`mt-0.5 text-sm font-semibold ${cancelacionProgramada ? "text-rojo" : "text-neutral-900"}`}>
+                      {fechaFinPeriodo ?? "—"}
+                    </dd>
+                  </div>
+                )}
+              </dl>
             </div>
 
             {/* 2º carné de un abono familiar: la facturación va por el titular */}
