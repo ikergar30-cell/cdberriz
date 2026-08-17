@@ -89,6 +89,18 @@ export async function crearSocio(formData: FormData): Promise<ActionResult> {
     datos.fecha_alta = new Date().toISOString().slice(0, 10);
   }
 
+  // 2º carné de un bono familiar: hereda la cuota del titular (paga por su
+  // cuenta), no se deja sin asignar.
+  if (datos.titular_id) {
+    const admin = createAdminClient();
+    const { data: titular } = await admin
+      .from("socios")
+      .select("tipo_abono_id")
+      .eq("id", datos.titular_id)
+      .single();
+    datos.tipo_abono_id = titular?.tipo_abono_id ?? null;
+  }
+
   let stripeIds: {
     stripe_customer_id: string;
     stripe_subscription_id: string;
@@ -143,6 +155,18 @@ export async function actualizarSocio(id: string, formData: FormData): Promise<A
   }
 
   const supabase = createClient();
+
+  // 2º carné de un bono familiar: hereda la cuota del titular (paga por su
+  // cuenta), no se deja sin asignar.
+  if (datos.titular_id) {
+    const admin = createAdminClient();
+    const { data: titular } = await admin
+      .from("socios")
+      .select("tipo_abono_id")
+      .eq("id", datos.titular_id)
+      .single();
+    datos.tipo_abono_id = titular?.tipo_abono_id ?? null;
+  }
 
   // Si se cambia la cuota manualmente y el socio ya tiene una suscripción de
   // Stripe, hay que actualizar el precio ahí también y cobrar la diferencia
