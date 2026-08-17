@@ -14,7 +14,8 @@ const ESTADOS: { valor: EstadoSocio; label: string }[] = [
 
 const METODOS = [
   { valor: "", label: "— Sin asignar —" },
-  { valor: "sepa_debit", label: "SEPA (domiciliación bancaria)" },
+  { valor: "sepa_debit", label: "SEPA por Stripe (alta automática)" },
+  { valor: "sepa_banco", label: "Domiciliación bancaria directa (fuera de Stripe)" },
   { valor: "card", label: "Tarjeta (gestiona Stripe)" },
   { valor: "manual", label: "Manual / fuera de Stripe" },
 ];
@@ -96,7 +97,9 @@ export function SocioForm({
     }
   }
 
-  const esSepa = metodoPago === "sepa_debit";
+  const esSepaStripe = metodoPago === "sepa_debit";
+  const esSepaBanco = metodoPago === "sepa_banco";
+  const muestraIban = esSepaStripe || esSepaBanco;
   const esNuevo = !socio;
 
   const input =
@@ -304,21 +307,28 @@ export function SocioForm({
             </select>
           </div>
 
-          {esSepa && (
+          {muestraIban && (
             <>
               <div className="sm:col-span-2">
-                <label className={label} htmlFor="iban">IBAN *</label>
+                <label className={label} htmlFor="iban">
+                  IBAN {esSepaStripe && esNuevo && "*"}
+                </label>
                 <input
                   id="iban"
                   name="iban"
                   placeholder="ES00 0000 0000 0000 0000 0000"
                   defaultValue={socio?.iban ?? ""}
                   className={input}
-                  required={esSepa && esNuevo}
+                  required={esSepaStripe && esNuevo}
                   style={{ fontFamily: "monospace" }}
                 />
+                {esSepaBanco && (
+                  <p className="mt-1 text-xs text-neutral-400">
+                    Solo informativo: el club lo cobra directamente en su banco, no a través de Stripe.
+                  </p>
+                )}
               </div>
-              {esNuevo && (
+              {esSepaStripe && esNuevo && (
                 <div>
                   <label className={label} htmlFor="fecha_inicio_cobro">
                     Fecha de primer cobro
@@ -334,7 +344,7 @@ export function SocioForm({
                   </p>
                 </div>
               )}
-              {esNuevo && (
+              {esSepaStripe && esNuevo && (
                 <div className="sm:col-span-2 rounded-xl border border-azul-200 bg-azul-50 p-4 text-sm text-azul-800">
                   <strong>Alta en Stripe:</strong> al guardar se creará automáticamente el cliente
                   en Stripe, se vinculará el IBAN y se configurará la suscripción anual.
@@ -385,7 +395,7 @@ export function SocioForm({
           className="rounded-full bg-rojo px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-rojo-600 disabled:opacity-60"
         >
           {guardando
-            ? esSepa && esNuevo
+            ? esSepaStripe && esNuevo
               ? "Creando en Stripe…"
               : "Guardando…"
             : socio

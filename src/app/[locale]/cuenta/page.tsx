@@ -19,6 +19,7 @@ import { CuentaAcciones } from "./CuentaAcciones";
 import { SolicitarCarnet } from "./SolicitarCarnet";
 import { CancelarCuota } from "./CancelarCuota";
 import { SubirFoto } from "./SubirFoto";
+import { CuentaBanco } from "./CuentaBanco";
 
 const ESTADO_LABEL: Record<string, { es: string; eu: string; cls: string }> = {
   activo:    { es: "Activo",          eu: "Aktiboa",         cls: "bg-green-100 text-green-800" },
@@ -90,7 +91,7 @@ export default async function CuentaPage({
   // deje a esa persona sin poder entrar a su portal.
   const { data: sociosCoincidentes } = await admin
     .from("socios")
-    .select("id, nombre, apellidos, numero_socio, estado, origen, fecha_alta, direccion, carnet_token, foto_url, carnet_fisico_pedido_en, carnet_fisico_entregado_en, carnet_fisico_recogida, stripe_customer_id, stripe_subscription_id, titular_id, tipos_abono(nombre, precio_cents)")
+    .select("id, nombre, apellidos, numero_socio, estado, origen, fecha_alta, direccion, carnet_token, foto_url, carnet_fisico_pedido_en, carnet_fisico_entregado_en, carnet_fisico_recogida, stripe_customer_id, stripe_subscription_id, titular_id, metodo_pago, iban, tipos_abono(nombre, precio_cents)")
     .ilike("email", user.email)
     .order("numero_socio", { ascending: true })
     .limit(1);
@@ -352,6 +353,11 @@ export default async function CuentaPage({
                     </p>
                   )}
                 </section>
+
+                {/* Cuenta bancaria: solo domiciliación directa (fuera de Stripe) */}
+                {socio.metodo_pago === "sepa_banco" && !titular && (
+                  <CuentaBanco iban={socio.iban ?? null} />
+                )}
 
                 {/* Ventajas del socio */}
                 <section className="rounded-2xl border border-neutral-200 bg-white p-6">

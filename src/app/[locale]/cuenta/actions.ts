@@ -5,7 +5,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe";
 import type { ActionResult } from "@/lib/actionResult";
 
-type SocioSesion = { id: string; stripe_subscription_id: string | null; titular_id: string | null };
+type SocioSesion = {
+  id: string;
+  stripe_subscription_id: string | null;
+  titular_id: string | null;
+  metodo_pago: string | null;
+};
 type ResultadoSesion =
   | { ok: false; error: string }
   | { ok: true; admin: ReturnType<typeof createAdminClient>; socio: SocioSesion };
@@ -26,7 +31,7 @@ async function socioDeLaSesion(): Promise<ResultadoSesion> {
   // rompa el portal entero para esa persona en vez de dejarla entrar.
   const { data: socios, error } = await admin
     .from("socios")
-    .select("id, stripe_subscription_id, titular_id")
+    .select("id, stripe_subscription_id, titular_id, metodo_pago")
     .ilike("email", user.email)
     .order("numero_socio", { ascending: true })
     .limit(1);
@@ -116,6 +121,29 @@ export async function iniciarSesionPortal(identificador: string, locale: string)
       options: { emailRedirectTo: `${siteUrl}/auth/callback?next=/${locale}/cuenta` },
     });
   }
+}
+
+// Cambia la cuenta bancaria a la que se domicilia la cuota. Solo aplica a
+// quien paga por domiciliación bancaria directa gestionada por el club
+// (fuera de Stripe): quien paga por Stripe cambia su tarjeta desde "Gestionar
+// mi cuota", no aquí. El cambio queda guardado, pero el club tiene que
+// actualizarlo también en el banco — no dispara ningún cobro automático.
+export async function actualizarIban(nuevoIban: string): Promise<ActionResult> {
+  const sesion = await socioDeLaSesion();
+  if (!sesion.ok) return { error: sesion.error };
+  const { admin, socio } = sesion;
+
+  if (socio.metodo_pago !== "sepa_banco") {
+    return { error: "Tu cuota no se paga por domiciliación bancaria directa." };
+  }
+
+  const iban = nuevoIban.replace(/\s+/g, "").toUpperCase();
+  if (!/^ES\d{22}$/.test(iban)) {
+    return { error: "El IBAN no es válido. Debe empezar por ES y tener 24 caracteres." };
+  }
+
+  const { error } = await admin.from("socios").update({ iban }).eq("id", socio.id);
+  if (error) return { error: error.message };
 }
 
 const TIPOS_FOTO_PERMITIDOS = ["image/jpeg", "image/png", "image/webp"];

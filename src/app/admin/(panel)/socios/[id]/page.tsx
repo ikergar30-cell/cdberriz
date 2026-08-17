@@ -26,7 +26,8 @@ const ESTADO_LABEL: Record<Socio["estado"], string> = {
 };
 
 const METODO_LABEL: Record<string, string> = {
-  sepa_debit: "Domiciliación bancaria (SEPA)",
+  sepa_debit: "SEPA por Stripe",
+  sepa_banco: "Domiciliación bancaria directa",
   card: "Tarjeta",
   manual: "Manual / fuera de Stripe",
   stripe: "Stripe",
@@ -263,7 +264,7 @@ export default async function FichaSocioPage({
                   {s.metodo_pago ? METODO_LABEL[s.metodo_pago] ?? s.metodo_pago : "Sin asignar"}
                 </dd>
               </div>
-              {s.metodo_pago === "sepa_debit" && s.iban && (
+              {(s.metodo_pago === "sepa_debit" || s.metodo_pago === "sepa_banco") && s.iban && (
                 <div>
                   <dt className="text-xs font-semibold uppercase text-neutral-400">Número de cuenta (IBAN)</dt>
                   <dd className="mt-0.5 text-sm text-neutral-800" style={{ fontFamily: "monospace" }}>
