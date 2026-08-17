@@ -34,13 +34,20 @@ export function CuentaAcciones({ tienePago }: { tienePago: boolean }) {
   return (
     <div className="space-y-4">
       {tienePago && (
-        <button
-          onClick={gestionar}
-          disabled={cargando}
-          className="rounded-full bg-rojo px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-rojo-600 disabled:opacity-60"
-        >
-          {cargando ? "…" : eu ? "Nire kuota kudeatu" : "Gestionar mi cuota"}
-        </button>
+        <div>
+          <button
+            onClick={gestionar}
+            disabled={cargando}
+            className="rounded-full bg-rojo px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-rojo-600 disabled:opacity-60"
+          >
+            {cargando ? "…" : eu ? "Nire kuota kudeatu" : "Gestionar mi cuota"}
+          </button>
+          <p className="mt-2 text-xs text-neutral-400">
+            {eu
+              ? "Txartela aldatu, faktura zain bat ordaindu edo faktura guztiak ikusi ahal izango dituzu."
+              : "Aquí puedes cambiar tu tarjeta, pagar una factura pendiente o ver todas tus facturas."}
+          </p>
+        </div>
       )}
       {error && <p className="text-sm font-semibold text-rojo">{error}</p>}
       <div>

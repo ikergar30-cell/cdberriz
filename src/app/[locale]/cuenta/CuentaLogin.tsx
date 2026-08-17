@@ -2,25 +2,19 @@
 
 import { useState } from "react";
 import { useLocale } from "next-intl";
-import { createClient } from "@/lib/supabase/client";
+import { iniciarSesionPortal } from "./actions";
 
 export function CuentaLogin() {
   const locale = useLocale();
   const eu = locale === "eu";
-  const [email, setEmail] = useState("");
+  const [valor, setValor] = useState("");
   const [estado, setEstado] = useState<"idle" | "enviando" | "enviado" | "error">("idle");
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setEstado("enviando");
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=/${locale}/cuenta`,
-      },
-    });
-    setEstado(error ? "error" : "enviado");
+    const r = await iniciarSesionPortal(valor, locale);
+    setEstado(r?.error ? "error" : "enviado");
   }
 
   if (estado === "enviado") {
@@ -28,8 +22,8 @@ export function CuentaLogin() {
       <div className="rounded-2xl border border-azul-200 bg-azul-50 p-6 text-azul-800">
         <p className="font-semibold">
           {eu
-            ? "Esteka bidali dugu zure emailera. Egin klik bertan sartzeko."
-            : "Te hemos enviado un enlace a tu email. Haz clic en él para entrar."}
+            ? "Zure emaila gure erregistroetan badago, esteka bat bidali dugu. Egin klik bertan sartzeko."
+            : "Si tu email está en nuestros registros, te hemos enviado un enlace. Haz clic en él para entrar."}
         </p>
       </div>
     );
@@ -42,14 +36,14 @@ export function CuentaLogin() {
     <form onSubmit={onSubmit} className="max-w-sm space-y-4">
       <p className="text-neutral-600">
         {eu
-          ? "Idatzi bazkide gisa erabili zenuen emaila eta sartzeko esteka bat bidaliko dizugu."
-          : "Escribe el email con el que te hiciste socio/a y te enviaremos un enlace para entrar."}
+          ? "Idatzi zure emaila, NANa edo bazkide zenbakia, eta sartzeko esteka bat bidaliko dizugu zure emailera."
+          : "Escribe tu email, DNI o número de socio, y te enviaremos un enlace de acceso a tu email."}
       </p>
       <input
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder="email@ejemplo.com"
+        type="text"
+        value={valor}
+        onChange={(e) => setValor(e.target.value)}
+        placeholder={eu ? "Emaila, NANa edo bazkide zk." : "Email, DNI o nº de socio"}
         className={input}
         required
       />

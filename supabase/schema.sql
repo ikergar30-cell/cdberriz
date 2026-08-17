@@ -395,3 +395,14 @@ create trigger jugadores_updated_at
 alter table jugadores enable row level security;
 create policy "jugadores_empleados" on jugadores
   for all using (es_empleado()) with check (es_empleado());
+
+-- ----------------------------------------------------------------------------
+-- 6. FOTOS DE CARNÉ — bucket público donde cada socio sube su propia foto
+--    desde su portal (/cuenta). La subida siempre pasa por un server action
+--    con service_role (nunca directo desde el navegador), así que no hace
+--    falta ninguna policy de "storage.objects": solo lectura pública para
+--    poder mostrar la foto en el carné.
+-- ----------------------------------------------------------------------------
+insert into storage.buckets (id, name, public)
+values ('fotos-socios', 'fotos-socios', true)
+on conflict (id) do nothing;

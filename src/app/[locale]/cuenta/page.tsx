@@ -17,6 +17,7 @@ import { CuentaLogin } from "./CuentaLogin";
 import { CuentaAcciones } from "./CuentaAcciones";
 import { SolicitarCarnet } from "./SolicitarCarnet";
 import { CancelarCuota } from "./CancelarCuota";
+import { SubirFoto } from "./SubirFoto";
 
 const ESTADO_LABEL: Record<string, { es: string; eu: string; cls: string }> = {
   activo:    { es: "Activo",          eu: "Aktiboa",         cls: "bg-green-100 text-green-800" },
@@ -116,7 +117,7 @@ export default async function CuentaPage({
   ]);
 
   const pagos = socio
-    ? (await admin.from("pagos").select("id, importe_cents, estado, metodo, temporada, fecha").eq("socio_id", socio.id).order("fecha", { ascending: false }).limit(5)).data ?? []
+    ? (await admin.from("pagos").select("id, importe_cents, estado, metodo, temporada, fecha, stripe_hosted_invoice_url").eq("socio_id", socio.id).order("fecha", { ascending: false }).limit(5)).data ?? []
     : [];
 
   // 2º carné de un abono familiar: los pagos y la facturación van por la
@@ -158,6 +159,14 @@ export default async function CuentaPage({
                 <span className={`rounded-full px-3 py-0.5 text-xs font-semibold ${ESTADO_LABEL[socio.estado]?.cls ?? "bg-white/15 text-white"}`}>
                   {ESTADO_LABEL[socio.estado]?.[eu ? "eu" : "es"] ?? socio.estado}
                 </span>
+                {fechaFinPeriodo && !titular && (
+                  <span className="rounded-full bg-white/15 px-3 py-0.5 text-xs text-white">
+                    {cancelacionProgramada
+                      ? (eu ? "Baja: " : "Se da de baja: ")
+                      : (eu ? "Hurrengo berritzea: " : "Próxima renovación: ")}
+                    {fechaFinPeriodo}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -193,9 +202,7 @@ export default async function CuentaPage({
                     }}
                     locale={locale}
                   />
-                  <p className="mt-3 text-center text-xs text-neutral-400">
-                    {eu ? "Erakutsi kode hau zelaira sartzean" : "Muestra este código en la entrada al campo"}
-                  </p>
+                  <SubirFoto />
                 </section>
 
                 {/* Próximos eventos */}
@@ -296,6 +303,16 @@ export default async function CuentaPage({
                               <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${lbl?.cls ?? ""}`}>
                                 {lbl?.es ?? p.estado}
                               </span>
+                              {p.stripe_hosted_invoice_url && (
+                                <a
+                                  href={p.stripe_hosted_invoice_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="mt-1 block text-[10px] font-semibold text-azul underline hover:text-azul-700"
+                                >
+                                  {eu ? "Faktura ikusi" : "Ver factura"}
+                                </a>
+                              )}
                             </div>
                           </li>
                         );
