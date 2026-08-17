@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { EstadoSocio, OrigenSocio } from "@/lib/supabase/types";
 import { camposFaltantes } from "@/lib/socios/camposFaltantes";
 import { etiquetaTipoSocio } from "@/config/origenSocio";
+import { normaliza } from "@/lib/texto";
 import { SincronizarRenovaciones } from "./SincronizarRenovaciones";
 import { SincronizarFechasAlta } from "./SincronizarFechasAlta";
 
@@ -63,10 +64,20 @@ export default async function SociosPage({
     .order("numero_socio");
 
   if (estado !== "todos") query = query.eq("estado", estado);
-  if (q) query = query.or(`nombre.ilike.%${q}%,apellidos.ilike.%${q}%,email.ilike.%${q}%`);
 
   const { data, error } = await query;
-  const todos = (data as unknown as SocioFila[]) ?? [];
+  let todos = (data as unknown as SocioFila[]) ?? [];
+
+  // Búsqueda sin distinguir mayúsculas/tildes ("garcia" debe encontrar
+  // "García"): Postgres/PostgREST no lo hace por defecto vía ilike, así que
+  // se filtra aquí. La lista de socios no es tan grande como para que esto
+  // sea un problema de rendimiento.
+  if (q) {
+    const buscado = normaliza(q);
+    todos = todos.filter((s) =>
+      normaliza(`${s.nombre} ${s.apellidos} ${s.email ?? ""}`).includes(buscado),
+    );
+  }
   const incompletosCount = todos.filter((s) => camposFaltantes(s).length > 0).length;
   const socios = soloIncompletos ? todos.filter((s) => camposFaltantes(s).length > 0) : todos;
 

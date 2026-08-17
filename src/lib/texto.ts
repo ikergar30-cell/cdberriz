@@ -10,3 +10,15 @@ export function capitalizarPalabras(texto: string): string {
     .toLowerCase()
     .replace(/(^|[\s-])([a-zà-ÿñ])/g, (_, sep, letra) => sep + letra.toUpperCase());
 }
+
+/**
+ * Quita mayúsculas y tildes para comparar/buscar texto sin que importe cómo
+ * lo haya escrito quien busca ("garcia" debe encontrar "García").
+ */
+export function normaliza(texto: string): string {
+  return texto
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .trim();
+}
