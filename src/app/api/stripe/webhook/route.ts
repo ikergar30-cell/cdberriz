@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        // Sincroniza el 2º cobro (y todos los siguientes) al 30 de junio,
+        // Sincroniza el 2º cobro (y todos los siguientes) al 1 de julio,
         // para que todos los socios se renueven en la misma fecha. No es
         // opcional ni "best effort": si falla, dejamos que el webhook
         // reintente en vez de tragarnos el error en silencio.

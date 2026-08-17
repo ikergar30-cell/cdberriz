@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { crearSuscripcionSEPA } from "@/lib/stripe/sepa";
-import { cambiarCuotaStripe } from "@/lib/stripe/alinearFacturacion";
+import { cambiarCuotaStripe, reAlinearRenovacion } from "@/lib/stripe/alinearFacturacion";
 import { stripe } from "@/lib/stripe";
 import { REEMBOLSO_DIAS, diasDesde } from "@/config/reembolso";
 import type { EstadoSocio, OrigenSocio } from "@/lib/supabase/types";
@@ -424,4 +424,40 @@ export async function importarSocios(filas: FilaImport[]): Promise<ResultadoFila
   }
 
   return resultados;
+}
+
+// Mueve la fecha de renovación de TODAS las suscripciones de Stripe ya
+// activas (altas anteriores a un cambio de política de facturación) a la
+// próxima fecha objetivo (ver src/config/facturacion.ts). No cobra ni
+// devuelve nada: solo reprograma cuándo cae el próximo cobro.
+export async function sincronizarRenovaciones(): Promise<
+  | { error: string }
+  | { error?: undefined; actualizadas: number; yaAlineadas: number; noActivas: number; errores: string[] }
+> {
+  await exigirEmpleado();
+  const admin = createAdminClient();
+
+  const { data: socios, error } = await admin
+    .from("socios")
+    .select("id, nombre, apellidos, stripe_subscription_id")
+    .not("stripe_subscription_id", "is", null);
+  if (error) return { error: error.message };
+
+  let actualizadas = 0;
+  let yaAlineadas = 0;
+  let noActivas = 0;
+  const errores: string[] = [];
+
+  for (const s of socios ?? []) {
+    try {
+      const resultado = await reAlinearRenovacion(s.stripe_subscription_id as string);
+      if (resultado === "ya_alineada") yaAlineadas++;
+      else if (resultado === "no_activa") noActivas++;
+      else actualizadas++;
+    } catch (e) {
+      errores.push(`${s.nombre} ${s.apellidos}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+
+  return { actualizadas, yaAlineadas, noActivas, errores };
 }

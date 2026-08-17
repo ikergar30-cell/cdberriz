@@ -145,6 +145,11 @@ export default async function CuentaPage({
                 <span className="rounded-full bg-white/15 px-3 py-0.5 text-xs text-white">
                   {eu ? "Bazkide nº" : "Socio nº"} {socio.numero_socio}
                 </span>
+                {socio.fecha_alta && (
+                  <span className="rounded-full bg-white/15 px-3 py-0.5 text-xs text-white">
+                    {eu ? "Bazkide" : "Socio/a desde"} {formatFecha(socio.fecha_alta, locale)}
+                  </span>
+                )}
                 {tipo && (
                   <span className="rounded-full bg-white/15 px-3 py-0.5 text-xs text-white">
                     {tipo.nombre} · {(tipo.precio_cents / 100).toFixed(0)} €/{eu ? "urte" : "año"}

@@ -68,7 +68,7 @@ export async function crearSuscripcionSEPA(datos: DatosSEPA) {
 
     const subscription = await stripe.subscriptions.create(subParams);
 
-    // Sincroniza el 2º cobro (y siguientes) al 30 de junio, igual que en el
+    // Sincroniza el 2º cobro (y siguientes) al 1 de julio, igual que en el
     // alta pública. Si el empleado fijó una fecha de primer cobro futura
     // (trial_end), no tocamos nada aquí: ese primer cobro todavía no ha
     // ocurrido, así que la fecha de sincronización se calculará más
