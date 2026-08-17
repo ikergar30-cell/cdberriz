@@ -13,12 +13,15 @@ const BADGE: Record<EstadoSocio, string> = {
   baja: "bg-neutral-100 text-neutral-500",
 };
 
+// "Activos" es la vista por defecto: los pendientes, morosos y bajas quedan
+// fuera de la lista principal a propósito, para no mezclarlos con el día a
+// día. Se accede a ellos con su propio filtro.
 const FILTROS: { valor: string; label: string }[] = [
-  { valor: "", label: "Todos" },
   { valor: "activo", label: "Activos" },
   { valor: "pendiente", label: "Pendientes" },
   { valor: "moroso", label: "Morosos" },
   { valor: "baja", label: "Bajas" },
+  { valor: "todos", label: "Todos" },
 ];
 
 type SocioFila = {
@@ -47,7 +50,8 @@ export default async function SociosPage({
   searchParams: { q?: string; estado?: string; incompletos?: string };
 }) {
   const q = (searchParams.q ?? "").trim();
-  const estado = searchParams.estado ?? "";
+  // Sin filtro explícito en la URL, se ve solo "Activos" (ver FILTROS).
+  const estado = searchParams.estado ?? "activo";
   const soloIncompletos = searchParams.incompletos === "1";
 
   const supabase = createClient();
@@ -58,7 +62,7 @@ export default async function SociosPage({
     )
     .order("numero_socio");
 
-  if (estado) query = query.eq("estado", estado);
+  if (estado !== "todos") query = query.eq("estado", estado);
   if (q) query = query.or(`nombre.ilike.%${q}%,apellidos.ilike.%${q}%,email.ilike.%${q}%`);
 
   const { data, error } = await query;
