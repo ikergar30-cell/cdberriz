@@ -83,6 +83,12 @@ export async function crearSocio(formData: FormData): Promise<ActionResult> {
     return { error: "Nombre y apellidos son obligatorios." };
   }
 
+  // Fecha de alta = hoy si el empleado no la ha tocado (el alta manual desde
+  // el panel también cuenta como "cuando se hizo socio/a").
+  if (!datos.fecha_alta) {
+    datos.fecha_alta = new Date().toISOString().slice(0, 10);
+  }
+
   let stripeIds: {
     stripe_customer_id: string;
     stripe_subscription_id: string;
@@ -460,4 +466,38 @@ export async function sincronizarRenovaciones(): Promise<
   }
 
   return { actualizadas, yaAlineadas, noActivas, errores };
+}
+
+// Rellena hacia atrás la fecha de alta de socios de Stripe que se quedaron
+// sin ella (el webhook que debía rellenarla no siempre llegaba). Usa la
+// fecha real de creación de su suscripción en Stripe.
+export async function sincronizarFechasAlta(): Promise<
+  { error: string } | { error?: undefined; actualizadas: number; errores: string[] }
+> {
+  await exigirEmpleado();
+  const admin = createAdminClient();
+
+  const { data: socios, error } = await admin
+    .from("socios")
+    .select("id, nombre, apellidos, stripe_subscription_id")
+    .not("stripe_subscription_id", "is", null)
+    .is("fecha_alta", null);
+  if (error) return { error: error.message };
+
+  let actualizadas = 0;
+  const errores: string[] = [];
+
+  for (const s of socios ?? []) {
+    try {
+      const suscripcion = await stripe.subscriptions.retrieve(s.stripe_subscription_id as string);
+      const fecha = new Date(suscripcion.created * 1000).toISOString().slice(0, 10);
+      const { error: errUpdate } = await admin.from("socios").update({ fecha_alta: fecha }).eq("id", s.id);
+      if (errUpdate) throw new Error(errUpdate.message);
+      actualizadas++;
+    } catch (e) {
+      errores.push(`${s.nombre} ${s.apellidos}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+
+  return { actualizadas, errores };
 }

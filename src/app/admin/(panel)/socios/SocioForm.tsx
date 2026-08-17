@@ -207,7 +207,7 @@ export function SocioForm({
               id="fecha_alta"
               name="fecha_alta"
               type="date"
-              defaultValue={socio?.fecha_alta ?? ""}
+              defaultValue={socio?.fecha_alta ?? (socio ? "" : new Date().toISOString().slice(0, 10))}
               className={input}
             />
           </div>

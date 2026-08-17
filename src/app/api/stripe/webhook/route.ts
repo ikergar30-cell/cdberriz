@@ -82,9 +82,10 @@ export async function POST(request: NextRequest) {
               fecha_nacimiento: m.fecha_nacimiento || null,
               stripe_customer_id: customerId,
               stripe_subscription_id: subscriptionId,
-              // La fecha de alta se rellena con el primer pago confirmado
-              // (evento "invoice.paid"), no aquí: con SEPA puede tardar días
-              // en confirmarse y no sería la fecha real del primer cobro.
+              // Fecha de alta = hoy, el día que se hace socio/a. No se
+              // espera al "invoice.paid" del primer cobro (con SEPA puede
+              // tardar días en confirmarse, y ese evento no siempre llega).
+              fecha_alta: new Date().toISOString().slice(0, 10),
             },
             { onConflict: "stripe_customer_id" },
           )
@@ -113,7 +114,7 @@ export async function POST(request: NextRequest) {
             metodo_pago: "stripe",
             titular_id: titular.id,
             stripe_subscription_id: subscriptionId,
-            // Igual que el titular: se rellena con el primer "invoice.paid".
+            fecha_alta: new Date().toISOString().slice(0, 10),
           };
           // Idempotente ante reintentos del webhook: si ya existe el 2º
           // carnet de este titular, se actualiza en vez de duplicarse.

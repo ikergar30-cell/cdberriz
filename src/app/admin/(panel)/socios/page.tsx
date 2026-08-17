@@ -4,6 +4,7 @@ import type { EstadoSocio, OrigenSocio } from "@/lib/supabase/types";
 import { camposFaltantes } from "@/lib/socios/camposFaltantes";
 import { etiquetaTipoSocio } from "@/config/origenSocio";
 import { SincronizarRenovaciones } from "./SincronizarRenovaciones";
+import { SincronizarFechasAlta } from "./SincronizarFechasAlta";
 
 const BADGE: Record<EstadoSocio, string> = {
   activo: "bg-green-100 text-green-700",
@@ -75,6 +76,7 @@ export default async function SociosPage({
         </h1>
         <div className="flex flex-wrap items-center gap-2">
           <SincronizarRenovaciones />
+          <SincronizarFechasAlta />
           <a
             href={exportHref}
             className="rounded-full border border-neutral-300 px-4 py-2 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-100"
