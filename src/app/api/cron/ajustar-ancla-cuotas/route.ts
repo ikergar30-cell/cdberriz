@@ -5,12 +5,16 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // "trial_end" (ver src/lib/stripe/alinearFacturacion.ts) retrasa el cobro de
 // una suscripción sin cobrar de más, pero en el modo de facturación de esta
 // cuenta ("flexible") no reinicia por sí solo la fecha ancla al terminar la
-// prueba: el cobro final saldría prorrateado (de menos) en vez del precio
-// completo de la cuota. Esta tarea corrige eso el mismo día que cada
-// suscripción sale de "prueba": reinicia la fecha ancla a "ahora" (que en
-// ese momento coincide con el 1 de julio) sin generar ningún prorrateo, así
-// que el cobro que sigue es siempre el 100% del precio de la cuota,
-// independientemente de cuándo se hiciera socio/a cada uno.
+// prueba: Stripe genera automáticamente, en cuanto termina, una factura en
+// borrador prorrateada (de menos) en vez de al precio completo de la cuota.
+//
+// Esta tarea busca esas facturas en borrador todavía sin cobrar, añade una
+// línea que compensa exactamente el prorrateo (comprobado con un test clock
+// de Stripe: deja el total en el precio completo real) y reinicia la fecha
+// ancla de la suscripción para que el ciclo siguiente también quede bien.
+// Corre cada hora porque Stripe finaliza y cobra esas facturas en borrador
+// por su cuenta (normalmente ~1 hora después de crearlas), y hay que llegar
+// antes de que eso pase.
 //
 // Seguridad: solo se ejecuta con el secreto CRON_SECRET (cabecera Authorization).
 export const runtime = "nodejs";
@@ -31,7 +35,6 @@ export async function GET(request: NextRequest) {
     .is("titular_id", null);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  const ahora = Math.floor(Date.now() / 1000);
   const ajustados: string[] = [];
   const errores: string[] = [];
   let revisados = 0;
@@ -39,16 +42,50 @@ export async function GET(request: NextRequest) {
   for (const s of socios ?? []) {
     revisados++;
     try {
-      const sub = await stripe.subscriptions.retrieve(s.stripe_subscription_id!);
-      // Solo tocar las que hoy mismo terminan (o ya deberían haber terminado,
-      // por si el cron falló algún día) su periodo de prueba de sincronización.
-      if (sub.status !== "trialing" || !sub.trial_end || sub.trial_end > ahora) continue;
+      // La factura de renovación en borrador, si Stripe ya la ha generado
+      // hoy al terminar la fase de sincronización de esta suscripción.
+      const facturas = await stripe.invoices.list({
+        subscription: s.stripe_subscription_id!,
+        status: "draft",
+        limit: 1,
+      });
+      const borrador = facturas.data.find((f) => f.billing_reason === "subscription_cycle");
+      if (!borrador) continue;
 
+      const lineas = await stripe.invoices.listLineItems(borrador.id!);
+      // El precio real de la cuota es la suma de las líneas positivas (el
+      // cargo del abono); cualquier línea negativa es el prorrateo de más
+      // que Stripe añade solo y que hay que compensar.
+      const esperado = lineas.data.filter((l) => l.amount > 0).reduce((sum, l) => sum + l.amount, 0);
+      const ajuste = esperado - borrador.total;
+      if (ajuste === 0) continue;
+
+      await stripe.invoiceItems.create({
+        customer: borrador.customer as string,
+        invoice: borrador.id!,
+        amount: ajuste,
+        currency: borrador.currency,
+        description: "Ajuste a cuota completa (sincronización de renovación al 1 de julio)",
+      });
+      await stripe.invoices.finalizeInvoice(borrador.id!);
+      // Fuerza el intento de cobro ya mismo en vez de esperar a que Stripe lo
+      // recoja por su cuenta (puede tardar): así el importe correcto queda
+      // cobrado cuanto antes, no solo calculado.
+      try {
+        await stripe.invoices.pay(borrador.id!);
+      } catch {
+        // Si Stripe ya lo estaba cobrando por su cuenta en paralelo, o el
+        // primer intento falla, lo reintentará solo — no es un fallo crítico.
+      }
+
+      // Deja el ciclo SIGUIENTE (el que empieza tras esta factura) también
+      // anclado al 1 de julio, sin generar ningún prorrateo adicional.
       await stripe.subscriptions.update(s.stripe_subscription_id!, {
         billing_cycle_anchor: "now",
         proration_behavior: "none",
       });
-      ajustados.push(`${s.nombre} ${s.apellidos}`);
+
+      ajustados.push(`${s.nombre} ${s.apellidos}: ${(borrador.total / 100).toFixed(2)}€ → ${(esperado / 100).toFixed(2)}€`);
     } catch (e) {
       errores.push(`${s.nombre} ${s.apellidos}: ${e instanceof Error ? e.message : "error"}`);
     }

@@ -86,6 +86,10 @@ export function AltaForm({ clave }: { clave: ClaveCuota }) {
       ? "C.D. Berrizek nire irudia erabiltzeko baimena ematen dut bere kanal ofizialetan argitaratutako argazki eta bideo-an (sare sozialak, web, argitalpenak)."
       : "Autorizo al C.D. Berriz a utilizar mi imagen en fotos y vídeos publicados en sus canales oficiales (redes sociales, web, publicaciones del club).",
     privacidadLink: eu ? "Pribatutasun-politika" : "Política de Privacidad",
+    bases: eu
+      ? "Irakurri eta onartzen dut bazkideen "
+      : "He leído y acepto las ",
+    basesLink: eu ? "baldintzak" : "condiciones de socios/as",
     tutorLegal: eu
       ? "Adin nagusitasunik gabeko bazkide baten alta egiten ari zara. Adierazten dut haren aita, ama edo tutore legala naizela eta bere izenean ematen dudala baimen hau, bazkidetza-kontratua eta bere irudia erabiltzeko baimena barne (1996ko urtarrilaren 15eko 1/1996 Lege Organikoa)."
       : "Estás dando de alta a un socio/a menor de edad. Declaro ser su padre, madre o tutor/a legal y prestar en su nombre este consentimiento, incluyendo el contrato de socio y la autorización de uso de su imagen (conforme a la Ley Orgánica 1/1996).",
@@ -229,9 +233,18 @@ export function AltaForm({ clave }: { clave: ClaveCuota }) {
           </span>
         </label>
         <label className="flex items-start gap-3 cursor-pointer">
-          <input type="checkbox" name="autoriza_imagen" className="mt-0.5 h-4 w-4 shrink-0 accent-azul" />
+          <input type="checkbox" name="autoriza_imagen" required className="mt-0.5 h-4 w-4 shrink-0 accent-azul" />
           <span className="text-xs text-neutral-600 leading-relaxed">
-            {t.imagen}
+            * {t.imagen}
+          </span>
+        </label>
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input type="checkbox" name="acepta_bases" required className="mt-0.5 h-4 w-4 shrink-0 accent-azul" />
+          <span className="text-xs text-neutral-600 leading-relaxed">
+            * {t.bases}{" "}
+            <a href={`/${locale}/legal/condiciones-socios`} target="_blank" rel="noopener noreferrer" className="text-azul underline">
+              {t.basesLink}
+            </a>
           </span>
         </label>
         {hayMenor && (

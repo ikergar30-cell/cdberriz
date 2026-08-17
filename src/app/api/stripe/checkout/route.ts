@@ -61,6 +61,15 @@ export async function POST(request: NextRequest) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaNacimiento)) {
     return NextResponse.json({ error: "Falta la fecha de nacimiento" }, { status: 400 });
   }
+  if (body.acepta_rgpd !== "on") {
+    return NextResponse.json({ error: "Falta aceptar la Política de Privacidad" }, { status: 400 });
+  }
+  if (body.autoriza_imagen !== "on") {
+    return NextResponse.json({ error: "Falta autorizar el uso de la imagen" }, { status: 400 });
+  }
+  if (body.acepta_bases !== "on") {
+    return NextResponse.json({ error: "Falta aceptar las condiciones de socios/as" }, { status: 400 });
+  }
 
   // Cuota que REALMENTE corresponde por edad (no nos fiamos del cliente):
   // un joven mayor de 25 o un "jubilado" menor de 65 pasan a Individual.
