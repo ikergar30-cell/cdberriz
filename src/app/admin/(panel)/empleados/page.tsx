@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { RolEmpleado } from "@/lib/supabase/types";
-import { crearEmpleado } from "./actions";
+import { crearEmpleado, reenviarEnlace } from "./actions";
 import { NombreEmpleado } from "./NombreEmpleado";
 
 // Badge de color según rol.
@@ -78,6 +78,11 @@ export default async function EmpleadosPage({ searchParams }: Props) {
           Nombre actualizado correctamente.
         </div>
       )}
+      {okMsg === "3" && (
+        <div className="mb-6 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+          Enlace reenviado. Si sigue sin llegarle, que revise Spam/Promociones.
+        </div>
+      )}
 
       {/* Tabla de empleados */}
       <div className="mb-10 overflow-hidden rounded-2xl border border-neutral-200 bg-white">
@@ -88,6 +93,7 @@ export default async function EmpleadosPage({ searchParams }: Props) {
               <th className="px-5 py-3 text-left font-semibold text-neutral-600">Email</th>
               <th className="px-5 py-3 text-left font-semibold text-neutral-600">Rol</th>
               <th className="px-5 py-3 text-left font-semibold text-neutral-600">Creado</th>
+              <th className="px-5 py-3 text-left font-semibold text-neutral-600"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-100">
@@ -104,11 +110,20 @@ export default async function EmpleadosPage({ searchParams }: Props) {
                   <td className="px-5 py-3 text-neutral-500">
                     {new Date(e.created_at).toLocaleDateString("es-ES")}
                   </td>
+                  <td className="px-5 py-3 text-right">
+                    {e.rol !== "verificador" && e.email && (
+                      <form action={reenviarEnlace.bind(null, e.email)}>
+                        <button type="submit" className="text-xs font-semibold text-azul hover:underline">
+                          Reenviar enlace
+                        </button>
+                      </form>
+                    )}
+                  </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={4} className="px-5 py-8 text-center text-neutral-400">
+                <td colSpan={5} className="px-5 py-8 text-center text-neutral-400">
                   No hay empleados registrados.
                 </td>
               </tr>

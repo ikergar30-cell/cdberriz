@@ -55,13 +55,49 @@ export async function crearEmpleado(formData: FormData): Promise<void> {
   }
 
   // El rol "verificador" no usa contraseña: entra solo con su email desde
-  // /admin/login-verificador (ver esa ruta). Para el resto, generamos el
-  // enlace para que establezcan su contraseña.
+  // /admin/login-verificador (ver esa ruta). Para el resto, enviamos el
+  // email de "restablecer contraseña" para que la establezcan.
+  //
+  // OJO: admin.generateLink() NO envía ningún email (solo genera el enlace
+  // para reenviarlo tú mismo con un proveedor propio); hay que usar
+  // resetPasswordForEmail() del cliente normal, que sí dispara el correo
+  // real de Supabase con la plantilla configurada.
   if (rol !== "verificador") {
-    await admin.auth.admin.generateLink({ type: "recovery", email });
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${siteUrl}/auth/callback`,
+    });
   }
 
   redirect("/admin/empleados?ok=1");
+}
+
+export async function reenviarEnlace(email: string): Promise<void> {
+  // Verificar que el usuario actual es admin.
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/admin/login");
+
+  const { data: perfil } = await supabase
+    .from("perfiles")
+    .select("rol")
+    .eq("id", user.id)
+    .single();
+
+  if (!perfil || perfil.rol !== "admin") redirect("/admin");
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${siteUrl}/auth/callback`,
+  });
+
+  if (error) {
+    redirect("/admin/empleados?error=" + encodeURIComponent(error.message));
+  }
+
+  redirect("/admin/empleados?ok=3");
 }
 
 export async function renombrarEmpleado(id: string, formData: FormData): Promise<void> {
