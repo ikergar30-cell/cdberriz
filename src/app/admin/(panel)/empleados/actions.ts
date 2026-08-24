@@ -100,7 +100,7 @@ export async function reenviarEnlace(email: string): Promise<void> {
   redirect("/admin/empleados?ok=3");
 }
 
-export async function renombrarEmpleado(id: string, formData: FormData): Promise<void> {
+export async function actualizarEmpleado(id: string, formData: FormData): Promise<void> {
   // Verificar que el usuario actual es admin.
   const supabase = createClient();
   const {
@@ -117,15 +117,63 @@ export async function renombrarEmpleado(id: string, formData: FormData): Promise
   if (!perfil || perfil.rol !== "admin") redirect("/admin");
 
   const nombre = (formData.get("nombre") as string | null)?.trim() ?? "";
-  if (!nombre) {
-    redirect("/admin/empleados?error=" + encodeURIComponent("El nombre no puede estar vacío."));
+  const email = (formData.get("email") as string | null)?.trim().toLowerCase() ?? "";
+  const rol = (formData.get("rol") as RolEmpleado | null) ?? "";
+
+  if (!nombre || !email || !rol) {
+    redirect("/admin/empleados?error=" + encodeURIComponent("Todos los campos son obligatorios."));
   }
 
   const admin = createAdminClient();
-  const { error } = await admin.from("perfiles").update({ nombre }).eq("id", id);
+
+  // El email real de login vive en Auth (auth.users); el de "perfiles" es
+  // solo un espejo para el login sin contraseña del rol "verificador". Hay
+  // que mantener los dos sincronizados o dejarían de coincidir.
+  const { error: authError } = await admin.auth.admin.updateUserById(id, {
+    email,
+    email_confirm: true,
+  });
+  if (authError) {
+    redirect("/admin/empleados?error=" + encodeURIComponent(authError.message));
+  }
+
+  const { error: perfilError } = await admin
+    .from("perfiles")
+    .update({ nombre, email, rol })
+    .eq("id", id);
+  if (perfilError) {
+    redirect("/admin/empleados?error=" + encodeURIComponent(perfilError.message));
+  }
+
+  redirect("/admin/empleados?ok=2");
+}
+
+export async function eliminarEmpleado(id: string): Promise<void> {
+  // Verificar que el usuario actual es admin.
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/admin/login");
+
+  const { data: perfil } = await supabase
+    .from("perfiles")
+    .select("rol")
+    .eq("id", user.id)
+    .single();
+
+  if (!perfil || perfil.rol !== "admin") redirect("/admin");
+
+  if (id === user.id) {
+    redirect("/admin/empleados?error=" + encodeURIComponent("No puedes eliminarte a ti mismo."));
+  }
+
+  // Borra el usuario de Auth; "perfiles" cae en cascada (ver schema.sql).
+  const admin = createAdminClient();
+  const { error } = await admin.auth.admin.deleteUser(id);
   if (error) {
     redirect("/admin/empleados?error=" + encodeURIComponent(error.message));
   }
 
-  redirect("/admin/empleados?ok=2");
+  redirect("/admin/empleados?ok=4");
 }

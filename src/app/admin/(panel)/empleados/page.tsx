@@ -2,22 +2,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { RolEmpleado } from "@/lib/supabase/types";
-import { crearEmpleado, reenviarEnlace } from "./actions";
-import { NombreEmpleado } from "./NombreEmpleado";
-
-// Badge de color según rol.
-function BadgeRol({ rol }: { rol: RolEmpleado }) {
-  const estilos: Record<RolEmpleado, string> = {
-    admin: "bg-blue-100 text-blue-700",
-    empleado: "bg-green-100 text-green-700",
-    verificador: "bg-orange-100 text-orange-700",
-  };
-  return (
-    <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${estilos[rol]}`}>
-      {rol}
-    </span>
-  );
-}
+import { crearEmpleado } from "./actions";
+import { FilaEmpleado } from "./FilaEmpleado";
 
 interface Props {
   searchParams: { error?: string; ok?: string };
@@ -75,12 +61,17 @@ export default async function EmpleadosPage({ searchParams }: Props) {
       )}
       {okMsg === "2" && (
         <div className="mb-6 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-          Nombre actualizado correctamente.
+          Empleado actualizado correctamente.
         </div>
       )}
       {okMsg === "3" && (
         <div className="mb-6 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
           Enlace reenviado. Si sigue sin llegarle, que revise Spam/Promociones.
+        </div>
+      )}
+      {okMsg === "4" && (
+        <div className="mb-6 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+          Empleado eliminado correctamente.
         </div>
       )}
 
@@ -99,27 +90,15 @@ export default async function EmpleadosPage({ searchParams }: Props) {
           <tbody className="divide-y divide-neutral-100">
             {empleados && empleados.length > 0 ? (
               empleados.map((e) => (
-                <tr key={e.id} className="hover:bg-neutral-50">
-                  <td className="px-5 py-3">
-                    <NombreEmpleado id={e.id} nombre={e.nombre} />
-                  </td>
-                  <td className="px-5 py-3 text-neutral-500">{e.email ?? "—"}</td>
-                  <td className="px-5 py-3">
-                    <BadgeRol rol={e.rol as RolEmpleado} />
-                  </td>
-                  <td className="px-5 py-3 text-neutral-500">
-                    {new Date(e.created_at).toLocaleDateString("es-ES")}
-                  </td>
-                  <td className="px-5 py-3 text-right">
-                    {e.rol !== "verificador" && e.email && (
-                      <form action={reenviarEnlace.bind(null, e.email)}>
-                        <button type="submit" className="text-xs font-semibold text-azul hover:underline">
-                          Reenviar enlace
-                        </button>
-                      </form>
-                    )}
-                  </td>
-                </tr>
+                <FilaEmpleado
+                  key={e.id}
+                  id={e.id}
+                  nombre={e.nombre}
+                  email={e.email}
+                  rol={e.rol as RolEmpleado}
+                  esYo={e.id === user.id}
+                  creado={new Date(e.created_at).toLocaleDateString("es-ES")}
+                />
               ))
             ) : (
               <tr>
