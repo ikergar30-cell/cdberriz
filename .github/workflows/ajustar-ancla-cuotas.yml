@@ -1,0 +1,15 @@
+name: Ajustar ancla de cuotas (cada hora)
+
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  ajustar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Llamar al endpoint de ajuste
+        run: |
+          curl -sS -f -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://cdberriz.com/api/cron/ajustar-ancla-cuotas"
