@@ -3,12 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { createClient } from "@/lib/supabase/client";
 
-export default function LoginPage() {
+export default function LoginVerificadorPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
 
@@ -16,30 +14,22 @@ export default function LoginPage() {
     e.preventDefault();
     setError(null);
     setCargando(true);
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      setError("Email o contraseña incorrectos.");
+    const res = await fetch("/api/admin/login-verificador", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    if (!res.ok) {
+      setError("Ese email no tiene acceso a verificar carnés.");
       setCargando(false);
       return;
     }
-    // Redirigir según el rol del empleado.
-    const { data: { user } } = await supabase.auth.getUser();
-    const { data: perfil } = user
-      ? await supabase.from("perfiles").select("rol").eq("id", user.id).single()
-      : { data: null };
-    const destino = perfil?.rol === "verificador" ? "/admin/verificar" : "/admin";
-    router.replace(destino);
+    router.replace("/admin/verificar");
     router.refresh();
   }
 
-  const input =
-    "w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-sm outline-none transition focus:border-azul focus:ring-2 focus:ring-azul/20";
-
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-azul-900 px-4">
-      {/* Foto del campo de fútbol como fondo, difuminada y oscurecida para no
-          competir con el formulario. */}
       <Image
         src="/campo-noche.jpg"
         alt=""
@@ -60,9 +50,9 @@ export default function LoginPage() {
             className="h-14 w-14 object-contain"
           />
           <h1 className="mt-3 font-display text-xl font-extrabold uppercase text-azul-700">
-            Intranet C.D. Berriz
+            Verificar carné
           </h1>
-          <p className="mt-1 text-sm text-neutral-500">Acceso para empleados del club</p>
+          <p className="mt-1 text-sm text-neutral-500">Acceso solo con email, sin contraseña</p>
         </div>
 
         <form onSubmit={onSubmit} className="space-y-4">
@@ -75,23 +65,10 @@ export default function LoginPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className={input}
+              className="w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-sm outline-none transition focus:border-azul focus:ring-2 focus:ring-azul/20"
               required
               autoComplete="email"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-semibold" htmlFor="password">
-              Contraseña
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className={input}
-              required
-              autoComplete="current-password"
+              autoFocus
             />
           </div>
 
@@ -106,8 +83,8 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <a href="/admin/login-verificador" className="mt-5 block text-center text-xs text-neutral-400 underline">
-          ¿Solo vas a verificar carnés? Entra sin contraseña
+        <a href="/admin/login" className="mt-5 block text-center text-xs text-neutral-400 underline">
+          Acceso con contraseña (resto del panel)
         </a>
       </div>
     </main>

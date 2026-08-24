@@ -406,3 +406,65 @@ create policy "jugadores_empleados" on jugadores
 insert into storage.buckets (id, name, public)
 values ('fotos-socios', 'fotos-socios', true)
 on conflict (id) do nothing;
+
+-- ----------------------------------------------------------------------------
+-- 7. ROL "verificador" con acceso REAL limitado a verificar carnés
+--    Hasta ahora es_empleado() (usado en casi todas las políticas) daba
+--    acceso completo a cualquier fila de "perfiles", incluido el rol
+--    "verificador" — la interfaz lo ocultaba, pero por RLS sí podía leer
+--    socios, pagos, tickets, etc. Se introduce es_empleado_pleno() (admin o
+--    empleado, NUNCA verificador) para las tablas con datos que ese rol no
+--    debe poder ver. "entradas" se queda con es_empleado() a propósito: es
+--    la tabla que el verificador SÍ necesita (aunque en la práctica el
+--    endpoint /api/admin/verificar usa la service_role key y no depende de
+--    esta política).
+-- ----------------------------------------------------------------------------
+
+-- Email del empleado en "perfiles", para poder identificarlo sin llamar a la
+-- Admin API de Auth: lo necesita el login sin contraseña del rol
+-- "verificador" (ver /api/admin/login-verificador).
+alter table perfiles add column if not exists email text;
+create unique index if not exists perfiles_email_idx on perfiles (lower(email));
+
+create or replace function es_empleado_pleno()
+returns boolean language sql security definer stable as $$
+  select exists (
+    select 1 from perfiles where id = auth.uid() and rol in ('admin', 'empleado')
+  );
+$$;
+
+drop policy if exists "socios_empleados" on socios;
+create policy "socios_empleados" on socios
+  for all using (es_empleado_pleno()) with check (es_empleado_pleno());
+
+drop policy if exists "pagos_lectura_empleados" on pagos;
+create policy "pagos_lectura_empleados" on pagos
+  for select using (es_empleado_pleno());
+
+drop policy if exists "abonos_lectura_empleados" on tipos_abono;
+create policy "abonos_lectura_empleados" on tipos_abono
+  for select using (es_empleado_pleno());
+
+drop policy if exists "personas_pago_empleados" on personas_pago;
+create policy "personas_pago_empleados" on personas_pago
+  for all using (es_empleado_pleno()) with check (es_empleado_pleno());
+
+drop policy if exists "resguardos_empleados" on resguardos;
+create policy "resguardos_empleados" on resguardos
+  for all using (es_empleado_pleno()) with check (es_empleado_pleno());
+
+drop policy if exists "carnets_fisicos_empleados" on carnets_fisicos;
+create policy "carnets_fisicos_empleados" on carnets_fisicos
+  for all using (es_empleado_pleno()) with check (es_empleado_pleno());
+
+drop policy if exists "tickets_empleados" on tickets;
+create policy "tickets_empleados" on tickets
+  for all using (es_empleado_pleno()) with check (es_empleado_pleno());
+
+drop policy if exists "ticket_mensajes_empleados" on ticket_mensajes;
+create policy "ticket_mensajes_empleados" on ticket_mensajes
+  for all using (es_empleado_pleno()) with check (es_empleado_pleno());
+
+drop policy if exists "jugadores_empleados" on jugadores;
+create policy "jugadores_empleados" on jugadores
+  for all using (es_empleado_pleno()) with check (es_empleado_pleno());

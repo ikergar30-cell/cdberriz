@@ -46,6 +46,7 @@ export interface TicketMensaje {
 export interface Perfil {
   id: string;
   nombre: string;
+  email: string | null;
   rol: RolEmpleado;
   created_at: string;
 }

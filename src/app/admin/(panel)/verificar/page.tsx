@@ -80,12 +80,54 @@ export default function VerificarPage() {
       </h1>
 
       {!escaneando && !resultado && (
-        <button
-          onClick={iniciar}
-          className="rounded-full bg-rojo px-6 py-3 text-sm font-semibold text-white transition hover:bg-rojo-600"
-        >
-          Abrir cámara y escanear
-        </button>
+        <>
+          <div className="mb-6 max-w-lg rounded-2xl border border-neutral-200 bg-white p-5 text-sm text-neutral-700">
+            <p className="mb-3 font-semibold text-neutral-900">Cómo funciona</p>
+            <ol className="mb-4 list-decimal space-y-1.5 pl-5">
+              <li>
+                Pulsa <span className="font-semibold">&quot;Abrir cámara y escanear&quot;</span> y
+                apunta al código QR del carné del socio (en su móvil o en el carné físico).
+              </li>
+              <li>La app lo lee sola, no hace falta pulsar nada más.</li>
+              <li>Deja pasar según el color que salga (abajo tienes el significado de cada uno).</li>
+              <li>
+                Para el siguiente socio, pulsa <span className="font-semibold">&quot;Escanear otro&quot;</span>.
+              </li>
+            </ol>
+            <p className="mb-2 font-semibold text-neutral-900">Qué significa cada resultado</p>
+            <ul className="space-y-2">
+              <li className="flex items-start gap-2">
+                <span className="mt-0.5 inline-block h-4 w-4 shrink-0 rounded-full bg-green-500" />
+                <span>
+                  <span className="font-semibold text-green-700">Acceso válido</span> — el socio está
+                  activo. Se registra la entrada automáticamente, puede pasar.
+                </span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="mt-0.5 inline-block h-4 w-4 shrink-0 rounded-full bg-amber-500" />
+                <span>
+                  <span className="font-semibold text-amber-700">Ya había entrado</span> — ese mismo
+                  carné ya se escaneó hace menos de 45 minutos. Compara la foto con la persona: puede
+                  ser una reentrada normal, o que el carné se esté compartiendo.
+                </span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="mt-0.5 inline-block h-4 w-4 shrink-0 rounded-full bg-rojo" />
+                <span>
+                  <span className="font-semibold text-rojo">No válido</span> — el socio no está al
+                  corriente de pago (o de baja). No debe pasar; si tiene dudas, que hable con el club.
+                </span>
+              </li>
+            </ul>
+          </div>
+
+          <button
+            onClick={iniciar}
+            className="rounded-full bg-rojo px-6 py-3 text-sm font-semibold text-white transition hover:bg-rojo-600"
+          >
+            Abrir cámara y escanear
+          </button>
+        </>
       )}
 
       {error && <p className="mt-4 text-sm font-semibold text-rojo">{error}</p>}

@@ -21,7 +21,7 @@ export async function crearEmpleado(formData: FormData): Promise<void> {
 
   if (!perfil || perfil.rol !== "admin") redirect("/admin");
 
-  const email = (formData.get("email") as string | null)?.trim() ?? "";
+  const email = (formData.get("email") as string | null)?.trim().toLowerCase() ?? "";
   const nombre = (formData.get("nombre") as string | null)?.trim() ?? "";
   const rol = (formData.get("rol") as RolEmpleado | null) ?? "";
 
@@ -46,7 +46,7 @@ export async function crearEmpleado(formData: FormData): Promise<void> {
   // Insertar en la tabla de perfiles.
   const { error: perfilError } = await admin
     .from("perfiles")
-    .insert({ id: authData.user.id, nombre, rol });
+    .insert({ id: authData.user.id, nombre, email, rol });
 
   if (perfilError) {
     // Intentar limpiar el usuario de Auth si falló el perfil.
@@ -54,8 +54,12 @@ export async function crearEmpleado(formData: FormData): Promise<void> {
     redirect("/admin/empleados?error=" + encodeURIComponent(perfilError.message));
   }
 
-  // Generar enlace de recuperación para que el empleado establezca su contraseña.
-  await admin.auth.admin.generateLink({ type: "recovery", email });
+  // El rol "verificador" no usa contraseña: entra solo con su email desde
+  // /admin/login-verificador (ver esa ruta). Para el resto, generamos el
+  // enlace para que establezcan su contraseña.
+  if (rol !== "verificador") {
+    await admin.auth.admin.generateLink({ type: "recovery", email });
+  }
 
   redirect("/admin/empleados?ok=1");
 }

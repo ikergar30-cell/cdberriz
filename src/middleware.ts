@@ -96,7 +96,8 @@ async function protegerAdmin(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const enLogin = request.nextUrl.pathname === "/admin/login";
+  const { pathname } = request.nextUrl;
+  const enLogin = pathname === "/admin/login" || pathname === "/admin/login-verificador";
 
   // Sin sesión y fuera del login → al login.
   if (!user && !enLogin) {
@@ -105,8 +106,29 @@ async function protegerAdmin(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  if (!user) return response;
+
+  // El rol "verificador" (usuario de la entrada, sin contraseña) SOLO puede
+  // usar /admin/verificar: cualquier otra ruta del panel (incluido el login,
+  // si ya tiene sesión) lo manda ahí. Es la aplicación real de la
+  // restricción — la RLS de socios/pagos/tickets/etc. también la refuerza en
+  // la base de datos (ver es_empleado_pleno() en supabase/schema.sql).
+  if (pathname.startsWith("/admin") && pathname !== "/admin/verificar") {
+    const { data: perfil } = await supabase
+      .from("perfiles")
+      .select("rol")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (perfil?.rol === "verificador") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/admin/verificar";
+      return NextResponse.redirect(url);
+    }
+  }
+
   // Con sesión y en el login → al panel.
-  if (user && enLogin) {
+  if (enLogin) {
     const url = request.nextUrl.clone();
     url.pathname = "/admin";
     return NextResponse.redirect(url);

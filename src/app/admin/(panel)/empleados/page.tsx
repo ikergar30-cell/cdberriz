@@ -42,7 +42,7 @@ export default async function EmpleadosPage({ searchParams }: Props) {
   const admin = createAdminClient();
   const { data: empleados } = await admin
     .from("perfiles")
-    .select("id, nombre, rol, created_at")
+    .select("id, nombre, email, rol, created_at")
     .order("created_at", { ascending: false });
 
   const errorMsg = searchParams.error;
@@ -67,7 +67,9 @@ export default async function EmpleadosPage({ searchParams }: Props) {
       )}
       {okMsg && (
         <div className="mb-6 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-          Empleado creado correctamente. Se ha enviado un enlace para establecer la contraseña.
+          Empleado creado correctamente. Si su rol no es &quot;verificador&quot;, se le ha
+          enviado un enlace para establecer la contraseña; el rol &quot;verificador&quot;
+          entra sin contraseña desde /admin/login-verificador.
         </div>
       )}
 
@@ -77,6 +79,7 @@ export default async function EmpleadosPage({ searchParams }: Props) {
           <thead className="border-b border-neutral-200 bg-neutral-50">
             <tr>
               <th className="px-5 py-3 text-left font-semibold text-neutral-600">Nombre</th>
+              <th className="px-5 py-3 text-left font-semibold text-neutral-600">Email</th>
               <th className="px-5 py-3 text-left font-semibold text-neutral-600">Rol</th>
               <th className="px-5 py-3 text-left font-semibold text-neutral-600">Creado</th>
             </tr>
@@ -86,6 +89,7 @@ export default async function EmpleadosPage({ searchParams }: Props) {
               empleados.map((e) => (
                 <tr key={e.id} className="hover:bg-neutral-50">
                   <td className="px-5 py-3 font-medium text-neutral-900">{e.nombre}</td>
+                  <td className="px-5 py-3 text-neutral-500">{e.email ?? "—"}</td>
                   <td className="px-5 py-3">
                     <BadgeRol rol={e.rol as RolEmpleado} />
                   </td>
@@ -96,7 +100,7 @@ export default async function EmpleadosPage({ searchParams }: Props) {
               ))
             ) : (
               <tr>
-                <td colSpan={3} className="px-5 py-8 text-center text-neutral-400">
+                <td colSpan={4} className="px-5 py-8 text-center text-neutral-400">
                   No hay empleados registrados.
                 </td>
               </tr>
