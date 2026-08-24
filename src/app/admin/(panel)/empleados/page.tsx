@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { RolEmpleado } from "@/lib/supabase/types";
 import { crearEmpleado } from "./actions";
+import { NombreEmpleado } from "./NombreEmpleado";
 
 // Badge de color según rol.
 function BadgeRol({ rol }: { rol: RolEmpleado }) {
@@ -46,7 +47,7 @@ export default async function EmpleadosPage({ searchParams }: Props) {
     .order("created_at", { ascending: false });
 
   const errorMsg = searchParams.error;
-  const okMsg = searchParams.ok === "1";
+  const okMsg = searchParams.ok;
 
   return (
     <div className="p-6 md:p-8">
@@ -65,11 +66,16 @@ export default async function EmpleadosPage({ searchParams }: Props) {
           {errorMsg}
         </div>
       )}
-      {okMsg && (
+      {okMsg === "1" && (
         <div className="mb-6 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
           Empleado creado correctamente. Si su rol no es &quot;verificador&quot;, se le ha
           enviado un enlace para establecer la contraseña; el rol &quot;verificador&quot;
           entra sin contraseña desde /admin/login-verificador.
+        </div>
+      )}
+      {okMsg === "2" && (
+        <div className="mb-6 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+          Nombre actualizado correctamente.
         </div>
       )}
 
@@ -88,7 +94,9 @@ export default async function EmpleadosPage({ searchParams }: Props) {
             {empleados && empleados.length > 0 ? (
               empleados.map((e) => (
                 <tr key={e.id} className="hover:bg-neutral-50">
-                  <td className="px-5 py-3 font-medium text-neutral-900">{e.nombre}</td>
+                  <td className="px-5 py-3">
+                    <NombreEmpleado id={e.id} nombre={e.nombre} />
+                  </td>
                   <td className="px-5 py-3 text-neutral-500">{e.email ?? "—"}</td>
                   <td className="px-5 py-3">
                     <BadgeRol rol={e.rol as RolEmpleado} />

@@ -63,3 +63,33 @@ export async function crearEmpleado(formData: FormData): Promise<void> {
 
   redirect("/admin/empleados?ok=1");
 }
+
+export async function renombrarEmpleado(id: string, formData: FormData): Promise<void> {
+  // Verificar que el usuario actual es admin.
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/admin/login");
+
+  const { data: perfil } = await supabase
+    .from("perfiles")
+    .select("rol")
+    .eq("id", user.id)
+    .single();
+
+  if (!perfil || perfil.rol !== "admin") redirect("/admin");
+
+  const nombre = (formData.get("nombre") as string | null)?.trim() ?? "";
+  if (!nombre) {
+    redirect("/admin/empleados?error=" + encodeURIComponent("El nombre no puede estar vacío."));
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin.from("perfiles").update({ nombre }).eq("id", id);
+  if (error) {
+    redirect("/admin/empleados?error=" + encodeURIComponent(error.message));
+  }
+
+  redirect("/admin/empleados?ok=2");
+}

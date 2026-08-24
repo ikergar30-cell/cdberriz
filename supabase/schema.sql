@@ -12,6 +12,9 @@
 --    Se enlaza 1:1 con auth.users (el login de Supabase).
 -- ----------------------------------------------------------------------------
 create type rol_empleado as enum ('admin', 'empleado');
+-- 'verificador': añadido más tarde (ver sección 7) para el usuario de la
+-- entrada, con acceso limitado solo a verificar carnés.
+alter type rol_empleado add value if not exists 'verificador';
 
 create table perfiles (
   id          uuid primary key references auth.users (id) on delete cascade,
