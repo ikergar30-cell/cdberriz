@@ -95,6 +95,17 @@ export default async function HomePage({
               {tx("Contacto", "Kontaktua")}
             </Link>
           </div>
+          <Link
+            href="/cuenta"
+            className="mt-1 inline-flex items-center gap-2 rounded-full bg-white/10 px-5 py-2.5 text-sm font-semibold text-dorado underline decoration-dorado/60 underline-offset-4 transition hover:bg-white/20"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 shrink-0">
+              <rect x="3" y="5" width="18" height="14" rx="2" />
+              <circle cx="9" cy="12" r="2" />
+              <path d="M14 10h4M14 14h4" strokeLinecap="round" />
+            </svg>
+            {t("heroCtaSocio")}
+          </Link>
         </div>
       </section>
 

@@ -17,7 +17,7 @@
     "patrocinadores": "Babesleak",
     "abrirMenu": "Menua ireki",
     "cerrarMenu": "Menua itxi",
-    "miCuenta": "Sartu"
+    "miCuenta": "Bazkide eremua"
   },
   "langSwitcher": {
     "label": "Hizkuntza"
@@ -25,6 +25,7 @@
   "home": {
     "heroTagline": "50 urte ilusioak elkarbanatuz",
     "heroCta": "Egin zaitez bazkide",
+    "heroCtaSocio": "Bazkidea naiz: sartu",
     "card1Title": "Jokatu gurekin",
     "card1Text": "Elkartu eta jokatu C.D. Berrizen.",
     "card2Title": "Entrenatu Berriz",

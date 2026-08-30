@@ -17,7 +17,7 @@
     "patrocinadores": "Patrocinadores",
     "abrirMenu": "Abrir menú",
     "cerrarMenu": "Cerrar menú",
-    "miCuenta": "Acceder"
+    "miCuenta": "Área de socio/a"
   },
   "langSwitcher": {
     "label": "Idioma"
@@ -25,6 +25,7 @@
   "home": {
     "heroTagline": "50 años compartiendo ilusiones",
     "heroCta": "Hazte socio/a",
+    "heroCtaSocio": "Ya soy socio/a: acceder",
     "card1Title": "Juega con nosotros",
     "card1Text": "Únete y juega en el C.D. Berriz.",
     "card2Title": "Entrena al Berriz",
