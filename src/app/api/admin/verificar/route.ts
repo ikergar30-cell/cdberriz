@@ -52,7 +52,13 @@ export async function POST(request: NextRequest) {
       query = query.eq("numero_socio", n);
     }
     if (email) query = query.ilike("email", email);
-    if (dni) query = query.eq("dni", normalizarDni(dni));
+    if (dni) {
+      const dniNorm = normalizarDni(dni);
+      // Si no ha escrito la letra (solo dígitos), buscamos por los dígitos:
+      // la letra del DNI se calcula a partir del número, así que ya
+      // identifica a la persona sin necesidad de teclearla.
+      query = /^\d+$/.test(dniNorm) ? query.ilike("dni", `${dniNorm}%`) : query.eq("dni", dniNorm);
+    }
 
     const { data: coincidencias } = await query.limit(2);
     socio = coincidencias?.length === 1 ? coincidencias[0] : null;

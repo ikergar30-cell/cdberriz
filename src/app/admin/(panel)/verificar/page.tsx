@@ -270,6 +270,9 @@ export default function VerificarPage() {
                 onChange={(e) => setDni(e.target.value)}
                 className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-azul focus:ring-1 focus:ring-azul"
               />
+              <p className="mt-1 text-xs text-neutral-400">
+                No hace falta la letra: con los números del DNI ya vale.
+              </p>
             </div>
           </div>
           <div className="mt-4 flex items-center gap-3">
