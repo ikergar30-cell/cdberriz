@@ -1,10 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { normalizarDni } from "@/lib/dni";
 
-// Verifica un carné por su token Y registra la entrada del día (check-in).
-// Solo empleados. Si el socio ya entró hoy, NO bloquea: avisa con la hora para
-// que el portero decida (reentrada legítima vs carné compartido).
+// Verifica un carné (por QR o, si el socio no lo tiene a mano, buscándolo por
+// nº de socio / email / DNI) Y registra la entrada del día (check-in). Solo
+// empleados. Si el socio ya entró hace poco, NO bloquea: avisa con la hora
+// para que el portero decida (reentrada legítima vs carné compartido).
+const VENTANA_MIN = 40;
+
 export async function POST(request: NextRequest) {
   const supabase = createClient();
   const {
@@ -19,20 +23,42 @@ export async function POST(request: NextRequest) {
     .maybeSingle();
   if (!perfil) return NextResponse.json({ error: "No autorizado" }, { status: 403 });
 
-  let token = "";
+  let body: { token?: string; numero_socio?: string; email?: string; dni?: string } = {};
   try {
-    token = String((await request.json()).token ?? "");
+    body = await request.json();
   } catch {
     /* sin cuerpo */
   }
-  if (!token) return NextResponse.json({ error: "Sin token" }, { status: 400 });
+
+  const token = String(body.token ?? "").trim();
+  const numeroSocio = String(body.numero_socio ?? "").trim();
+  const email = String(body.email ?? "").trim();
+  const dni = String(body.dni ?? "").trim();
 
   const admin = createAdminClient();
-  const { data: socio } = await admin
-    .from("socios")
-    .select("id, nombre, apellidos, numero_socio, estado, foto_url, tipos_abono(nombre)")
-    .eq("carnet_token", token)
-    .maybeSingle();
+  const columnas = "id, nombre, apellidos, numero_socio, estado, foto_url, tipos_abono(nombre)";
+
+  let socio;
+  if (token) {
+    ({ data: socio } = await admin.from("socios").select(columnas).eq("carnet_token", token).maybeSingle());
+  } else if (numeroSocio || email || dni) {
+    // Búsqueda manual: se combinan (AND) los campos que el verificador tenga
+    // a mano, para confirmar que es realmente esa persona. Si no encuentra
+    // exactamente uno, no se da acceso (ambigüedad = no válido).
+    let query = admin.from("socios").select(columnas);
+    if (numeroSocio) {
+      const n = Number(numeroSocio);
+      if (!Number.isInteger(n)) return NextResponse.json({ encontrado: false });
+      query = query.eq("numero_socio", n);
+    }
+    if (email) query = query.ilike("email", email);
+    if (dni) query = query.eq("dni", normalizarDni(dni));
+
+    const { data: coincidencias } = await query.limit(2);
+    socio = coincidencias?.length === 1 ? coincidencias[0] : null;
+  } else {
+    return NextResponse.json({ error: "Faltan datos" }, { status: 400 });
+  }
 
   if (!socio) return NextResponse.json({ encontrado: false });
 
@@ -56,9 +82,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ...base, yaEntro: false, horaEntrada: null });
   }
 
-  // ¿Ha entrado en los últimos 45 minutos? Esta ventana se reinicia, de modo que
-  // si hay otro partido más tarde el mismo día, el socio puede volver a entrar.
-  const VENTANA_MIN = 45;
+  // ¿Ha entrado en los últimos VENTANA_MIN minutos? Esta ventana se reinicia,
+  // de modo que si hay otro partido más tarde el mismo día, el socio puede
+  // volver a entrar.
   const desde = new Date(Date.now() - VENTANA_MIN * 60 * 1000).toISOString();
   const { data: previa } = await admin
     .from("entradas")
@@ -70,7 +96,7 @@ export async function POST(request: NextRequest) {
     .maybeSingle();
 
   if (previa) {
-    // Entró hace menos de 45 min: avisamos con la hora, NO bloqueamos (decide el portero).
+    // Entró hace menos de VENTANA_MIN min: avisamos con la hora, NO bloqueamos (decide el portero).
     const hora = new Date(previa.creado_en).toLocaleTimeString("es-ES", {
       hour: "2-digit",
       minute: "2-digit",
@@ -78,7 +104,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ...base, yaEntro: true, horaEntrada: hora });
   }
 
-  // Entrada nueva (o pasados los 45 min): la registramos.
+  // Entrada nueva (o pasada la ventana): la registramos.
   await admin.from("entradas").insert({ socio_id: socio.id, empleado_id: user.id });
   return NextResponse.json({ ...base, yaEntro: false, horaEntrada: null });
 }

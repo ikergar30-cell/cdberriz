@@ -20,12 +20,22 @@ type Resultado =
 export default function VerificarPage() {
   const [resultado, setResultado] = useState<Resultado | null>(null);
   const [escaneando, setEscaneando] = useState(false);
+  const [mostrarManual, setMostrarManual] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const scannerRef = useRef<{ stop: () => Promise<void> } | null>(null);
+
+  // Búsqueda manual: para cuando el socio no tiene el QR a mano. Con
+  // cualquiera de los tres datos basta, pero si se rellena más de uno se
+  // exigen todos a la vez (mayor garantía de que es esa persona).
+  const [numeroSocio, setNumeroSocio] = useState("");
+  const [email, setEmail] = useState("");
+  const [dni, setDni] = useState("");
+  const [buscando, setBuscando] = useState(false);
 
   async function iniciar() {
     setResultado(null);
     setError(null);
+    setMostrarManual(false);
     setEscaneando(true);
     try {
       const { Html5Qrcode } = await import("html5-qrcode");
@@ -39,7 +49,7 @@ export default function VerificarPage() {
           const m = texto.match(/\/verificar\/([^/?#]+)/);
           const token = m ? m[1] : texto;
           await detener();
-          await comprobar(token);
+          await comprobar({ token });
         },
         () => {},
       );
@@ -57,12 +67,18 @@ export default function VerificarPage() {
     setEscaneando(false);
   }
 
-  async function comprobar(token: string) {
+  function abrirManual() {
+    setResultado(null);
+    setError(null);
+    setMostrarManual(true);
+  }
+
+  async function comprobar(datos: { token?: string; numero_socio?: string; email?: string; dni?: string }) {
     try {
       const res = await fetch("/api/admin/verificar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token }),
+        body: JSON.stringify(datos),
       });
       setResultado(await res.json());
     } catch {
@@ -70,8 +86,27 @@ export default function VerificarPage() {
     }
   }
 
+  async function buscarManual(e: React.FormEvent) {
+    e.preventDefault();
+    if (!numeroSocio.trim() && !email.trim() && !dni.trim()) {
+      setError("Rellena al menos el nº de socio, el email o el DNI.");
+      return;
+    }
+    setError(null);
+    setBuscando(true);
+    await comprobar({
+      numero_socio: numeroSocio.trim() || undefined,
+      email: email.trim() || undefined,
+      dni: dni.trim() || undefined,
+    });
+    setBuscando(false);
+    setMostrarManual(false);
+  }
+
   // Al salir de la página, apagar la cámara.
   useEffect(() => () => void detener(), []);
+
+  const pantallaInicial = !escaneando && !mostrarManual && !resultado;
 
   return (
     <div className="p-6 md:p-8">
@@ -79,7 +114,7 @@ export default function VerificarPage() {
         Verificar carné
       </h1>
 
-      {!escaneando && !resultado && (
+      {pantallaInicial && (
         <>
           <div className="mb-6 max-w-lg rounded-2xl border border-neutral-200 bg-white p-5 text-sm text-neutral-700">
             <p className="mb-3 font-semibold text-neutral-900">Cómo funciona</p>
@@ -94,6 +129,10 @@ export default function VerificarPage() {
                 Para el siguiente socio, pulsa <span className="font-semibold">&quot;Escanear otro&quot;</span>.
               </li>
             </ol>
+            <p className="mb-3 text-neutral-600">
+              Si el socio no tiene el QR a mano, puedes buscarlo con su nº de socio, email o DNI
+              pulsando <span className="font-semibold">&quot;Buscar sin QR&quot;</span>.
+            </p>
             <p className="mb-2 font-semibold text-neutral-900">Qué significa cada resultado</p>
             <ul className="space-y-2">
               <li className="flex items-start gap-2">
@@ -107,7 +146,7 @@ export default function VerificarPage() {
                 <span className="mt-0.5 inline-block h-4 w-4 shrink-0 rounded-full bg-amber-500" />
                 <span>
                   <span className="font-semibold text-amber-700">Ya había entrado</span> — ese mismo
-                  carné ya se escaneó hace menos de 45 minutos. Compara la foto con la persona: puede
+                  carné ya se verificó hace menos de 40 minutos. Compara la foto con la persona: puede
                   ser una reentrada normal, o que el carné se esté compartiendo.
                 </span>
               </li>
@@ -121,12 +160,20 @@ export default function VerificarPage() {
             </ul>
           </div>
 
-          <button
-            onClick={iniciar}
-            className="rounded-full bg-rojo px-6 py-3 text-sm font-semibold text-white transition hover:bg-rojo-600"
-          >
-            Abrir cámara y escanear
-          </button>
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={iniciar}
+              className="rounded-full bg-rojo px-6 py-3 text-sm font-semibold text-white transition hover:bg-rojo-600"
+            >
+              Abrir cámara y escanear
+            </button>
+            <button
+              onClick={abrirManual}
+              className="rounded-full border border-neutral-300 px-6 py-3 text-sm font-semibold text-neutral-700 transition hover:border-azul hover:text-azul"
+            >
+              Buscar sin QR
+            </button>
+          </div>
         </>
       )}
 
@@ -140,6 +187,61 @@ export default function VerificarPage() {
         </button>
       )}
 
+      {/* Búsqueda manual */}
+      {mostrarManual && (
+        <form onSubmit={buscarManual} className="mt-4 max-w-sm rounded-2xl border border-neutral-200 bg-white p-6">
+          <p className="mb-1 font-display text-lg font-bold text-neutral-900">Buscar sin QR</p>
+          <p className="mb-4 text-sm text-neutral-500">
+            Rellena al menos un dato. Si rellenas varios, tienen que coincidir todos.
+          </p>
+          <div className="space-y-3">
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-neutral-600">Nº de socio</label>
+              <input
+                type="number"
+                value={numeroSocio}
+                onChange={(e) => setNumeroSocio(e.target.value)}
+                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-azul focus:ring-1 focus:ring-azul"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-neutral-600">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-azul focus:ring-1 focus:ring-azul"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-neutral-600">DNI / NIE</label>
+              <input
+                type="text"
+                value={dni}
+                onChange={(e) => setDni(e.target.value)}
+                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-azul focus:ring-1 focus:ring-azul"
+              />
+            </div>
+          </div>
+          <div className="mt-4 flex items-center gap-3">
+            <button
+              type="submit"
+              disabled={buscando}
+              className="rounded-full bg-rojo px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-rojo-600 disabled:opacity-60"
+            >
+              {buscando ? "Buscando…" : "Buscar"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setMostrarManual(false)}
+              className="text-sm font-semibold text-neutral-500 underline"
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+      )}
+
       {/* Resultado */}
       {resultado && (
         <div className="mt-6 max-w-sm rounded-2xl border border-neutral-200 bg-white p-6 text-center shadow-sm">
@@ -147,7 +249,9 @@ export default function VerificarPage() {
             <>
               <Circulo ok={false} />
               <p className="mt-3 font-display text-2xl font-extrabold text-rojo">Carné no válido</p>
-              <p className="mt-1 text-sm text-neutral-600">No corresponde a ningún socio.</p>
+              <p className="mt-1 text-sm text-neutral-600">
+                No corresponde a ningún socio (o hay varios con esos datos: prueba con más campos).
+              </p>
             </>
           ) : (
             <>
@@ -169,7 +273,7 @@ export default function VerificarPage() {
               </p>
               {resultado.valido && resultado.yaEntro && (
                 <p className="mt-1 text-sm font-semibold text-amber-700">
-                  Entró a las {resultado.horaEntrada} (hace menos de 45 min). Comprueba la foto.
+                  Entró a las {resultado.horaEntrada} (hace menos de 40 min). Comprueba la foto.
                 </p>
               )}
               {resultado.valido && !resultado.yaEntro && (
@@ -199,12 +303,20 @@ export default function VerificarPage() {
               </div>
             </>
           )}
-          <button
-            onClick={iniciar}
-            className="mt-6 rounded-full bg-azul px-6 py-2.5 text-sm font-semibold text-white"
-          >
-            Escanear otro
-          </button>
+          <div className="mt-6 flex items-center justify-center gap-3">
+            <button
+              onClick={iniciar}
+              className="rounded-full bg-azul px-5 py-2.5 text-sm font-semibold text-white"
+            >
+              Escanear otro
+            </button>
+            <button
+              onClick={abrirManual}
+              className="rounded-full border border-neutral-300 px-5 py-2.5 text-sm font-semibold text-neutral-700 hover:border-azul hover:text-azul"
+            >
+              Buscar sin QR
+            </button>
+          </div>
         </div>
       )}
     </div>
