@@ -31,7 +31,7 @@ export async function POST(request: Request) {
   // .maybeSingle() lance un error y la solicitud falle sin motivo aparente.
   const { data: sociosCoincidentes, error: errorSocio } = await admin
     .from("socios")
-    .select("id, nombre, apellidos, numero_socio, direccion, carnet_fisico_pedido_en, carnet_fisico_entregado_en")
+    .select("id, nombre, apellidos, numero_socio, direccion, foto_url, carnet_fisico_pedido_en, carnet_fisico_entregado_en")
     .ilike("email", user.email)
     .order("numero_socio", { ascending: true })
     .limit(1);
@@ -41,6 +41,15 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: "No se encontró tu ficha de socio." },
       { status: 404 },
+    );
+  }
+
+  // El carné físico lleva la misma foto que el digital: sin foto subida no
+  // se puede tramitar la solicitud.
+  if (!socio.foto_url) {
+    return NextResponse.json(
+      { error: "Sube antes tu foto (arriba, en \"Carné digital\") para poder pedir el carné físico." },
+      { status: 422 },
     );
   }
 

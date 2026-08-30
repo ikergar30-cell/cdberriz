@@ -9,9 +9,10 @@ interface Props {
   entregadoEn: string | null;
   recogida: string | null;
   tieneDireccion: boolean;
+  tieneFoto: boolean;
 }
 
-export function SolicitarCarnet({ pedidoEn, entregadoEn, recogida, tieneDireccion }: Props) {
+export function SolicitarCarnet({ pedidoEn, entregadoEn, recogida, tieneDireccion, tieneFoto }: Props) {
   const locale = useLocale();
   const eu = locale === "eu";
   const router = useRouter();
@@ -26,6 +27,7 @@ export function SolicitarCarnet({ pedidoEn, entregadoEn, recogida, tieneDireccio
     : "Te avisaremos por email en cuanto esté listo para recoger.";
 
   async function solicitar() {
+    if (!tieneFoto) return;
     if (!tieneDireccion && !direccion.trim()) {
       setError(eu ? "Zure helbidea behar dugu." : "Introduce tu dirección.");
       return;
@@ -142,9 +144,18 @@ export function SolicitarCarnet({ pedidoEn, entregadoEn, recogida, tieneDireccio
       <h2 className="font-display text-lg font-bold text-neutral-900">
         {eu ? "Karnet fisikoa eskatu" : "Solicitar carné físico"}
       </h2>
-      <p className="mt-1 text-sm text-neutral-600">{avisoEmail}</p>
 
-      {!tieneDireccion && (
+      {!tieneFoto ? (
+        <p className="mt-1 text-sm font-semibold text-rojo">
+          {eu
+            ? "Lehenago zure argazkia igo behar duzu (goian, \"Karnet digitala\" atalean)."
+            : "Antes tienes que subir tu foto (arriba, en \"Carné digital\")."}
+        </p>
+      ) : (
+        <p className="mt-1 text-sm text-neutral-600">{avisoEmail}</p>
+      )}
+
+      {tieneFoto && !tieneDireccion && (
         <div className="mt-4">
           <label className="block text-sm font-semibold text-neutral-700">
             {eu ? "Helbidea (zure profila osatzeko)" : "Dirección (para completar tu perfil)"}
@@ -164,7 +175,7 @@ export function SolicitarCarnet({ pedidoEn, entregadoEn, recogida, tieneDireccio
 
       <button
         onClick={solicitar}
-        disabled={cargando}
+        disabled={cargando || !tieneFoto}
         className="mt-4 rounded-full bg-azul px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-azul-700 disabled:opacity-60"
       >
         {cargando

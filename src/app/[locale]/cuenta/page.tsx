@@ -423,6 +423,7 @@ export default async function CuentaPage({
                   entregadoEn={socio.carnet_fisico_entregado_en ?? null}
                   recogida={socio.carnet_fisico_recogida ?? null}
                   tieneDireccion={!!socio.direccion}
+                  tieneFoto={!!socio.foto_url}
                 />
 
                 {/* Gestionar cuota + cerrar sesión */}

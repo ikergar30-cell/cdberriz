@@ -93,3 +93,57 @@ export async function marcarCarnetListo(id: string, mensaje: string): Promise<Ac
   revalidatePath("/admin/socios/carnets");
   revalidatePath("/admin");
 }
+
+// Rechaza una solicitud de carné físico porque al socio le falta la foto (no
+// se puede imprimir un carné sin foto). Avisa por email para que la suba y
+// vuelva a pedirlo; la solicitud desaparece de "Pendientes" hasta entonces.
+export async function rechazarCarnetSinFoto(id: string): Promise<ActionResult> {
+  await exigirEmpleado();
+  const admin = createAdminClient();
+
+  const { data: socio, error: errSocio } = await admin
+    .from("socios")
+    .select("nombre, apellidos, email, numero_socio, foto_url, carnet_fisico_entregado_en")
+    .eq("id", id)
+    .single();
+  if (errSocio || !socio) return { error: "Socio no encontrado." };
+  if (socio.foto_url) return { error: "Este socio ya tiene foto subida; no hace falta rechazarlo." };
+  if (socio.carnet_fisico_entregado_en) return { error: "Este carné ya está marcado como listo." };
+
+  const { error } = await admin
+    .from("socios")
+    .update({ carnet_fisico_pedido_en: null })
+    .eq("id", id);
+  if (error) return { error: error.message };
+
+  const apiKey = process.env.RESEND_API_KEY;
+  if (apiKey && socio.email) {
+    try {
+      const resend = new Resend(apiKey);
+      const from = process.env.CONTACT_FROM || club.remitente;
+      await resend.emails.send({
+        from,
+        to: socio.email,
+        subject: "Falta tu foto para el carné / Argazkia falta zaizu karnetarako",
+        text:
+          `[EUSKARAZ]\n` +
+          `Kaixo ${socio.nombre}:\n\n` +
+          `Ezin izan dugu zure bazkide-txartel fisikoaren eskaera kudeatu, argazkia falta baitzaizu. ` +
+          `Igo ezazu zure argazkia zure eremu pribatutik ("Karnet digitala" atalean) eta gero eska ezazu berriro karnet fisikoa.\n\n` +
+          `Agur bero bat,\nC.D. Berriz\n\n` +
+          `— — —\n\n` +
+          `[EN CASTELLANO]\n` +
+          `Hola ${socio.nombre}:\n\n` +
+          `No hemos podido tramitar tu solicitud de carné físico (nº ${socio.numero_socio}) porque todavía ` +
+          `no tienes una foto subida. Sube tu foto desde tu área privada (sección "Carné digital") y vuelve ` +
+          `a solicitar el carné físico.\n\n` +
+          `Un saludo,\nC.D. Berriz`,
+      });
+    } catch {
+      /* el aviso es informativo, no bloquea el rechazo */
+    }
+  }
+
+  revalidatePath("/admin/socios/carnets");
+  revalidatePath("/admin");
+}

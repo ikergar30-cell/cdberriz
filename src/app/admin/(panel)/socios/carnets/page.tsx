@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { Socio } from "@/lib/supabase/types";
 import { BotonListo } from "./BotonListo";
+import { BotonRechazar } from "./BotonRechazar";
 
 function formatearFecha(fecha: string) {
   return new Date(fecha).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" });
@@ -9,14 +10,22 @@ function formatearFecha(fecha: string) {
 
 type Fila = Pick<
   Socio,
-  "id" | "numero_socio" | "nombre" | "apellidos" | "email" | "direccion" | "carnet_fisico_pedido_en" | "carnet_fisico_entregado_en"
+  | "id"
+  | "numero_socio"
+  | "nombre"
+  | "apellidos"
+  | "email"
+  | "direccion"
+  | "foto_url"
+  | "carnet_fisico_pedido_en"
+  | "carnet_fisico_entregado_en"
 >;
 
 export default async function CarnetsFisicosPage() {
   const supabase = createClient();
   const { data } = await supabase
     .from("socios")
-    .select("id, numero_socio, nombre, apellidos, email, direccion, carnet_fisico_pedido_en, carnet_fisico_entregado_en")
+    .select("id, numero_socio, nombre, apellidos, email, direccion, foto_url, carnet_fisico_pedido_en, carnet_fisico_entregado_en")
     .not("carnet_fisico_pedido_en", "is", null)
     .order("carnet_fisico_pedido_en", { ascending: true });
 
@@ -72,6 +81,11 @@ export default async function CarnetsFisicosPage() {
                       {s.nombre} {s.apellidos}
                     </Link>
                     <p className="text-xs text-neutral-400">Nº {s.numero_socio}</p>
+                    {!s.foto_url && (
+                      <span className="mt-1 inline-block rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">
+                        Sin foto — no se puede imprimir
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-neutral-600">{s.direccion ?? "—"}</td>
                   <td className="px-4 py-3 text-neutral-600">
@@ -79,13 +93,19 @@ export default async function CarnetsFisicosPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-3">
-                      <a
-                        href={`/api/admin/carnets-pdf?id=${s.id}`}
-                        className="text-xs font-semibold text-azul hover:underline"
-                      >
-                        PDF
-                      </a>
-                      <BotonListo id={s.id} />
+                      {s.foto_url ? (
+                        <>
+                          <a
+                            href={`/api/admin/carnets-pdf?id=${s.id}`}
+                            className="text-xs font-semibold text-azul hover:underline"
+                          >
+                            PDF
+                          </a>
+                          <BotonListo id={s.id} />
+                        </>
+                      ) : (
+                        <BotonRechazar id={s.id} nombre={`${s.nombre} ${s.apellidos}`} />
+                      )}
                     </div>
                   </td>
                 </tr>
