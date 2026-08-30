@@ -104,7 +104,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ...base, yaEntro: true, horaEntrada: hora });
   }
 
-  // Entrada nueva (o pasada la ventana): la registramos.
-  await admin.from("entradas").insert({ socio_id: socio.id, empleado_id: user.id });
-  return NextResponse.json({ ...base, yaEntro: false, horaEntrada: null });
+  // Entrada nueva (o pasada la ventana): la registramos. Devolvemos su id
+  // para poder deshacerla desde la pantalla si el verificador se equivoca
+  // (nº de socio erróneo, pulsación doble…) — ver /api/admin/verificar/cancelar.
+  const { data: entrada } = await admin
+    .from("entradas")
+    .insert({ socio_id: socio.id, empleado_id: user.id })
+    .select("id")
+    .single();
+  return NextResponse.json({ ...base, yaEntro: false, horaEntrada: null, entradaId: entrada?.id ?? null });
 }

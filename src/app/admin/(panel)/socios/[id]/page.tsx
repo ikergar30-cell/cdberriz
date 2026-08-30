@@ -65,16 +65,22 @@ export default async function FichaSocioPage({
   params: { id: string };
 }) {
   const supabase = createClient();
-  const [{ data: socio }, { data: tipos }, { data: pagos }, { data: carnetsHist }] = await Promise.all([
-    supabase.from("socios").select("*").eq("id", id).single(),
-    supabase.from("tipos_abono").select("*").eq("activo", true).order("orden"),
-    supabase.from("pagos").select("*").eq("socio_id", id).order("fecha", { ascending: false }),
-    supabase
-      .from("carnets_fisicos")
-      .select("id, temporada, solicitado_en, entregado_en")
-      .eq("socio_id", id)
-      .order("solicitado_en", { ascending: false }),
-  ]);
+  const [{ data: socio }, { data: tipos }, { data: pagos }, { data: carnetsHist }, { data: entradasHist }] =
+    await Promise.all([
+      supabase.from("socios").select("*").eq("id", id).single(),
+      supabase.from("tipos_abono").select("*").eq("activo", true).order("orden"),
+      supabase.from("pagos").select("*").eq("socio_id", id).order("fecha", { ascending: false }),
+      supabase
+        .from("carnets_fisicos")
+        .select("id, temporada, solicitado_en, entregado_en")
+        .eq("socio_id", id)
+        .order("solicitado_en", { ascending: false }),
+      supabase
+        .from("entradas")
+        .select("id, creado_en")
+        .eq("socio_id", id)
+        .order("creado_en", { ascending: false }),
+    ]);
 
   if (!socio) notFound();
 
@@ -82,6 +88,7 @@ export default async function FichaSocioPage({
   const cuota = (tipos as TipoAbono[] | null)?.find((t) => t.id === s.tipo_abono_id) ?? null;
   const listaPagos = (pagos as Pago[]) ?? [];
   const historialCarnets = (carnetsHist as CarnetFisico[]) ?? [];
+  const historialEntradas = (entradasHist as { id: string; creado_en: string }[]) ?? [];
 
   // Si es el 2º carné de un abono familiar, mostramos también quién es el titular.
   let titular: Pick<Socio, "id" | "nombre" | "apellidos"> | null = null;
@@ -167,11 +174,7 @@ export default async function FichaSocioPage({
   // Derecho de desistimiento (14 días): además del plazo, el socio no debe
   // haber usado ya el carné (cada entrada válida en el control de acceso
   // queda registrada en "entradas").
-  const { count: entradasUsadas } = await supabase
-    .from("entradas")
-    .select("id", { count: "exact", head: true })
-    .eq("socio_id", id);
-  const haUsadoCarnet = (entradasUsadas ?? 0) > 0;
+  const haUsadoCarnet = historialEntradas.length > 0;
   const elegibleReembolso = ultimoPago !== null && diasTranscurridos <= REEMBOLSO_DIAS && !haUsadoCarnet;
   const diasRestantesReembolso = elegibleReembolso
     ? Math.max(0, Math.ceil(REEMBOLSO_DIAS - diasTranscurridos))
@@ -392,6 +395,37 @@ export default async function FichaSocioPage({
               </div>
             </div>
           )}
+
+          {/* Entradas registradas (control de acceso a partidos) */}
+          <div>
+            <h2 className="font-display text-sm font-bold uppercase tracking-wide text-neutral-500">
+              Entradas a partidos ({historialEntradas.length})
+            </h2>
+            {historialEntradas.length === 0 ? (
+              <p className="mt-2 text-sm text-neutral-400">Todavía no ha usado el carné para entrar.</p>
+            ) : (
+              <div className="mt-3 max-h-64 overflow-y-auto overflow-x-auto rounded-xl border border-neutral-200 bg-white">
+                <table className="w-full text-left text-sm">
+                  <thead className="sticky top-0 bg-neutral-50 text-xs font-semibold uppercase text-neutral-500">
+                    <tr>
+                      <th className="px-4 py-3">Fecha</th>
+                      <th className="px-4 py-3">Hora</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-100">
+                    {historialEntradas.map((e) => (
+                      <tr key={e.id}>
+                        <td className="px-4 py-3 text-neutral-700">{formatearFecha(e.creado_en)}</td>
+                        <td className="px-4 py-3 text-neutral-600">
+                          {new Date(e.creado_en).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Carné digital del socio (para ver/imprimir) */}

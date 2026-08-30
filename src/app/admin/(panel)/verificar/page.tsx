@@ -15,6 +15,7 @@ type Resultado =
       estado: string;
       cuota: string | null;
       foto_url: string | null;
+      entradaId: string | null;
     };
 
 export default function VerificarPage() {
@@ -31,6 +32,15 @@ export default function VerificarPage() {
   const [email, setEmail] = useState("");
   const [dni, setDni] = useState("");
   const [buscando, setBuscando] = useState(false);
+  // El DNI/NIE es casi todo números salvo la letra final (o la inicial en un
+  // NIE): se abre con teclado numérico para ir más rápido, con opción de
+  // cambiar a letras cuando toque escribirla.
+  const [dniTeclado, setDniTeclado] = useState<"numerico" | "letras">("numerico");
+  const dniRef = useRef<HTMLInputElement>(null);
+
+  // Deshacer un registro por error (nº de socio equivocado, doble pulsación…).
+  const [cancelando, setCancelando] = useState(false);
+  const [cancelado, setCancelado] = useState(false);
 
   async function iniciar() {
     setResultado(null);
@@ -74,6 +84,7 @@ export default function VerificarPage() {
   }
 
   async function comprobar(datos: { token?: string; numero_socio?: string; email?: string; dni?: string }) {
+    setCancelado(false);
     try {
       const res = await fetch("/api/admin/verificar", {
         method: "POST",
@@ -83,6 +94,25 @@ export default function VerificarPage() {
       setResultado(await res.json());
     } catch {
       setError("Error al verificar.");
+    }
+  }
+
+  async function cancelarRegistro(entradaId: string) {
+    setError(null);
+    setCancelando(true);
+    try {
+      const res = await fetch("/api/admin/verificar/cancelar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ entradaId }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "No se pudo deshacer el registro.");
+      setCancelado(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo deshacer el registro.");
+    } finally {
+      setCancelando(false);
     }
   }
 
@@ -199,6 +229,7 @@ export default function VerificarPage() {
               <label className="mb-1 block text-xs font-semibold text-neutral-600">Nº de socio</label>
               <input
                 type="number"
+                inputMode="numeric"
                 value={numeroSocio}
                 onChange={(e) => setNumeroSocio(e.target.value)}
                 className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-azul focus:ring-1 focus:ring-azul"
@@ -214,9 +245,27 @@ export default function VerificarPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-neutral-600">DNI / NIE</label>
+              <div className="mb-1 flex items-center justify-between">
+                <label className="block text-xs font-semibold text-neutral-600">DNI / NIE</label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDniTeclado((v) => (v === "numerico" ? "letras" : "numerico"));
+                    // Cambiar el teclado a medio escribir exige reenfocar el
+                    // campo: la mayoría de móviles no cambian el teclado en
+                    // caliente si el input ya tiene el foco.
+                    dniRef.current?.blur();
+                    setTimeout(() => dniRef.current?.focus(), 0);
+                  }}
+                  className="text-xs font-semibold text-azul underline"
+                >
+                  {dniTeclado === "numerico" ? "Cambiar a letras" : "Cambiar a números"}
+                </button>
+              </div>
               <input
+                ref={dniRef}
                 type="text"
+                inputMode={dniTeclado === "numerico" ? "numeric" : "text"}
                 value={dni}
                 onChange={(e) => setDni(e.target.value)}
                 className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-azul focus:ring-1 focus:ring-azul"
@@ -277,7 +326,26 @@ export default function VerificarPage() {
                 </p>
               )}
               {resultado.valido && !resultado.yaEntro && (
-                <p className="mt-1 text-sm text-green-700">Entrada registrada ✓</p>
+                <>
+                  {cancelado ? (
+                    <p className="mt-1 text-sm font-semibold text-neutral-600">
+                      Registro deshecho. Este socio no cuenta como entrado.
+                    </p>
+                  ) : (
+                    <>
+                      <p className="mt-1 text-sm text-green-700">Entrada registrada ✓</p>
+                      {resultado.entradaId && (
+                        <button
+                          onClick={() => cancelarRegistro(resultado.entradaId!)}
+                          disabled={cancelando}
+                          className="mt-1 text-xs font-semibold text-rojo underline disabled:opacity-60"
+                        >
+                          {cancelando ? "Deshaciendo…" : "¿Te has equivocado? Deshacer registro"}
+                        </button>
+                      )}
+                    </>
+                  )}
+                </>
               )}
               <div className="mt-4 flex items-center gap-4 text-left">
                 <div className="h-20 w-16 shrink-0 overflow-hidden rounded-lg bg-neutral-100">
