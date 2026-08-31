@@ -7,6 +7,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // puede cancelar dentro de los 15 minutos posteriores al registro — pasado
 // ese margen, ya no es "corregir un error al momento" sino tocar el
 // histórico, y eso se hace desde la ficha del socio si hiciera falta.
+//
+// Sirve tanto para entradas de socios como de invitados (viven en tablas
+// distintas, "entradas" y "entradas_invitado"): se prueba primero una y
+// luego la otra, según en cuál exista ese id.
 const MARGEN_MIN = 15;
 
 export async function POST(request: NextRequest) {
@@ -32,14 +36,15 @@ export async function POST(request: NextRequest) {
   if (!entradaId) return NextResponse.json({ error: "Falta el id de la entrada" }, { status: 400 });
 
   const admin = createAdminClient();
-  const { data: entrada } = await admin
-    .from("entradas")
-    .select("id, creado_en")
-    .eq("id", entradaId)
-    .maybeSingle();
-  if (!entrada) return NextResponse.json({ error: "Esa entrada ya no existe" }, { status: 404 });
 
-  const antiguedadMin = (Date.now() - new Date(entrada.creado_en).getTime()) / 60000;
+  const [{ data: entrada }, { data: entradaInvitado }] = await Promise.all([
+    admin.from("entradas").select("id, creado_en").eq("id", entradaId).maybeSingle(),
+    admin.from("entradas_invitado").select("id, creado_en").eq("id", entradaId).maybeSingle(),
+  ]);
+  const fila = entrada ?? entradaInvitado;
+  if (!fila) return NextResponse.json({ error: "Esa entrada ya no existe" }, { status: 404 });
+
+  const antiguedadMin = (Date.now() - new Date(fila.creado_en).getTime()) / 60000;
   if (antiguedadMin > MARGEN_MIN) {
     return NextResponse.json(
       { error: `Ya han pasado más de ${MARGEN_MIN} minutos; no se puede deshacer desde aquí.` },
@@ -47,6 +52,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  await admin.from("entradas").delete().eq("id", entradaId);
+  await admin.from(entrada ? "entradas" : "entradas_invitado").delete().eq("id", entradaId);
   return NextResponse.json({ ok: true });
 }

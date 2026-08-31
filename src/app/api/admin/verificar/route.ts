@@ -7,6 +7,10 @@ import { normalizarDni } from "@/lib/dni";
 // nº de socio / email / DNI) Y registra la entrada del día (check-in). Solo
 // empleados. Si el socio ya entró hace poco, NO bloquea: avisa con la hora
 // para que el portero decida (reentrada legítima vs carné compartido).
+//
+// El QR también puede ser una invitación temporal (tabla "invitados", ver
+// /admin/invitados) en vez de un socio: se comprueba aparte porque vive en
+// sus propias tablas (no se mezcla con las estadísticas de socios).
 const VENTANA_MIN = 40;
 
 export async function POST(request: NextRequest) {
@@ -41,6 +45,8 @@ export async function POST(request: NextRequest) {
   let socio;
   if (token) {
     ({ data: socio } = await admin.from("socios").select(columnas).eq("carnet_token", token).maybeSingle());
+    // Ningún socio con ese token: puede ser una invitación temporal.
+    if (!socio) return await verificarInvitado(admin, token, user.id);
   } else if (numeroSocio || email || dni) {
     // Búsqueda manual: se combinan (AND) los campos que el verificador tenga
     // a mano, para confirmar que es realmente esa persona. Si no encuentra
@@ -74,6 +80,7 @@ export async function POST(request: NextRequest) {
   // Datos base de respuesta.
   const base = {
     encontrado: true,
+    tipo: "socio" as const,
     valido,
     nombre: socio.nombre,
     apellidos: socio.apellidos,
@@ -116,6 +123,68 @@ export async function POST(request: NextRequest) {
   const { data: entrada } = await admin
     .from("entradas")
     .insert({ socio_id: socio.id, empleado_id: user.id })
+    .select("id")
+    .single();
+  return NextResponse.json({ ...base, yaEntro: false, horaEntrada: null, entradaId: entrada?.id ?? null });
+}
+
+async function verificarInvitado(admin: ReturnType<typeof createAdminClient>, token: string, empleadoId: string) {
+  const { data: invitado } = await admin
+    .from("invitados")
+    .select("id, nombre, motivo, expira_en, revocado_en, usos_maximos")
+    .eq("token", token)
+    .maybeSingle();
+
+  if (!invitado) return NextResponse.json({ encontrado: false });
+
+  const { count: usados } = await admin
+    .from("entradas_invitado")
+    .select("id", { count: "exact", head: true })
+    .eq("invitado_id", invitado.id);
+
+  const caducado = new Date(invitado.expira_en) < new Date();
+  const agotado = (usados ?? 0) >= invitado.usos_maximos;
+  const valido = !invitado.revocado_en && !caducado && !agotado;
+  const estado = invitado.revocado_en ? "revocado" : caducado ? "caducado" : agotado ? "agotado" : "vigente";
+
+  const base = {
+    encontrado: true,
+    tipo: "invitado" as const,
+    valido,
+    nombre: invitado.nombre,
+    apellidos: "",
+    numero_socio: null,
+    estado,
+    cuota: invitado.motivo,
+    foto_url: null,
+    expiraEn: invitado.expira_en,
+  };
+
+  if (!valido) {
+    return NextResponse.json({ ...base, yaEntro: false, horaEntrada: null });
+  }
+
+  // Misma ventana de "ya había entrado" que los socios, para no contar dos
+  // veces un doble escaneo seguido del mismo invitado.
+  const VENTANA_INVITADO_MIN = 40;
+  const desde = new Date(Date.now() - VENTANA_INVITADO_MIN * 60 * 1000).toISOString();
+  const { data: previa } = await admin
+    .from("entradas_invitado")
+    .select("creado_en")
+    .eq("invitado_id", invitado.id)
+    .gte("creado_en", desde)
+    .order("creado_en", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (previa) {
+    const hora = new Date(previa.creado_en).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
+    return NextResponse.json({ ...base, yaEntro: true, horaEntrada: hora });
+  }
+
+  const { data: entrada } = await admin
+    .from("entradas_invitado")
+    .insert({ invitado_id: invitado.id, empleado_id: empleadoId })
     .select("id")
     .single();
   return NextResponse.json({ ...base, yaEntro: false, horaEntrada: null, entradaId: entrada?.id ?? null });

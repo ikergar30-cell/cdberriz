@@ -53,12 +53,7 @@ export default async function VerificarPage({
     .maybeSingle();
 
   if (!socio) {
-    return (
-      <Marco>
-        <Estado ok={false} grande="✗" titulo="Carné no válido" />
-        <p className="mt-2 text-neutral-600">Este código no corresponde a ningún socio.</p>
-      </Marco>
-    );
+    return await MostrarInvitado(admin, token);
   }
 
   const tipo = (socio as unknown as { tipos_abono?: { nombre: string } | null }).tipos_abono;
@@ -94,6 +89,49 @@ export default async function VerificarPage({
       {!valido && (
         <p className="mt-4 rounded-lg bg-rojo-50 p-3 text-sm font-semibold text-rojo">
           Estado: {socio.estado}. No tiene la cuota en vigor.
+        </p>
+      )}
+    </Marco>
+  );
+}
+
+// Si el token no es de ningún socio, puede ser una invitación temporal.
+async function MostrarInvitado(admin: ReturnType<typeof createAdminClient>, token: string) {
+  const { data: invitado } = await admin
+    .from("invitados")
+    .select("id, nombre, motivo, expira_en, revocado_en, usos_maximos")
+    .eq("token", token)
+    .maybeSingle();
+
+  if (!invitado) {
+    return (
+      <Marco>
+        <Estado ok={false} grande="✗" titulo="Carné no válido" />
+        <p className="mt-2 text-neutral-600">Este código no corresponde a ningún socio ni invitación.</p>
+      </Marco>
+    );
+  }
+
+  const { count: usados } = await admin
+    .from("entradas_invitado")
+    .select("id", { count: "exact", head: true })
+    .eq("invitado_id", invitado.id);
+
+  const caducado = new Date(invitado.expira_en) < new Date();
+  const agotado = (usados ?? 0) >= invitado.usos_maximos;
+  const valido = !invitado.revocado_en && !caducado && !agotado;
+  const motivoNoValido = invitado.revocado_en ? "Invitación anulada" : caducado ? "Caducada" : "Ya se ha usado";
+
+  return (
+    <Marco>
+      <Estado ok={valido} grande={valido ? "✓" : "✗"} titulo={valido ? "ACCESO VÁLIDO" : "NO VÁLIDO"} />
+      <div className="mt-6 text-left">
+        <p className="font-display text-xl font-bold text-azul-700">{invitado.nombre}</p>
+        <p className="text-sm text-neutral-500">Invitación temporal{invitado.motivo ? ` · ${invitado.motivo}` : ""}</p>
+      </div>
+      {!valido && (
+        <p className="mt-4 rounded-lg bg-rojo-50 p-3 text-sm font-semibold text-rojo">
+          {motivoNoValido}.
         </p>
       )}
     </Marco>

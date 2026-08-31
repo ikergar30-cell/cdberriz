@@ -6,16 +6,18 @@ type Resultado =
   | { encontrado: false }
   | {
       encontrado: true;
+      tipo: "socio" | "invitado";
       valido: boolean;
       yaEntro: boolean;
       horaEntrada: string | null;
       nombre: string;
       apellidos: string;
-      numero_socio: number;
+      numero_socio: number | null;
       estado: string;
       cuota: string | null;
       foto_url: string | null;
       entradaId: string | null;
+      expiraEn?: string | null;
     };
 
 export default function VerificarPage() {
@@ -162,6 +164,13 @@ export default function VerificarPage() {
             <p className="mb-3 text-neutral-600">
               Si el socio no tiene el QR a mano, puedes buscarlo con su nº de socio, email o DNI
               pulsando <span className="font-semibold">&quot;Buscar sin QR&quot;</span>.
+            </p>
+            <p className="mb-3 text-neutral-600">
+              Los QR de invitación temporal (ver{" "}
+              <a href="/admin/invitados" className="font-semibold text-azul underline">
+                Invitados
+              </a>
+              ) se escanean igual, aquí mismo.
             </p>
             <p className="mb-2 font-semibold text-neutral-900">Qué significa cada resultado</p>
             <ul className="space-y-2">
@@ -332,7 +341,7 @@ export default function VerificarPage() {
                 <>
                   {cancelado ? (
                     <p className="mt-1 text-sm font-semibold text-neutral-600">
-                      Registro deshecho. Este socio no cuenta como entrado.
+                      Registro deshecho. Esta entrada no cuenta.
                     </p>
                   ) : (
                     <>
@@ -365,7 +374,26 @@ export default function VerificarPage() {
                   <p className="font-display text-lg font-bold text-azul-700">
                     {resultado.nombre} {resultado.apellidos}
                   </p>
-                  <p className="text-sm text-neutral-500">Socio nº {resultado.numero_socio}</p>
+                  {resultado.tipo === "invitado" ? (
+                    <>
+                      <span className="inline-block rounded-full bg-azul-50 px-2 py-0.5 text-xs font-semibold text-azul-700">
+                        Invitado/a
+                      </span>
+                      {resultado.expiraEn && (
+                        <p className="mt-1 text-xs text-neutral-500">
+                          Válida hasta{" "}
+                          {new Date(resultado.expiraEn).toLocaleDateString("es-ES", {
+                            day: "numeric",
+                            month: "short",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-sm text-neutral-500">Socio nº {resultado.numero_socio}</p>
+                  )}
                   <p className="text-sm text-neutral-700">{resultado.cuota ?? "—"}</p>
                   {!resultado.valido && (
                     <p className="text-sm font-semibold text-rojo">Estado: {resultado.estado}</p>

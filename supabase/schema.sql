@@ -471,3 +471,46 @@ create policy "ticket_mensajes_empleados" on ticket_mensajes
 drop policy if exists "jugadores_empleados" on jugadores;
 create policy "jugadores_empleados" on jugadores
   for all using (es_empleado_pleno()) with check (es_empleado_pleno());
+
+-- ----------------------------------------------------------------------------
+-- 8. INVITADOS — carnés temporales de invitación, caducan solos
+--    Para gente sin cuota (prensa, familiares, invitados puntuales de un
+--    partido...) que necesita pasar el control de acceso una o pocas veces,
+--    sin darlos de alta como socios. Se generan desde la intranet y dejan de
+--    ser válidos al pasar expira_en, al agotar usos_maximos, o si se
+--    revocan a mano antes de tiempo. Van en tablas separadas de socios/
+--    entradas para no mezclar sus estadísticas con las de los socios.
+-- ----------------------------------------------------------------------------
+create table if not exists invitados (
+  id            uuid primary key default gen_random_uuid(),
+  nombre        text not null,
+  motivo        text,
+  token         uuid not null default gen_random_uuid(),
+  creado_por    uuid references perfiles (id),
+  creado_en     timestamptz not null default now(),
+  expira_en     timestamptz not null,
+  usos_maximos  integer not null default 1 check (usos_maximos > 0),
+  revocado_en   timestamptz
+);
+create unique index if not exists invitados_token_idx on invitados (token);
+
+create table if not exists entradas_invitado (
+  id           uuid primary key default gen_random_uuid(),
+  invitado_id  uuid not null references invitados (id) on delete cascade,
+  creado_en    timestamptz not null default now(),
+  empleado_id  uuid references perfiles (id)
+);
+create index if not exists entradas_invitado_idx on entradas_invitado (invitado_id, creado_en);
+
+alter table invitados         enable row level security;
+alter table entradas_invitado enable row level security;
+
+-- Gestionar (crear/revocar/listar) invitados: admin o empleado, NO
+-- verificador (que solo debe poder escanear/validar, no crear invitaciones).
+create policy "invitados_empleados" on invitados
+  for all using (es_empleado_pleno()) with check (es_empleado_pleno());
+-- Registrar la entrada del invitado sí lo puede hacer también el
+-- verificador (es su trabajo en la puerta); en la práctica el endpoint de
+-- verificación usa la service_role key y no depende de esta política.
+create policy "entradas_invitado_empleados" on entradas_invitado
+  for all using (es_empleado()) with check (es_empleado());
