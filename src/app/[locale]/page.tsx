@@ -42,6 +42,49 @@ export default async function HomePage({
     pickLocale(inicio?.heroSubtitulo, locale) || t("heroTagline");
   const anios = new Date().getFullYear() - club.fundacion;
 
+  // Una fila del calendario. Partidos en granate, actos del club en azul.
+  const filaEvento = (e: Evento) => {
+    const fecha = new Date(e.fecha).toLocaleDateString(eu ? "eu" : "es-ES", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    });
+    const color =
+      e.tipo === "club"
+        ? {
+            barra: "bg-azul-600",
+            etiqueta: "bg-azul-50 text-azul-700",
+            fecha: "text-azul-700",
+            texto: t("eventoClub"),
+          }
+        : {
+            barra: "bg-rojo-600",
+            etiqueta: "bg-rojo-50 text-rojo-700",
+            fecha: "text-rojo-700",
+            texto: t("eventoPartido"),
+          };
+    return (
+      <li
+        key={e._id}
+        className="relative flex flex-col gap-1 overflow-hidden rounded-xl border border-neutral-200 bg-white p-5 pl-7 sm:flex-row sm:items-center sm:justify-between"
+      >
+        <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-2 ${color.barra}`} />
+        <div>
+          <span
+            className={`mb-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${color.etiqueta}`}
+          >
+            {color.texto}
+          </span>
+          <p className="font-display text-lg font-bold text-azul-700">
+            {pickLocale(e.titulo, locale)}
+          </p>
+          {e.lugar && <p className="text-sm text-neutral-500">{e.lugar}</p>}
+        </div>
+        <p className={`text-sm font-semibold capitalize ${color.fecha}`}>{fecha}</p>
+      </li>
+    );
+  };
+
   // Las dos primeras tarjetas llevan a contacto; la tercera, a socios.
   const cards = [
     { title: t("card1Title"), text: t("card1Text"), href: "/contacto", variant: "primary" as const },
@@ -209,52 +252,34 @@ export default async function HomePage({
           {t("eventosTitle")}
         </h2>
         {eventos.length > 0 ? (
-          <ul className="space-y-3">
-            {eventos.map((e) => {
-              const fecha = new Date(e.fecha).toLocaleDateString(
-                locale === "eu" ? "eu" : "es-ES",
-                { weekday: "long", day: "numeric", month: "long" },
-              );
-              // Partidos en granate, actos del club en azul.
-              const esClub = e.tipo === "club";
-              const color = esClub
-                ? {
-                    barra: "bg-azul-600",
-                    etiqueta: "bg-azul-50 text-azul-700",
-                    fecha: "text-azul-700",
-                    texto: t("eventoClub"),
-                  }
-                : {
-                    barra: "bg-rojo-600",
-                    etiqueta: "bg-rojo-50 text-rojo-700",
-                    fecha: "text-rojo-700",
-                    texto: t("eventoPartido"),
-                  };
-              return (
-                <li
-                  key={e._id}
-                  className="relative flex flex-col gap-1 overflow-hidden rounded-xl border border-neutral-200 bg-white p-5 pl-7 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <span
+          <>
+            <ul className="space-y-3">{eventos.slice(0, 3).map(filaEvento)}</ul>
+            {/* El resto del calendario, plegado. <details> funciona sin
+                JavaScript, así que la portada sigue siendo estática. */}
+            {eventos.length > 3 && (
+              <details className="group mt-3">
+                <summary className="flex cursor-pointer list-none items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white p-4 text-sm font-semibold text-azul-700 transition hover:bg-neutral-50 [&::-webkit-details-marker]:hidden">
+                  <span className="group-open:hidden">
+                    {t("eventosVerTodos", { count: eventos.length - 3 })}
+                  </span>
+                  <span className="hidden group-open:inline">{t("eventosVerMenos")}</span>
+                  <svg
                     aria-hidden="true"
-                    className={`absolute inset-y-0 left-0 w-2 ${color.barra}`}
-                  />
-                  <div>
-                    <span
-                      className={`mb-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${color.etiqueta}`}
-                    >
-                      {color.texto}
-                    </span>
-                    <p className="font-display text-lg font-bold text-azul-700">
-                      {pickLocale(e.titulo, locale)}
-                    </p>
-                    {e.lugar && <p className="text-sm text-neutral-500">{e.lugar}</p>}
-                  </div>
-                  <p className={`text-sm font-semibold capitalize ${color.fecha}`}>{fecha}</p>
-                </li>
-              );
-            })}
-          </ul>
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    className="h-4 w-4 transition-transform group-open:rotate-180"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.17l3.71-3.94a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </summary>
+                <ul className="mt-3 space-y-3">{eventos.slice(3).map(filaEvento)}</ul>
+              </details>
+            )}
+          </>
         ) : (
           <p className="rounded-xl border border-dashed border-neutral-300 bg-white p-10 text-center text-neutral-500">
             {t("eventosEmpty")}

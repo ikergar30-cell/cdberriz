@@ -38,7 +38,9 @@
     "eventosTitle": "Hurrengo ekitaldiak",
     "eventosEmpty": "Ez dago hurrengo ekitaldirik.",
     "eventoPartido": "Partidua",
-    "eventoClub": "Kluba"
+    "eventoClub": "Kluba",
+    "eventosVerTodos": "Ikusi gainerako {count} ekitaldiak",
+    "eventosVerMenos": "Ikusi gutxiago"
   },
   "noticias": {
     "title": "Albisteak",

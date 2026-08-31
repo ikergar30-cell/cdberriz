@@ -38,7 +38,9 @@
     "eventosTitle": "Próximos eventos",
     "eventosEmpty": "Sin próximos eventos.",
     "eventoPartido": "Partido",
-    "eventoClub": "Club"
+    "eventoClub": "Club",
+    "eventosVerTodos": "Ver los {count} eventos restantes",
+    "eventosVerMenos": "Ver menos"
   },
   "noticias": {
     "title": "Noticias",
