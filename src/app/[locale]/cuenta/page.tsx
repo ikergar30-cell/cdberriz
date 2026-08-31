@@ -259,7 +259,12 @@ export default async function CuentaPage({
                     <ul className="divide-y divide-neutral-100">
                       {eventosMostrar.map((ev) => (
                         <li key={ev._id} className="flex items-center gap-4 py-3 first:pt-0 last:pb-0">
-                          <div className="flex w-10 flex-shrink-0 flex-col items-center rounded-lg bg-rojo py-1.5 text-white">
+                          {/* Partidos en granate, actos del club en azul. */}
+                          <div
+                            className={`flex w-10 flex-shrink-0 flex-col items-center rounded-lg py-1.5 text-white ${
+                              ev.tipo === "club" ? "bg-azul-600" : "bg-rojo"
+                            }`}
+                          >
                             <span className="text-[10px] leading-none opacity-80">{mesAbr(ev.fecha, locale)}</span>
                             <span className="font-display text-lg font-bold leading-tight">{diaMes(ev.fecha)}</span>
                           </div>

@@ -215,18 +215,42 @@ export default async function HomePage({
                 locale === "eu" ? "eu" : "es-ES",
                 { weekday: "long", day: "numeric", month: "long" },
               );
+              // Partidos en granate, actos del club en azul.
+              const esClub = e.tipo === "club";
+              const color = esClub
+                ? {
+                    barra: "bg-azul-600",
+                    etiqueta: "bg-azul-50 text-azul-700",
+                    fecha: "text-azul-700",
+                    texto: t("eventoClub"),
+                  }
+                : {
+                    barra: "bg-rojo-600",
+                    etiqueta: "bg-rojo-50 text-rojo-700",
+                    fecha: "text-rojo-700",
+                    texto: t("eventoPartido"),
+                  };
               return (
                 <li
                   key={e._id}
-                  className="flex flex-col gap-1 rounded-xl border border-neutral-200 bg-white p-5 sm:flex-row sm:items-center sm:justify-between"
+                  className="relative flex flex-col gap-1 overflow-hidden rounded-xl border border-neutral-200 bg-white p-5 pl-7 sm:flex-row sm:items-center sm:justify-between"
                 >
+                  <span
+                    aria-hidden="true"
+                    className={`absolute inset-y-0 left-0 w-2 ${color.barra}`}
+                  />
                   <div>
+                    <span
+                      className={`mb-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${color.etiqueta}`}
+                    >
+                      {color.texto}
+                    </span>
                     <p className="font-display text-lg font-bold text-azul-700">
                       {pickLocale(e.titulo, locale)}
                     </p>
                     {e.lugar && <p className="text-sm text-neutral-500">{e.lugar}</p>}
                   </div>
-                  <p className="text-sm font-semibold capitalize text-rojo">{fecha}</p>
+                  <p className={`text-sm font-semibold capitalize ${color.fecha}`}>{fecha}</p>
                 </li>
               );
             })}

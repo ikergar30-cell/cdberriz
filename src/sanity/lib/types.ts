@@ -15,12 +15,17 @@ export type Noticia = {
   cuerpo?: { es?: unknown[]; eu?: unknown[] };
 };
 
+export type TipoEvento = "partido" | "club";
+
 export type Evento = {
   _id: string;
   titulo: LocaleString;
   fecha: string;
   lugar?: string;
   descripcion?: LocaleText;
+  // Los eventos creados antes de existir este campo no lo traen: se tratan
+  // como partido, que es lo que eran.
+  tipo?: TipoEvento;
 };
 
 export type Equipo = {

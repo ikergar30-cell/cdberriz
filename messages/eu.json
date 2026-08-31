@@ -36,7 +36,9 @@
     "noticiasTitle": "Azken albisteak",
     "noticiasCta": "Ikusi albiste guztiak",
     "eventosTitle": "Hurrengo ekitaldiak",
-    "eventosEmpty": "Ez dago hurrengo ekitaldirik."
+    "eventosEmpty": "Ez dago hurrengo ekitaldirik.",
+    "eventoPartido": "Partidua",
+    "eventoClub": "Kluba"
   },
   "noticias": {
     "title": "Albisteak",

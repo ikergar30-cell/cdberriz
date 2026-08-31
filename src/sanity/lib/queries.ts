@@ -18,7 +18,7 @@ export const noticiaPorSlugQuery = `
 
 export const eventosProximosQuery = `
 *[_type == "evento" && fecha >= now()] | order(fecha asc)[0...3]{
-  _id, titulo, fecha, lugar, descripcion
+  _id, titulo, fecha, lugar, descripcion, tipo
 }`;
 
 export const equiposQuery = `

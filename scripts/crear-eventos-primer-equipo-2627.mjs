@@ -98,6 +98,7 @@ const otros = [
       es: "Presentación de equipos del C.D. Berriz",
       eu: "C.D. Berrizeko taldeen aurkezpena",
     },
+    tipo: "club",
     fecha: "2026-09-27T16:30:00+02:00",
     lugar: "Berrizburu Futbol Zelaia",
     descripcion: {
@@ -114,6 +115,7 @@ for (const a of amistosos) {
   docs.push({
     _id: `evento-${a.id}-2627`,
     _type: "evento",
+    tipo: "partido",
     titulo: {
       es: `Amistoso ante el ${a.rival.es}${aviso.es}`,
       eu: `Lagunartekoa ${a.rival.eu}-ren aurka${aviso.eu}`,
@@ -132,6 +134,7 @@ for (const [jornada, fecha, rival, local] of liga) {
   docs.push({
     _id: `evento-liga-j${jornada}-2627`,
     _type: "evento",
+    tipo: "partido",
     titulo: {
       es: `Jornada ${jornada}: ${enfrentamiento}`,
       eu: `${jornada}. jardunaldia: ${enfrentamiento}`,

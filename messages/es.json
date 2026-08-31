@@ -36,7 +36,9 @@
     "noticiasTitle": "Noticias recientes",
     "noticiasCta": "Ver todas las noticias",
     "eventosTitle": "Próximos eventos",
-    "eventosEmpty": "Sin próximos eventos."
+    "eventosEmpty": "Sin próximos eventos.",
+    "eventoPartido": "Partido",
+    "eventoClub": "Club"
   },
   "noticias": {
     "title": "Noticias",
