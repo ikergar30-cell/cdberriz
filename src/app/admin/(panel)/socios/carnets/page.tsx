@@ -62,7 +62,7 @@ export default async function CarnetsFisicosPage() {
         <p className="mt-3 text-sm text-neutral-500">No hay solicitudes pendientes.</p>
       ) : (
         <div className="mt-3 overflow-x-auto rounded-xl border border-neutral-200 bg-white">
-          <table className="w-full text-left text-sm">
+          <table className="w-full min-w-[640px] text-left text-sm">
             <thead className="bg-neutral-50 text-xs font-semibold uppercase text-neutral-500">
               <tr>
                 <th className="px-4 py-3">Socio</th>
@@ -121,7 +121,7 @@ export default async function CarnetsFisicosPage() {
         <p className="mt-3 text-sm text-neutral-500">Todavía no hay ninguno marcado como listo.</p>
       ) : (
         <div className="mt-3 overflow-x-auto rounded-xl border border-neutral-200 bg-white">
-          <table className="w-full text-left text-sm">
+          <table className="w-full min-w-[640px] text-left text-sm">
             <thead className="bg-neutral-50 text-xs font-semibold uppercase text-neutral-500">
               <tr>
                 <th className="px-4 py-3">Socio</th>

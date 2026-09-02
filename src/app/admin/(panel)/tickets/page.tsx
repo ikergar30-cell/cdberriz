@@ -113,8 +113,8 @@ export default async function TicketsPage({
           No hay {papelera ? "tickets en la papelera" : archivados ? "tickets archivados" : "mensajes"} con esos criterios.
         </p>
       ) : (
-        <div className="mt-5 overflow-hidden rounded-xl border border-neutral-200 bg-white">
-          <table className="w-full text-left text-sm">
+        <div className="mt-5 overflow-x-auto rounded-xl border border-neutral-200 bg-white">
+          <table className="w-full min-w-[640px] text-left text-sm">
             <thead className="border-b border-neutral-200 bg-neutral-50 text-xs uppercase tracking-wide text-neutral-500">
               <tr>
                 <th className="px-4 py-3">Remitente</th>

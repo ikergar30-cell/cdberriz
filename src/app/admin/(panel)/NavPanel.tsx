@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -69,6 +69,18 @@ export function NavPanel({
 }) {
   const pathname = usePathname();
   const [abierto, setAbierto] = useState(false);
+
+  // Con el menú abierto (capa a pantalla completa), se bloquea el scroll de
+  // la página de detrás: en el móvil, si no, el dedo arrastra el contenido
+  // que hay debajo en vez del propio menú.
+  useEffect(() => {
+    if (!abierto) return;
+    const anterior = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = anterior;
+    };
+  }, [abierto]);
 
   const activo = (href: string) =>
     href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
@@ -170,10 +182,25 @@ export function NavPanel({
         </button>
       </header>
 
-      {/* Menú desplegable móvil */}
+      {/* Menú móvil: capa a pantalla completa. Antes se insertaba en el flujo
+          de la página y empujaba el contenido hacia abajo, obligando a hacer
+          scroll para volver a lo que estabas mirando. */}
       {abierto && (
-        <div className="bg-azul-900 px-3 pb-3 md:hidden">
-          {enlaces(() => setAbierto(false))}
+        <div className="fixed inset-0 z-50 flex flex-col bg-azul-900 md:hidden">
+          <div className="flex shrink-0 items-center justify-between px-4 py-3">
+            {marca(true)}
+            <button
+              type="button"
+              onClick={() => setAbierto(false)}
+              aria-label="Cerrar menú"
+              className="rounded-xl bg-white/10 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
+            >
+              ✕
+            </button>
+          </div>
+          <nav className="flex-1 overflow-y-auto overscroll-contain px-3 pb-4">
+            {enlaces(() => setAbierto(false))}
+          </nav>
           {pie}
         </div>
       )}

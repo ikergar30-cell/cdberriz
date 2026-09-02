@@ -125,7 +125,10 @@ export default async function PanelLayout({
         esAdmin={esAdmin}
         logout={<LogoutButton variante="oscuro" />}
       />
-      <main className="flex-1 overflow-x-auto md:overflow-y-auto md:p-2.5">
+      {/* "min-w-0" es imprescindible: sin él, un hijo ancho (una tabla) estira
+          este contenedor flexible y quien se desplaza en horizontal es la
+          página entera en vez de la propia tabla. */}
+      <main className="min-w-0 flex-1 md:overflow-y-auto md:p-2.5">
         {/* El contenido va sobre una "hoja" blanca redondeada: separa
             visualmente la navegación del trabajo y da aire al panel. */}
         <div className="min-h-full bg-white md:rounded-2xl md:shadow-[0_1px_3px_rgba(10,47,77,0.06),0_8px_24px_-12px_rgba(10,47,77,0.12)]">

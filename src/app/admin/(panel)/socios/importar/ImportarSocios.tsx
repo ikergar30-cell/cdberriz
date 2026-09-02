@@ -155,7 +155,7 @@ export function ImportarSocios() {
             </button>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full min-w-[640px] text-left text-xs">
               <thead className="border-b border-neutral-200 bg-neutral-50 text-neutral-500">
                 <tr>
                   <th className="px-3 py-2">Nombre</th>

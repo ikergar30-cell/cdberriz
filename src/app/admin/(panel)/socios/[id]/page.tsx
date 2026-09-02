@@ -423,7 +423,7 @@ export default async function FichaSocioPage({
                 Carnés físicos
               </h2>
               <div className="mt-3 overflow-x-auto rounded-xl border border-neutral-200 bg-white">
-                <table className="w-full text-left text-sm">
+                <table className="w-full min-w-[640px] text-left text-sm">
                   <thead className="bg-neutral-50 text-xs font-semibold uppercase text-neutral-500">
                     <tr>
                       <th className="px-4 py-3">Temporada</th>
@@ -468,7 +468,7 @@ export default async function FichaSocioPage({
               <p className="mt-2 text-sm text-neutral-400">Todavía no ha usado el carné para entrar.</p>
             ) : (
               <div className="mt-3 max-h-64 overflow-y-auto overflow-x-auto rounded-xl border border-neutral-200 bg-white">
-                <table className="w-full text-left text-sm">
+                <table className="w-full min-w-[640px] text-left text-sm">
                   <thead className="sticky top-0 bg-neutral-50 text-xs font-semibold uppercase text-neutral-500">
                     <tr>
                       <th className="px-4 py-3">Fecha</th>

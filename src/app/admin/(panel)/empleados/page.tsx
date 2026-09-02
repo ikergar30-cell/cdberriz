@@ -74,8 +74,8 @@ export default async function EmpleadosPage({ searchParams }: Props) {
       )}
 
       {/* Tabla de empleados */}
-      <div className="mb-10 overflow-hidden rounded-2xl border border-neutral-200 bg-white">
-        <table className="w-full text-sm">
+      <div className="mb-10 overflow-x-auto rounded-2xl border border-neutral-200 bg-white">
+        <table className="w-full min-w-[640px] text-sm">
           <thead className="border-b border-neutral-200 bg-neutral-50">
             <tr>
               <th className="px-5 py-3 text-left font-semibold text-neutral-600">Nombre</th>

@@ -166,7 +166,7 @@ export default async function FinanzasPage({
             Desglose mensual {ano}
           </h2>
           <div className="mt-3 overflow-x-auto rounded-xl border border-neutral-200 bg-white">
-            <table className="w-full text-left text-sm">
+            <table className="w-full min-w-[640px] text-left text-sm">
               <thead className="bg-neutral-50 text-xs font-semibold uppercase text-neutral-500">
                 <tr>
                   <th className="px-4 py-3">Mes</th>

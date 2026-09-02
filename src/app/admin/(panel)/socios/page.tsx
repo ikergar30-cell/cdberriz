@@ -330,8 +330,8 @@ export default async function SociosPage({
               <h2 className="mb-3 font-display text-sm font-bold uppercase tracking-wide text-neutral-500">
                 Socios de cuota ({sociosCuota.length})
               </h2>
-              <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
-                <table className="w-full text-left text-sm">
+              <div className="overflow-x-auto rounded-xl border border-neutral-200 bg-white">
+                <table className="w-full min-w-[640px] text-left text-sm">
                   <thead className="border-b border-neutral-200 bg-neutral-50 text-xs uppercase tracking-wide text-neutral-500">
                     <tr>
                       <th className="px-4 py-3">Nº</th>
@@ -447,7 +447,10 @@ export default async function SociosPage({
                         </span>
                         <span className="text-neutral-400">▾</span>
                       </summary>
-                      <table className="w-full border-t border-neutral-100 text-left text-sm">
+                      {/* El desplazamiento horizontal va en la tabla, no en el
+                          <details>: así el título del grupo no se mueve. */}
+                      <div className="overflow-x-auto border-t border-neutral-100">
+                      <table className="w-full min-w-[640px] text-left text-sm">
                         <tbody className="divide-y divide-neutral-100">
                           {lista.map((g) => (
                             <tr key={g.jugador?.id ?? "sin-vincular"} className="align-top hover:bg-neutral-50">
@@ -490,6 +493,7 @@ export default async function SociosPage({
                           ))}
                         </tbody>
                       </table>
+                      </div>
                     </details>
                   );
                 })}
