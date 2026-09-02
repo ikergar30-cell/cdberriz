@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { EstadoSocio, OrigenSocio } from "@/lib/supabase/types";
 import { camposFaltantes } from "@/lib/socios/camposFaltantes";
+import { idsNombreARevisar } from "@/lib/socios/nombreARevisar";
 import { etiquetaTipoSocio } from "@/config/origenSocio";
 import { normaliza } from "@/lib/texto";
 import { SincronizarRenovaciones } from "./SincronizarRenovaciones";
@@ -67,15 +68,27 @@ function DatosBadge({ socio }: { socio: SocioFila }) {
   );
 }
 
+function AvisoNombre() {
+  return (
+    <span
+      title="Mismo nombre que el socio del número siguiente/anterior — alta antigua de los dos padres/madres bajo el mismo nombre. Revisar y corregir a mano."
+      className="inline-flex items-center gap-1 rounded-full bg-rojo-50 px-2 py-0.5 text-xs font-semibold text-rojo"
+    >
+      ⚠ Revisar nombre
+    </span>
+  );
+}
+
 export default async function SociosPage({
   searchParams,
 }: {
-  searchParams: { q?: string; estado?: string; incompletos?: string };
+  searchParams: { q?: string; estado?: string; incompletos?: string; revisar?: string };
 }) {
   const q = (searchParams.q ?? "").trim();
   // Sin filtro explícito en la URL, se ve solo "Activos" (ver FILTROS).
   const estado = searchParams.estado ?? "activo";
   const soloIncompletos = searchParams.incompletos === "1";
+  const soloRevisarNombre = searchParams.revisar === "1";
 
   const supabase = createClient();
   let query = supabase
@@ -120,7 +133,13 @@ export default async function SociosPage({
     );
   }
   const incompletosCount = todos.filter((s) => camposFaltantes(s).length > 0).length;
-  const socios = soloIncompletos ? todos.filter((s) => camposFaltantes(s).length > 0) : todos;
+
+  // Altas antiguas de los dos padres/madres bajo el mismo nombre (ver
+  // src/lib/socios/nombreARevisar.ts) — no se corrige solo, solo se avisa.
+  const revisarNombreIds = idsNombreARevisar(todos);
+
+  let socios = soloIncompletos ? todos.filter((s) => camposFaltantes(s).length > 0) : todos;
+  if (soloRevisarNombre) socios = socios.filter((s) => revisarNombreIds.has(s.id));
 
   // Para que el titular también vea a quién le paga el 2º carné (no solo al
   // revés). Se calcula sobre "todos", no sobre el filtro activo, para no
@@ -258,6 +277,7 @@ export default async function SociosPage({
               const params = new URLSearchParams();
               if (estado) params.set("estado", estado);
               if (!soloIncompletos) params.set("incompletos", "1");
+              if (soloRevisarNombre) params.set("revisar", "1");
               const qs = params.toString();
               return (
                 <Link
@@ -269,6 +289,31 @@ export default async function SociosPage({
                   }`}
                 >
                   ⚠ Datos incompletos ({incompletosCount})
+                </Link>
+              );
+            })()}
+          </>
+        )}
+
+        {revisarNombreIds.size > 0 && (
+          <>
+            <span className="mx-1 h-4 w-px bg-neutral-200" />
+            {(() => {
+              const params = new URLSearchParams();
+              if (estado) params.set("estado", estado);
+              if (soloIncompletos) params.set("incompletos", "1");
+              if (!soloRevisarNombre) params.set("revisar", "1");
+              const qs = params.toString();
+              return (
+                <Link
+                  href={`/admin/socios${qs ? `?${qs}` : ""}`}
+                  className={`rounded-full px-3 py-1.5 text-sm font-semibold transition ${
+                    soloRevisarNombre
+                      ? "bg-rojo text-white"
+                      : "bg-rojo-50 text-rojo hover:bg-rojo-100"
+                  }`}
+                >
+                  ⚠ Revisar nombre ({revisarNombreIds.size})
                 </Link>
               );
             })()}
@@ -324,6 +369,11 @@ export default async function SociosPage({
                             <Link href={`/admin/socios/${s.id}`} className="font-semibold text-azul-700 hover:underline">
                               {s.nombre} {s.apellidos}
                             </Link>
+                            {revisarNombreIds.has(s.id) && (
+                              <div className="mt-1">
+                                <AvisoNombre />
+                              </div>
+                            )}
                             {s.titular_id && (
                               <div className="text-xs text-neutral-400">
                                 ↳ bono familiar de{" "}
@@ -442,6 +492,7 @@ export default async function SociosPage({
                                       {s.nombre} {s.apellidos}
                                       <span className="text-neutral-400">nº{s.numero_socio}</span>
                                       <DatosBadge socio={s} />
+                                      {revisarNombreIds.has(s.id) && <AvisoNombre />}
                                     </Link>
                                   ))}
                                 </div>
