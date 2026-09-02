@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { CabeceraPagina, CuerpoPagina } from "../ui";
 
 type Resultado =
   | { encontrado: false }
@@ -141,10 +142,12 @@ export default function VerificarPage() {
   const pantallaInicial = !escaneando && !mostrarManual && !resultado;
 
   return (
-    <div className="p-6 md:p-8">
-      <h1 className="mb-6 font-display text-[28px] font-extrabold uppercase leading-none tracking-tight text-azul-900 md:text-[32px]">
-        Verificar carné
-      </h1>
+    <>
+      <CabeceraPagina
+        titulo="Verificar carné"
+        descripcion="Control de acceso a los partidos: escanea el QR del carné o busca al socio por sus datos."
+      />
+      <CuerpoPagina>
 
       {pantallaInicial && (
         <>
@@ -418,7 +421,8 @@ export default function VerificarPage() {
           </div>
         </div>
       )}
-    </div>
+      </CuerpoPagina>
+    </>
   );
 }
 

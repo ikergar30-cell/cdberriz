@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { Ticket } from "@/lib/supabase/types";
 import { CATEGORIAS_TICKET, ESTADOS_TICKET, etiquetaCategoria, etiquetaEstado } from "@/config/tickets";
+import { CabeceraPagina, CuerpoPagina } from "../ui";
 
 function formatearFecha(fecha: string) {
   return new Date(fecha).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" });
@@ -52,16 +53,14 @@ export default async function TicketsPage({
     }`;
 
   return (
-    <div className="p-6 md:p-8">
-      <h1 className="font-display text-[28px] font-extrabold uppercase leading-none tracking-tight text-azul-900 md:text-[32px]">
-        Buzón de contacto
-      </h1>
-      <p className="mt-1 max-w-2xl text-sm text-neutral-500">
-        Mensajes recibidos desde el formulario de la web. Ábrelos para responder, clasificar o archivar.
-      </p>
-
+    <>
+      <CabeceraPagina
+        titulo="Buzón de contacto"
+        descripcion="Mensajes recibidos desde el formulario de la web. Ábrelos para responder, clasificar o archivar."
+      />
+      <CuerpoPagina>
       {/* Filtros por estado */}
-      <div className="mt-6 flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Link href={con({ estado: "", papelera: "" })} className={chip(!estado && !papelera)}>
           Todos
         </Link>
@@ -152,6 +151,7 @@ export default async function TicketsPage({
         </div>
       )}
       <p className="mt-4 text-sm text-neutral-400">{tickets.length} ticket(s)</p>
-    </div>
+      </CuerpoPagina>
+    </>
   );
 }

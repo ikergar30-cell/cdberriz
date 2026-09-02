@@ -12,6 +12,7 @@ import { proximoCierreTemporada } from "@/config/facturacion";
 import { HistorialPagos } from "./HistorialPagos";
 import { AccionesAbono } from "./AccionesAbono";
 import { ConvertirSocio } from "./ConvertirSocio";
+import { BotonEnlace, CabeceraPagina, CuerpoPagina } from "../../ui";
 
 const ESTADO_BADGE: Record<Socio["estado"], string> = {
   activo: "bg-green-100 text-green-700",
@@ -207,47 +208,42 @@ export default async function FichaSocioPage({
     : null;
 
   return (
-    <div className="p-6 md:p-8">
-      <Link href="/admin/socios" className="text-sm font-semibold text-neutral-500 hover:text-neutral-800">
-        ← Volver a socios
-      </Link>
-
-      <div className="mb-6 mt-2 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="font-display text-[28px] font-extrabold uppercase leading-none tracking-tight text-azul-900 md:text-[32px]">
-            {s.nombre} {s.apellidos}
-          </h1>
-          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${ESTADO_BADGE[s.estado]}`}>
-            {ESTADO_LABEL[s.estado]}
-          </span>
-          {(() => {
-            const tipo = etiquetaTipoSocio(s.origen, Boolean(s.tipo_abono_id));
-            return (
-              <span className={`rounded-full px-3 py-1 text-xs font-semibold ${tipo.badge}`}>
-                {tipo.label}
-              </span>
-            );
-          })()}
-          {s.carnet_fisico_pedido_en && (
-            <span
-              className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                s.carnet_fisico_entregado_en
-                  ? "bg-green-100 text-green-700"
-                  : "bg-amber-100 text-amber-800"
-              }`}
-            >
-              {s.carnet_fisico_entregado_en ? "Carné físico listo/entregado" : "Carné físico solicitado"}
+    <>
+      <CabeceraPagina
+        titulo={`${s.nombre} ${s.apellidos}`}
+        volver={{ href: "/admin/socios", label: "Volver a socios" }}
+        etiquetas={
+          <>
+            <span className={`rounded-full px-3 py-1 text-xs font-semibold ${ESTADO_BADGE[s.estado]}`}>
+              {ESTADO_LABEL[s.estado]}
             </span>
-          )}
-        </div>
-        <Link
-          href={`/admin/socios/${id}/editar`}
-          className="rounded-full border border-neutral-300 px-4 py-2 text-sm font-semibold text-neutral-600 transition hover:border-azul hover:text-azul"
-        >
-          Editar datos
-        </Link>
-      </div>
+            {(() => {
+              const tipo = etiquetaTipoSocio(s.origen, Boolean(s.tipo_abono_id));
+              return (
+                <span className={`rounded-full px-3 py-1 text-xs font-semibold ${tipo.badge}`}>
+                  {tipo.label}
+                </span>
+              );
+            })()}
+            <span className="text-xs text-neutral-400">Socio nº {s.numero_socio}</span>
+            {s.carnet_fisico_pedido_en && (
+              <span
+                className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                  s.carnet_fisico_entregado_en
+                    ? "bg-green-100 text-green-700"
+                    : "bg-amber-100 text-amber-800"
+                }`}
+              >
+                {s.carnet_fisico_entregado_en ? "Carné físico listo/entregado" : "Carné físico solicitado"}
+              </span>
+            )}
+          </>
+        }
+      >
+        <BotonEnlace href={`/admin/socios/${id}/editar`}>Editar datos</BotonEnlace>
+      </CabeceraPagina>
 
+      <CuerpoPagina>
       {faltan.length > 0 && (
         <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
           <strong>Faltan datos por rellenar:</strong> {faltan.join(", ")}.{" "}
@@ -511,6 +507,7 @@ export default async function FichaSocioPage({
           />
         </div>
       </div>
-    </div>
+      </CuerpoPagina>
+    </>
   );
 }

@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import QRCode from "qrcode";
 import { createClient } from "@/lib/supabase/server";
 import { CopiarEnlace } from "../CopiarEnlace";
 import { BotonRevocar } from "../BotonRevocar";
+import { CabeceraPagina, CuerpoPagina } from "../../ui";
 
 function formatearFecha(fecha: string) {
   return new Date(fecha).toLocaleDateString("es-ES", {
@@ -39,12 +39,13 @@ export default async function InvitadoDetallePage({ params: { id } }: { params: 
   const qrSvg = await QRCode.toString(url, { type: "svg", margin: 0, color: { dark: "#00528F", light: "#ffffff" } });
 
   return (
-    <div className="p-6 md:p-8">
-      <Link href="/admin/invitados" className="text-sm font-semibold text-neutral-500 hover:text-neutral-800">
-        ← Volver a invitados
-      </Link>
-
-      <div className="mt-4 max-w-md rounded-2xl border border-neutral-200 bg-white p-6">
+    <>
+      <CabeceraPagina
+        titulo="Invitación temporal"
+        volver={{ href: "/admin/invitados", label: "Volver a invitados" }}
+      />
+      <CuerpoPagina>
+      <div className="max-w-md rounded-2xl border border-neutral-200 bg-white p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="font-display text-xl font-bold text-neutral-900">{invitado.nombre}</h1>
@@ -92,6 +93,7 @@ export default async function InvitadoDetallePage({ params: { id } }: { params: 
           </div>
         )}
       </div>
-    </div>
+      </CuerpoPagina>
+    </>
   );
 }

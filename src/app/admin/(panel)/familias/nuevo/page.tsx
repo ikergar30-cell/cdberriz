@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { JugadorForm } from "../JugadorForm";
 import { crearJugador } from "../actions";
+import { CabeceraPagina, CuerpoPagina } from "../../ui";
 
 export default async function NuevoJugadorPage() {
   const supabase = createClient();
@@ -11,14 +11,14 @@ export default async function NuevoJugadorPage() {
     .order("numero_socio");
 
   return (
-    <div className="p-6 md:p-8">
-      <Link href="/admin/familias" className="text-sm font-semibold text-neutral-500 hover:text-neutral-800">
-        ← Volver a familias
-      </Link>
-      <h1 className="mb-6 mt-2 font-display text-[28px] font-extrabold uppercase leading-none tracking-tight text-azul-900 md:text-[32px]">
-        Nuevo/a jugador/a
-      </h1>
+    <>
+      <CabeceraPagina
+        titulo="Nuevo/a jugador/a"
+        volver={{ href: "/admin/familias", label: "Volver a familias" }}
+      />
+      <CuerpoPagina>
       <JugadorForm socios={socios ?? []} accion={crearJugador} />
-    </div>
+      </CuerpoPagina>
+    </>
   );
 }

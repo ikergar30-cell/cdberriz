@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { TipoAbono } from "@/lib/supabase/types";
 import { SocioForm } from "../SocioForm";
 import { crearSocio } from "../actions";
+import { CabeceraPagina, CuerpoPagina } from "../../ui";
 
 export default async function NuevoSocioPage() {
   const supabase = createClient();
@@ -12,18 +12,15 @@ export default async function NuevoSocioPage() {
   ]);
 
   return (
-    <div className="p-6 md:p-8">
-      <Link href="/admin/socios" className="text-sm font-semibold text-neutral-500 hover:text-neutral-800">
-        ← Volver a socios
-      </Link>
-      <h1 className="mb-6 mt-2 font-display text-[28px] font-extrabold uppercase leading-none tracking-tight text-azul-900 md:text-[32px]">
-        Nuevo socio
-      </h1>
+    <>
+      <CabeceraPagina titulo="Nuevo socio" volver={{ href: "/admin/socios", label: "Volver a socios" }} />
+      <CuerpoPagina>
       <SocioForm
         tipos={(tipos as TipoAbono[]) ?? []}
         accion={crearSocio}
         sociosParaTitular={sociosParaTitular ?? []}
       />
-    </div>
+      </CuerpoPagina>
+    </>
   );
 }

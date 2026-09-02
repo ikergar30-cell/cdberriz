@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { RolEmpleado } from "@/lib/supabase/types";
 import { crearEmpleado } from "./actions";
 import { FilaEmpleado } from "./FilaEmpleado";
+import { CabeceraPagina, CuerpoPagina } from "../ui";
 
 interface Props {
   searchParams: { error?: string; ok?: string };
@@ -36,15 +37,12 @@ export default async function EmpleadosPage({ searchParams }: Props) {
   const okMsg = searchParams.ok;
 
   return (
-    <div className="p-6 md:p-8">
-      <div className="mb-8">
-        <h1 className="font-display text-[28px] font-extrabold uppercase leading-none tracking-tight text-azul-900 md:text-[32px]">
-          Empleados
-        </h1>
-        <p className="mt-1 text-sm text-neutral-500">
-          Gestión de cuentas de acceso al panel de administración.
-        </p>
-      </div>
+    <>
+      <CabeceraPagina
+        titulo="Empleados"
+        descripcion="Gestión de cuentas de acceso al panel de administración."
+      />
+      <CuerpoPagina>
 
       {/* Mensajes de estado */}
       {errorMsg && (
@@ -172,6 +170,7 @@ export default async function EmpleadosPage({ searchParams }: Props) {
           El empleado recibirá un enlace para establecer su contraseña.
         </p>
       </div>
-    </div>
+      </CuerpoPagina>
+    </>
   );
 }

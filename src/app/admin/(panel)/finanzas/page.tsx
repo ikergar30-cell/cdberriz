@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { stripe } from "@/lib/stripe";
+import { CabeceraPagina, CuerpoPagina } from "../ui";
 
 // Informe financiero de Stripe — SOLO admin (directiva). Lee las transacciones
 // de saldo del año elegido: bruto cobrado, comisiones de Stripe, neto real,
@@ -119,16 +120,14 @@ export default async function FinanzasPage({
     : [];
 
   return (
-    <div className="p-6 md:p-8">
-      <h1 className="font-display text-[28px] font-extrabold uppercase leading-none tracking-tight text-azul-900 md:text-[32px]">
-        Informe financiero · Stripe
-      </h1>
-      <p className="mt-1 text-sm text-neutral-500">
-        Cobros de cuotas de socios a través de Stripe. Solo visible para administradores.
-      </p>
-
+    <>
+      <CabeceraPagina
+        titulo="Informe financiero · Stripe"
+        descripcion="Cobros de cuotas de socios a través de Stripe. Solo visible para administradores."
+      />
+      <CuerpoPagina>
       {/* Selector de año */}
-      <div className="mt-5 flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2">
         {anos.map((a) => (
           <Link
             key={a}
@@ -198,6 +197,7 @@ export default async function FinanzasPage({
           </div>
         </>
       )}
-    </div>
+      </CuerpoPagina>
+    </>
   );
 }

@@ -1,10 +1,10 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Ticket, TicketMensaje } from "@/lib/supabase/types";
 import { etiquetaCategoria, etiquetaEstado } from "@/config/tickets";
 import { Responder } from "./Responder";
 import { ControlesTicket } from "./ControlesTicket";
+import { CabeceraPagina, CuerpoPagina } from "../../ui";
 
 function formatearFechaHora(fecha: string) {
   return new Date(fecha).toLocaleString("es-ES", {
@@ -34,15 +34,12 @@ export default async function TicketPage({ params: { id } }: { params: { id: str
   const est = etiquetaEstado(t.estado);
 
   return (
-    <div className="p-6 md:p-8">
-      <Link href="/admin/tickets" className="text-sm font-semibold text-neutral-500 hover:text-neutral-800">
-        ← Volver al buzón
-      </Link>
-
-      <div className="mb-6 mt-2 flex flex-wrap items-center gap-3">
-        <h1 className="font-display text-[28px] font-extrabold uppercase leading-none tracking-tight text-azul-900 md:text-[32px]">
-          {t.asunto || "Mensaje de contacto"}
-        </h1>
+    <>
+      <CabeceraPagina
+        titulo={t.asunto || "Mensaje de contacto"}
+        volver={{ href: "/admin/tickets", label: "Volver al buzón" }}
+        etiquetas={
+          <>
         <span className={`rounded-full px-3 py-1 text-xs font-semibold ${est.badge}`}>{est.label}</span>
         <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-semibold text-neutral-600">
           {etiquetaCategoria(t.categoria)}
@@ -57,8 +54,11 @@ export default async function TicketPage({ params: { id } }: { params: { id: str
             En la papelera
           </span>
         )}
-      </div>
+          </>
+        }
+      />
 
+      <CuerpoPagina>
       <div className="grid gap-8 lg:grid-cols-[1fr_18rem]">
         {/* Conversación + respuesta */}
         <div className="space-y-4">
@@ -107,6 +107,7 @@ export default async function TicketPage({ params: { id } }: { params: { id: str
           eliminadoEn={t.eliminado_en}
         />
       </div>
-    </div>
+      </CuerpoPagina>
+    </>
   );
 }

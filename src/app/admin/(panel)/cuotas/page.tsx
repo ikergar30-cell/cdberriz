@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { TipoAbono } from "@/lib/supabase/types";
+import { CabeceraPagina, CuerpoPagina } from "../ui";
 
 export default async function CuotasPage() {
   const supabase = createClient();
@@ -7,10 +8,12 @@ export default async function CuotasPage() {
   const tipos = (data as TipoAbono[]) ?? [];
 
   return (
-    <div className="p-6 md:p-8">
-      <h1 className="mb-6 font-display text-[28px] font-extrabold uppercase leading-none tracking-tight text-azul-900 md:text-[32px]">
-        Cuotas
-      </h1>
+    <>
+      <CabeceraPagina
+        titulo="Cuotas"
+        descripcion="Precios de las cuotas de socio/a y su enlace con Stripe para el pago online."
+      />
+      <CuerpoPagina>
 
       <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
         <table className="w-full text-left text-sm">
@@ -48,6 +51,7 @@ export default async function CuotasPage() {
       <p className="mt-4 text-sm text-neutral-500">
         El pago online se activa en la Fase 2 (Stripe). Los precios se editan aquí y en Stripe.
       </p>
-    </div>
+      </CuerpoPagina>
+    </>
   );
 }

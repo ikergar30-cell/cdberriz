@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Socio } from "@/lib/supabase/types";
 import { BotonListo } from "./BotonListo";
 import { BotonRechazar } from "./BotonRechazar";
+import { CabeceraPagina, CuerpoPagina } from "../../ui";
 
 function formatearFecha(fecha: string) {
   return new Date(fecha).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" });
@@ -34,17 +35,14 @@ export default async function CarnetsFisicosPage() {
   const listos = solicitudes.filter((s) => s.carnet_fisico_entregado_en);
 
   return (
-    <div className="p-6 md:p-8">
-      <h1 className="font-display text-[28px] font-extrabold uppercase leading-none tracking-tight text-azul-900 md:text-[32px]">
-        Carnés físicos
-      </h1>
-      <p className="mt-1 max-w-2xl text-sm text-neutral-500">
-        Socios que han solicitado el carné físico desde su portal. Cuando lo tengas preparado,
-        márcalo como listo — se avisa al socio por email para que pase a recogerlo por Berrizburu.
-      </p>
-
+    <>
+      <CabeceraPagina
+        titulo="Carnés físicos"
+        descripcion="Socios que han solicitado el carné físico desde su portal. Cuando lo tengas preparado, márcalo como listo — se avisa al socio por email para que pase a recogerlo por Berrizburu."
+      />
+      <CuerpoPagina>
       {/* Pendientes de entregar */}
-      <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-display text-sm font-bold uppercase tracking-wide text-neutral-500">
           Pendientes de entregar
           <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800">
@@ -154,6 +152,7 @@ export default async function CarnetsFisicosPage() {
           </table>
         </div>
       )}
-    </div>
+      </CuerpoPagina>
+    </>
   );
 }

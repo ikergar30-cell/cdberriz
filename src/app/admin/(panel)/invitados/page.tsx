@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { crearInvitado } from "./actions";
 import { BotonRevocar } from "./BotonRevocar";
 import { CopiarEnlace } from "./CopiarEnlace";
+import { CabeceraPagina, CuerpoPagina } from "../ui";
 
 interface Invitado {
   id: string;
@@ -63,12 +64,12 @@ export default async function InvitadosPage({ searchParams }: Props) {
   const recienCreado = searchParams.creado ? invitados.find((i) => i.id === searchParams.creado) : null;
 
   return (
-    <div className="p-6 md:p-8">
-      <h1 className="font-display text-[28px] font-extrabold uppercase leading-none tracking-tight text-azul-900 md:text-[32px]">Invitados</h1>
-      <p className="mt-1 max-w-2xl text-sm text-neutral-500">
-        Carnés temporales para gente sin cuota (prensa, familiares, invitados puntuales…). Caducan
-        solos en la fecha que pongas, o antes si los revocas.
-      </p>
+    <>
+      <CabeceraPagina
+        titulo="Invitados"
+        descripcion="Carnés temporales para gente sin cuota (prensa, familiares, invitados puntuales…). Caducan solos en la fecha que pongas, o antes si los revocas."
+      />
+      <CuerpoPagina>
 
       {searchParams.error && (
         <div className="mt-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -213,6 +214,7 @@ export default async function InvitadosPage({ searchParams }: Props) {
           </table>
         </div>
       )}
-    </div>
+      </CuerpoPagina>
+    </>
   );
 }

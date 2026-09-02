@@ -1,6 +1,12 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import type { EstadoSocio } from "@/lib/supabase/types";
+import type { EstadoSocio, OrigenSocio } from "@/lib/supabase/types";
+import { etiquetaTipoSocio } from "@/config/origenSocio";
 import { Aviso, BotonEnlace, CabeceraPagina, CuerpoPagina, TarjetaCifra } from "./ui";
+
+function formatearFecha(fecha: string) {
+  return new Date(fecha).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" });
+}
 
 // Cuenta socios por estado. RLS garantiza que solo un empleado ve estos datos.
 async function contarPorEstado(estado: EstadoSocio) {
@@ -46,6 +52,33 @@ async function contarSociosARevisar() {
   return count ?? 0;
 }
 
+// Últimas altas: los socios más recientes por fecha de alta. Solo aparecen
+// los que la tienen registrada (las altas online la guardan siempre); el
+// padrón histórico importado no la trae, y tampoco tendría sentido colarlo
+// aquí como si se acabara de apuntar.
+async function ultimasAltas() {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("socios")
+    .select("id, numero_socio, nombre, apellidos, origen, estado, tipo_abono_id, fecha_alta, tipos_abono(nombre)")
+    .not("fecha_alta", "is", null)
+    .order("fecha_alta", { ascending: false })
+    .limit(6);
+  return (data as unknown as UltimaAlta[]) ?? [];
+}
+
+interface UltimaAlta {
+  id: string;
+  numero_socio: number;
+  nombre: string;
+  apellidos: string;
+  origen: OrigenSocio;
+  estado: EstadoSocio;
+  tipo_abono_id: string | null;
+  fecha_alta: string;
+  tipos_abono: { nombre: string } | null;
+}
+
 // Tickets del buzón de contacto sin atender (estado "nuevo", no archivados).
 async function contarTicketsNuevos() {
   const supabase = createClient();
@@ -79,7 +112,7 @@ async function contarSuscriptores(): Promise<string> {
 }
 
 export default async function ResumenPage() {
-  const [activos, pendientes, morosos, bajas, altasMes, suscriptores, carnetsPendientes, ticketsNuevos, sociosARevisar] = await Promise.all([
+  const [activos, pendientes, morosos, bajas, altasMes, suscriptores, carnetsPendientes, ticketsNuevos, sociosARevisar, altasRecientes] = await Promise.all([
     contarPorEstado("activo"),
     contarPorEstado("pendiente"),
     contarPorEstado("moroso"),
@@ -89,6 +122,7 @@ export default async function ResumenPage() {
     contarCarnetsPendientes(),
     contarTicketsNuevos(),
     contarSociosARevisar(),
+    ultimasAltas(),
   ]);
 
   const total = activos + pendientes + morosos + bajas;
@@ -147,6 +181,55 @@ export default async function ResumenPage() {
           {tarjetas.map((t) => (
             <TarjetaCifra key={t.label} {...t} />
           ))}
+        </div>
+
+        {/* Últimas altas */}
+        <div className="mt-8 overflow-hidden rounded-2xl border border-neutral-200/80">
+          <div className="flex items-center justify-between gap-3 border-b border-neutral-100 bg-neutral-50/70 px-5 py-3.5">
+            <h2 className="font-display text-base font-bold uppercase tracking-wide text-azul-900">
+              Últimas altas
+            </h2>
+            <Link href="/admin/socios" className="text-xs font-semibold text-azul hover:underline">
+              Ver todos los socios →
+            </Link>
+          </div>
+          {altasRecientes.length === 0 ? (
+            <p className="px-5 py-6 text-sm text-neutral-400">
+              Todavía no hay ninguna alta con fecha registrada.
+            </p>
+          ) : (
+            <ul className="divide-y divide-neutral-100">
+              {altasRecientes.map((s) => {
+                const tipo = etiquetaTipoSocio(s.origen, Boolean(s.tipo_abono_id));
+                return (
+                  <li key={s.id}>
+                    <Link
+                      href={`/admin/socios/${s.id}`}
+                      className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-5 py-3 transition hover:bg-neutral-50"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-neutral-800">
+                          {s.nombre} {s.apellidos}
+                          <span className="ml-2 font-normal text-neutral-400">nº{s.numero_socio}</span>
+                        </p>
+                        <p className="text-xs text-neutral-400">
+                          {s.tipos_abono?.nombre ?? "Sin cuota asignada"}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2.5">
+                        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${tipo.badge}`}>
+                          {tipo.label}
+                        </span>
+                        <span className="whitespace-nowrap text-xs tabular-nums text-neutral-400">
+                          {formatearFecha(s.fecha_alta)}
+                        </span>
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </div>
 
         {/* Acceso rápido a Sanity Studio */}

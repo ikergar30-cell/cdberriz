@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { temporadaActual, limitesTemporada } from "@/lib/temporada";
+import { CabeceraPagina, CuerpoPagina } from "../../ui";
 
 interface FilaEntrada {
   socio_id: string;
@@ -54,17 +55,14 @@ export default async function AsistenciaPage() {
     .sort((a, b) => b.total - a.total);
 
   return (
-    <div className="p-6 md:p-8">
-      <h1 className="font-display text-[28px] font-extrabold uppercase leading-none tracking-tight text-azul-900 md:text-[32px]">
-        Asistencia a partidos
-      </h1>
-      <p className="mt-1 max-w-2xl text-sm text-neutral-500">
-        Temporada {temporadaActual()}, a partir de las entradas registradas al verificar el carné en
-        la puerta.
-      </p>
-
+    <>
+      <CabeceraPagina
+        titulo="Asistencia a partidos"
+        descripcion={`Temporada ${temporadaActual()}, a partir de las entradas registradas al verificar el carné en la puerta.`}
+      />
+      <CuerpoPagina>
       {/* Cifras rápidas */}
-      <div className="mt-6 grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-2xl border border-neutral-200 bg-white p-5">
           <p className="text-xs font-semibold uppercase text-neutral-400">Entradas totales</p>
           <p className="mt-1 font-display text-3xl font-extrabold text-azul-700">{entradas.length}</p>
@@ -116,6 +114,7 @@ export default async function AsistenciaPage() {
           </table>
         </div>
       )}
-    </div>
+      </CuerpoPagina>
+    </>
   );
 }

@@ -1,10 +1,10 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Jugador } from "@/lib/supabase/types";
 import { JugadorForm, type SocioParaVincular } from "../JugadorForm";
 import { actualizarJugador } from "../actions";
 import { BotonEliminarJugador } from "../BotonEliminarJugador";
+import { CabeceraPagina, CuerpoPagina } from "../../ui";
 
 export default async function EditarJugadorPage({ params: { id } }: { params: { id: string } }) {
   const supabase = createClient();
@@ -24,21 +24,20 @@ export default async function EditarJugadorPage({ params: { id } }: { params: { 
   const actualizar = actualizarJugador.bind(null, id);
 
   return (
-    <div className="p-6 md:p-8">
-      <Link href="/admin/familias" className="text-sm font-semibold text-neutral-500 hover:text-neutral-800">
-        ← Volver a familias
-      </Link>
-      <div className="mb-6 mt-2 flex items-center justify-between gap-4">
-        <h1 className="font-display text-[28px] font-extrabold uppercase leading-none tracking-tight text-azul-900 md:text-[32px]">
-          Editar · {jugador.nombre} {jugador.apellidos}
-        </h1>
+    <>
+      <CabeceraPagina
+        titulo={`Editar · ${jugador.nombre} ${jugador.apellidos ?? ""}`}
+        volver={{ href: "/admin/familias", label: "Volver a familias" }}
+      >
         <BotonEliminarJugador id={id} nombre={`${jugador.nombre} ${jugador.apellidos ?? ""}`} />
-      </div>
+      </CabeceraPagina>
+      <CuerpoPagina>
       <JugadorForm
         jugador={jugador as unknown as Jugador & { madre: SocioParaVincular | null; padre: SocioParaVincular | null }}
         socios={socios ?? []}
         accion={actualizar}
       />
-    </div>
+      </CuerpoPagina>
+    </>
   );
 }

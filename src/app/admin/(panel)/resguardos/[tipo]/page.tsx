@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { PersonaPago } from "@/lib/supabase/types";
 import { FormResguardos } from "./FormResguardos";
 import { GestionPersonas } from "./GestionPersonas";
+import { CabeceraPagina, CuerpoPagina } from "../../ui";
 
 const MESES_ES = [
   "enero", "febrero", "marzo", "abril", "mayo", "junio",
@@ -49,17 +50,17 @@ export default async function ResguardosPage({
   ]);
 
   return (
-    <div className="p-6 md:p-8">
-      <h1 className="font-display text-[28px] font-extrabold uppercase leading-none tracking-tight text-azul-900 md:text-[32px]">
-        Resguardos · {esArbitros ? "Árbitros" : "Entrenadores"}
-      </h1>
-      <p className="mt-1 max-w-2xl text-sm text-neutral-500">
-        {esArbitros
-          ? "Genera el recibo de pago del arbitraje de cada partido. Añade varias filas para descargar todos los PDFs de la jornada en un ZIP."
-          : "Genera el recibo mensual de dietas de cada entrenador. Añade una fila por entrenador y descarga todos los PDFs del mes en un ZIP."}
-      </p>
-
-      <div className="mt-6">
+    <>
+      <CabeceraPagina
+        titulo={`Resguardos · ${esArbitros ? "Árbitros" : "Entrenadores"}`}
+        descripcion={
+          esArbitros
+            ? "Genera el recibo de pago del arbitraje de cada partido. Añade varias filas para descargar todos los PDFs de la jornada en un ZIP."
+            : "Genera el recibo mensual de dietas de cada entrenador. Añade una fila por entrenador y descarga todos los PDFs del mes en un ZIP."
+        }
+      />
+      <CuerpoPagina>
+      <div>
         <FormResguardos
           tipo={tipoPersona}
           personas={(personas as PersonaPago[]) ?? []}
@@ -117,6 +118,7 @@ export default async function ResguardosPage({
           </table>
         </div>
       )}
-    </div>
+      </CuerpoPagina>
+    </>
   );
 }

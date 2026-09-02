@@ -9,12 +9,15 @@ export function CabeceraPagina({
   titulo,
   descripcion,
   volver,
+  etiquetas,
   children,
 }: {
   titulo: string;
   descripcion?: string;
   /** Enlace "← Volver a…" encima del título. */
   volver?: { href: string; label: string };
+  /** Insignias de estado bajo el título (activo, tipo de socio…). */
+  etiquetas?: React.ReactNode;
   /** Botones/acciones a la derecha. */
   children?: React.ReactNode;
 }) {
@@ -33,6 +36,7 @@ export function CabeceraPagina({
           <h1 className="font-display text-[28px] font-extrabold uppercase leading-none tracking-tight text-azul-900 md:text-[34px]">
             {titulo}
           </h1>
+          {etiquetas && <div className="mt-3 flex flex-wrap items-center gap-2">{etiquetas}</div>}
           {descripcion && (
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-neutral-500">{descripcion}</p>
           )}
