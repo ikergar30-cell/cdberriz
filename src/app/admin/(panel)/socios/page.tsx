@@ -94,6 +94,19 @@ export default async function SociosPage({
   let todos = (data as unknown as SocioFila[]) ?? [];
   const jugadores = (jugadoresData as JugadorFila[]) ?? [];
 
+  // Para poder buscar también por el nombre del hijo/a ("Alvaro" debe
+  // encontrar a sus dos padres, aunque ninguno se llame así).
+  const nombresHijosPorSocio = new Map<string, string[]>();
+  for (const j of jugadores) {
+    const nombreHijo = `${j.nombre} ${j.apellidos ?? ""}`.trim();
+    for (const pid of [j.madre_socio_id, j.padre_socio_id]) {
+      if (!pid) continue;
+      const lista = nombresHijosPorSocio.get(pid) ?? [];
+      lista.push(nombreHijo);
+      nombresHijosPorSocio.set(pid, lista);
+    }
+  }
+
   // Búsqueda sin distinguir mayúsculas/tildes ("garcia" debe encontrar
   // "García"): Postgres/PostgREST no lo hace por defecto vía ilike, así que
   // se filtra aquí. La lista de socios no es tan grande como para que esto
@@ -101,7 +114,9 @@ export default async function SociosPage({
   if (q) {
     const buscado = normaliza(q);
     todos = todos.filter((s) =>
-      normaliza(`${s.nombre} ${s.apellidos} ${s.email ?? ""}`).includes(buscado),
+      normaliza(
+        `${s.nombre} ${s.apellidos} ${s.email ?? ""} ${(nombresHijosPorSocio.get(s.id) ?? []).join(" ")}`,
+      ).includes(buscado),
     );
   }
   const incompletosCount = todos.filter((s) => camposFaltantes(s).length > 0).length;
@@ -150,6 +165,24 @@ export default async function SociosPage({
   if (sinVincular.length > 0) {
     grupos.push({ jugador: null, padres: sinVincular });
   }
+
+  // Con 190 familias, listarlas todas abiertas de golpe se hacía eterno de
+  // recorrer: se agrupan por equipo en bloques plegables (cerrados por
+  // defecto), y con cada familia en una sola fila compacta en vez de su
+  // propia tarjeta. Si hay una búsqueda activa, los bloques con resultados
+  // se abren solos para no obligar a andar clicando.
+  const gruposPorEquipo = new Map<string, GrupoFamilia[]>();
+  for (const g of grupos) {
+    const clave = g.jugador ? g.jugador.equipo || "Sin equipo" : "Sin hijo/a vinculado";
+    const lista = gruposPorEquipo.get(clave) ?? [];
+    lista.push(g);
+    gruposPorEquipo.set(clave, lista);
+  }
+  const equiposOrdenados = Array.from(gruposPorEquipo.keys()).sort((a, b) => {
+    if (a === "Sin hijo/a vinculado") return 1;
+    if (b === "Sin hijo/a vinculado") return -1;
+    return a.localeCompare(b);
+  });
 
   // Conserva el filtro de estado en el enlace de exportar.
   const exportHref = `/admin/socios/export${estado ? `?estado=${estado}` : ""}`;
@@ -345,74 +378,81 @@ export default async function SociosPage({
             </div>
           )}
 
-          {/* ── Por hijo/a jugando, agrupados bajo su hijo/a ── */}
+          {/* ── Por hijo/a jugando, agrupados por equipo y luego por hijo/a ── */}
           {grupos.length > 0 && (
             <div>
               <h2 className="mb-1 font-display text-sm font-bold uppercase tracking-wide text-neutral-500">
                 Por hijo/a jugando ({sociosJugador.length})
               </h2>
               <p className="mb-3 text-xs text-neutral-400">
-                Agrupados por el hijo/a que juega. Si un socio tiene más de uno, sale debajo de
-                cada uno (es la misma persona, solo se repite la vista).
+                Agrupados por equipo y luego por hijo/a — pulsa un equipo para desplegarlo. Si un
+                socio tiene más de un hijo/a, sale en cada uno (es la misma persona).
               </p>
-              <div className="space-y-3">
-                {grupos.map((g) => (
-                  <div key={g.jugador?.id ?? "sin-vincular"} className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
-                    <div className="flex items-center justify-between gap-3 border-b border-neutral-100 bg-neutral-50 px-4 py-2.5">
-                      {g.jugador ? (
-                        <p className="text-sm font-semibold text-neutral-800">
-                          ⚽ {g.jugador.nombre} {g.jugador.apellidos ?? ""}
-                          {g.jugador.equipo && (
-                            <span className="ml-2 font-normal text-neutral-400">{g.jugador.equipo}</span>
-                          )}
-                        </p>
-                      ) : (
-                        <p className="text-sm font-semibold text-amber-700">
-                          Sin hijo/a vinculado esta temporada
-                        </p>
-                      )}
-                      {g.jugador && (
-                        <Link
-                          href={`/admin/familias/${g.jugador.id}`}
-                          className="text-xs font-semibold text-azul hover:underline"
-                        >
-                          Editar vínculo
-                        </Link>
-                      )}
-                    </div>
-                    <table className="w-full text-left text-sm">
-                      <tbody className="divide-y divide-neutral-100">
-                        {g.padres.map((s) => {
-                          const tipo = etiquetaTipoSocio(s.origen, Boolean(s.tipo_abono_id));
-                          return (
-                            <tr key={s.id} className="transition hover:bg-neutral-50">
-                              <td className="w-14 px-4 py-2.5 text-neutral-400">{s.numero_socio}</td>
-                              <td className="px-4 py-2.5">
-                                <Link href={`/admin/socios/${s.id}`} className="font-semibold text-azul-700 hover:underline">
-                                  {s.nombre} {s.apellidos}
-                                </Link>
+              <div className="space-y-2">
+                {equiposOrdenados.map((equipo) => {
+                  const lista = gruposPorEquipo.get(equipo)!;
+                  const totalPersonas = lista.reduce((n, g) => n + g.padres.length, 0);
+                  return (
+                    <details
+                      key={equipo}
+                      open={Boolean(q)}
+                      className="overflow-hidden rounded-xl border border-neutral-200 bg-white [&_summary::-webkit-details-marker]:hidden"
+                    >
+                      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-neutral-800 hover:bg-neutral-50">
+                        <span>
+                          {equipo === "Sin hijo/a vinculado" ? "⚠ " : "⚽ "}
+                          {equipo}
+                          <span className="ml-2 font-normal text-neutral-400">
+                            {lista.length} familia{lista.length !== 1 && "s"} · {totalPersonas} socio(s)
+                          </span>
+                        </span>
+                        <span className="text-neutral-400">▾</span>
+                      </summary>
+                      <table className="w-full border-t border-neutral-100 text-left text-sm">
+                        <tbody className="divide-y divide-neutral-100">
+                          {lista.map((g) => (
+                            <tr key={g.jugador?.id ?? "sin-vincular"} className="align-top hover:bg-neutral-50">
+                              <td className="w-48 px-4 py-3 font-semibold text-neutral-800">
+                                {g.jugador ? (
+                                  <>
+                                    {g.jugador.nombre} {g.jugador.apellidos ?? ""}
+                                    <Link
+                                      href={`/admin/familias/${g.jugador.id}`}
+                                      className="mt-0.5 block text-xs font-normal text-azul hover:underline"
+                                    >
+                                      Editar vínculo
+                                    </Link>
+                                  </>
+                                ) : (
+                                  <span className="text-amber-700">Sin vincular</span>
+                                )}
                               </td>
-                              <td className="px-4 py-2.5">
-                                <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${tipo.badge}`}>
-                                  {tipo.label}
-                                </span>
-                              </td>
-                              <td className="px-4 py-2.5 text-neutral-600">{s.email ?? s.telefono ?? "—"}</td>
-                              <td className="px-4 py-2.5">
-                                <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${BADGE[s.estado]}`}>
-                                  {s.estado}
-                                </span>
-                              </td>
-                              <td className="w-12 px-4 py-2.5">
-                                <DatosBadge socio={s} />
+                              <td className="px-4 py-3">
+                                <div className="flex flex-wrap gap-x-6 gap-y-1.5">
+                                  {g.padres.map((s) => (
+                                    <Link
+                                      key={s.id}
+                                      href={`/admin/socios/${s.id}`}
+                                      className="inline-flex items-center gap-1.5 text-neutral-700 hover:text-azul hover:underline"
+                                    >
+                                      <span
+                                        className={`h-1.5 w-1.5 rounded-full ${BADGE[s.estado].split(" ")[0]}`}
+                                        title={s.estado}
+                                      />
+                                      {s.nombre} {s.apellidos}
+                                      <span className="text-neutral-400">nº{s.numero_socio}</span>
+                                      <DatosBadge socio={s} />
+                                    </Link>
+                                  ))}
+                                </div>
                               </td>
                             </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                ))}
+                          ))}
+                        </tbody>
+                      </table>
+                    </details>
+                  );
+                })}
               </div>
             </div>
           )}
