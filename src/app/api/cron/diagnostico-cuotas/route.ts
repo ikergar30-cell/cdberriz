@@ -17,6 +17,43 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
+  // Modo puntual "?socio=<nº>": vuelca en crudo una suscripción concreta,
+  // para poder mirar de dónde sale un importe raro sin tocar nada.
+  const numeroSocio = request.nextUrl.searchParams.get("socio");
+  if (numeroSocio) {
+    const dbUno = createAdminClient();
+    const { data: socio } = await dbUno
+      .from("socios")
+      .select("numero_socio, nombre, apellidos, stripe_subscription_id")
+      .eq("numero_socio", Number(numeroSocio))
+      .single();
+    if (!socio?.stripe_subscription_id) {
+      return NextResponse.json({ error: "Sin suscripción" }, { status: 404 });
+    }
+    const sub = await stripe.subscriptions.retrieve(socio.stripe_subscription_id);
+    const previsión = await stripe.invoices.createPreview({ subscription: sub.id });
+    return NextResponse.json({
+      socio: `${socio.nombre} ${socio.apellidos}`,
+      status: sub.status,
+      trial_end: sub.trial_end,
+      billing_cycle_anchor: sub.billing_cycle_anchor,
+      current_period_end: sub.items.data[0]?.current_period_end,
+      descuentos: sub.discounts,
+      schedule: sub.schedule,
+      item: {
+        price_id: sub.items.data[0]?.price?.id,
+        unit_amount: sub.items.data[0]?.price?.unit_amount,
+        nickname: sub.items.data[0]?.price?.nickname,
+        quantity: sub.items.data[0]?.quantity,
+      },
+      previsión: {
+        total: previsión.total,
+        subtotal: previsión.subtotal,
+        lineas: previsión.lines.data.map((l) => ({ desc: l.description, amount: l.amount })),
+      },
+    });
+  }
+
   const db = createAdminClient();
 
   const { data: socios, error } = await db
