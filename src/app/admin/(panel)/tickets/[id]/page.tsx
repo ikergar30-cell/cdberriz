@@ -40,7 +40,7 @@ export default async function TicketPage({ params: { id } }: { params: { id: str
       </Link>
 
       <div className="mb-6 mt-2 flex flex-wrap items-center gap-3">
-        <h1 className="font-display text-2xl font-extrabold uppercase text-neutral-900">
+        <h1 className="font-display text-[28px] font-extrabold uppercase leading-none tracking-tight text-azul-900 md:text-[32px]">
           {t.asunto || "Mensaje de contacto"}
         </h1>
         <span className={`rounded-full px-3 py-1 text-xs font-semibold ${est.badge}`}>{est.label}</span>

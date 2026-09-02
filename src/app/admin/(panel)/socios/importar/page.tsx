@@ -10,7 +10,7 @@ export default function ImportarSociosPage() {
       >
         ← Volver a socios
       </Link>
-      <h1 className="mb-2 mt-2 font-display text-2xl font-extrabold uppercase text-neutral-900">
+      <h1 className="mb-2 mt-2 font-display text-[28px] font-extrabold uppercase leading-none tracking-tight text-azul-900 md:text-[32px]">
         Importar socios
       </h1>
       <p className="mb-6 text-sm text-neutral-500">

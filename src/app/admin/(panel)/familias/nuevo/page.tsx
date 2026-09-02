@@ -15,7 +15,7 @@ export default async function NuevoJugadorPage() {
       <Link href="/admin/familias" className="text-sm font-semibold text-neutral-500 hover:text-neutral-800">
         ← Volver a familias
       </Link>
-      <h1 className="mb-6 mt-2 font-display text-2xl font-extrabold uppercase text-neutral-900">
+      <h1 className="mb-6 mt-2 font-display text-[28px] font-extrabold uppercase leading-none tracking-tight text-azul-900 md:text-[32px]">
         Nuevo/a jugador/a
       </h1>
       <JugadorForm socios={socios ?? []} accion={crearJugador} />

@@ -7,6 +7,7 @@ import { etiquetaTipoSocio } from "@/config/origenSocio";
 import { normaliza } from "@/lib/texto";
 import { SincronizarRenovaciones } from "./SincronizarRenovaciones";
 import { SincronizarFechasAlta } from "./SincronizarFechasAlta";
+import { BotonEnlace, CabeceraPagina, CuerpoPagina, clasesBoton } from "../ui";
 
 const BADGE: Record<EstadoSocio, string> = {
   activo: "bg-green-100 text-green-700",
@@ -207,35 +208,23 @@ export default async function SociosPage({
   const exportHref = `/admin/socios/export${estado ? `?estado=${estado}` : ""}`;
 
   return (
-    <div className="p-6 md:p-8">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-display text-2xl font-extrabold uppercase text-neutral-900">
-          Socios
-        </h1>
-        <div className="flex flex-wrap items-center gap-2">
-          <SincronizarRenovaciones />
-          <SincronizarFechasAlta />
-          <a
-            href={exportHref}
-            className="rounded-full border border-neutral-300 px-4 py-2 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-100"
-          >
-            Exportar CSV
-          </a>
-          <Link
-            href="/admin/socios/importar"
-            className="rounded-full border border-azul px-4 py-2 text-sm font-semibold text-azul transition hover:bg-azul hover:text-white"
-          >
-            Importar CSV
-          </Link>
-          <Link
-            href="/admin/socios/nuevo"
-            className="rounded-full bg-rojo px-4 py-2 text-sm font-semibold text-white transition hover:bg-rojo-600"
-          >
-            + Nuevo socio
-          </Link>
-        </div>
-      </div>
+    <>
+      <CabeceraPagina
+        titulo="Socios"
+        descripcion={`${sociosCuota.length} de cuota y ${sociosJugador.length} por hijo/a jugando.`}
+      >
+        <SincronizarRenovaciones />
+        <SincronizarFechasAlta />
+        <a href={exportHref} className={clasesBoton("suave")}>
+          Exportar CSV
+        </a>
+        <BotonEnlace href="/admin/socios/importar">Importar CSV</BotonEnlace>
+        <BotonEnlace href="/admin/socios/nuevo" tono="primario">
+          + Nuevo socio
+        </BotonEnlace>
+      </CabeceraPagina>
 
+      <CuerpoPagina>
       {/* Buscador + filtros */}
       <form className="mb-4 flex flex-wrap items-center gap-2" action="/admin/socios">
         <input
@@ -510,7 +499,8 @@ export default async function SociosPage({
         </div>
       )}
 
-      <p className="mt-6 text-sm text-neutral-400">{socios.length} socio(s)</p>
-    </div>
+        <p className="mt-6 text-sm text-neutral-400">{socios.length} socio(s)</p>
+      </CuerpoPagina>
+    </>
   );
 }

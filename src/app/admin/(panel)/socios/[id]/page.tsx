@@ -214,7 +214,7 @@ export default async function FichaSocioPage({
 
       <div className="mb-6 mt-2 flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="font-display text-2xl font-extrabold uppercase text-neutral-900">
+          <h1 className="font-display text-[28px] font-extrabold uppercase leading-none tracking-tight text-azul-900 md:text-[32px]">
             {s.nombre} {s.apellidos}
           </h1>
           <span className={`rounded-full px-3 py-1 text-xs font-semibold ${ESTADO_BADGE[s.estado]}`}>

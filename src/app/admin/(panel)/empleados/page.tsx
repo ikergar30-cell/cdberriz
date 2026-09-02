@@ -38,7 +38,7 @@ export default async function EmpleadosPage({ searchParams }: Props) {
   return (
     <div className="p-6 md:p-8">
       <div className="mb-8">
-        <h1 className="font-display text-2xl font-extrabold uppercase text-neutral-900">
+        <h1 className="font-display text-[28px] font-extrabold uppercase leading-none tracking-tight text-azul-900 md:text-[32px]">
           Empleados
         </h1>
         <p className="mt-1 text-sm text-neutral-500">

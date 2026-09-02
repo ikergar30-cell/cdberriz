@@ -50,7 +50,7 @@ export default async function ResguardosPage({
 
   return (
     <div className="p-6 md:p-8">
-      <h1 className="font-display text-2xl font-extrabold uppercase text-neutral-900">
+      <h1 className="font-display text-[28px] font-extrabold uppercase leading-none tracking-tight text-azul-900 md:text-[32px]">
         Resguardos · {esArbitros ? "Árbitros" : "Entrenadores"}
       </h1>
       <p className="mt-1 max-w-2xl text-sm text-neutral-500">

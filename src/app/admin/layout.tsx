@@ -1,5 +1,17 @@
 import type { Metadata, Viewport } from "next";
+import { Inter, Barlow_Condensed } from "next/font/google";
 import "../globals.css";
+
+// Mismas tipografías que la web pública (Inter para texto, Barlow Condensed
+// para titulares). Antes no se cargaban aquí, así que toda la intranet se
+// veía con la fuente por defecto del navegador.
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
+const barlow = Barlow_Condensed({
+  subsets: ["latin"],
+  weight: ["600", "700", "800"],
+  variable: "--font-display",
+  display: "swap",
+});
 
 // Layout raíz del panel de empleados. No usa el header/footer público ni los
 // idiomas es/eu (es una herramienta interna en castellano). No se indexa.
@@ -35,8 +47,8 @@ export default function AdminRootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es">
-      <body className="bg-neutral-50 text-neutral-900 antialiased">
+    <html lang="es" className={`${inter.variable} ${barlow.variable}`}>
+      <body className="bg-neutral-100 font-sans text-neutral-900 antialiased">
         {children}
       </body>
     </html>

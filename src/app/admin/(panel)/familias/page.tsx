@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { normaliza } from "@/lib/texto";
+import { BotonEnlace, CabeceraPagina, CuerpoPagina } from "../ui";
 
 interface FilaJugador {
   id: string;
@@ -44,25 +45,17 @@ export default async function FamiliasPage({
   }
 
   return (
-    <div className="p-6 md:p-8">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="font-display text-2xl font-extrabold uppercase text-neutral-900">
-            Familias / Jugadores
-          </h1>
-          <p className="mt-1 max-w-2xl text-sm text-neutral-500">
-            Cada jugador/a de cantera enlazado con sus padres/madres socios. De aquí sale que, si
-            ambos son socios, cada uno vea también el carné del otro en su portal.
-          </p>
-        </div>
-        <Link
-          href="/admin/familias/nuevo"
-          className="rounded-full bg-rojo px-4 py-2 text-sm font-semibold text-white transition hover:bg-rojo-600"
-        >
+    <>
+      <CabeceraPagina
+        titulo="Familias / Jugadores"
+        descripcion="Cada jugador/a de cantera enlazado con sus padres/madres socios. De aquí sale que, si ambos son socios, cada uno vea también el carné del otro en su portal."
+      >
+        <BotonEnlace href="/admin/familias/nuevo" tono="primario">
           + Nuevo/a jugador/a
-        </Link>
-      </div>
+        </BotonEnlace>
+      </CabeceraPagina>
 
+      <CuerpoPagina>
       <form className="mb-4 flex flex-wrap items-center gap-2" action="/admin/familias">
         <input
           name="q"
@@ -136,7 +129,8 @@ export default async function FamiliasPage({
         </div>
       )}
 
-      <p className="mt-4 text-sm text-neutral-400">{jugadores.length} jugador(es)</p>
-    </div>
+        <p className="mt-4 text-sm text-neutral-400">{jugadores.length} jugador(es)</p>
+      </CuerpoPagina>
+    </>
   );
 }

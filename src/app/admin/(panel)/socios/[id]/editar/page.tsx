@@ -33,7 +33,7 @@ export default async function EditarSocioPage({
         ← Volver a la ficha
       </Link>
       <div className="mb-6 mt-2 flex items-center justify-between gap-4">
-        <h1 className="font-display text-2xl font-extrabold uppercase text-neutral-900">
+        <h1 className="font-display text-[28px] font-extrabold uppercase leading-none tracking-tight text-azul-900 md:text-[32px]">
           Editar · Socio nº {s.numero_socio}
         </h1>
         <BotonEliminar accion={eliminar} />

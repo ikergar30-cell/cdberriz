@@ -31,7 +31,7 @@ export function SincronizarFechasAlta() {
     <button
       onClick={ejecutar}
       disabled={pendiente}
-      className="rounded-full border border-neutral-300 px-4 py-2 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-100 disabled:opacity-60"
+      className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 transition hover:border-azul-200 hover:bg-azul-50/50 hover:text-azul disabled:opacity-60"
     >
       {pendiente ? "…" : "Rellenar fechas de alta"}
     </button>

@@ -33,7 +33,7 @@ export function SincronizarRenovaciones() {
     return (
       <button
         onClick={() => setConfirmando(true)}
-        className="rounded-full border border-neutral-300 px-4 py-2 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-100"
+        className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 transition hover:border-azul-200 hover:bg-azul-50/50 hover:text-azul"
       >
         Sincronizar renovaciones
       </button>
