@@ -1,8 +1,10 @@
 "use server";
 
+import { Resend } from "resend";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe";
+import { club } from "@/config/club";
 import type { ActionResult } from "@/lib/actionResult";
 import { REEMBOLSO_DIAS, diasDesde } from "@/config/reembolso";
 
@@ -177,11 +179,39 @@ export async function iniciarSesionPortal(
 
   if (email) {
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-    const supabase = createClient();
-    await supabase.auth.signInWithOtp({
+
+    // Enlace mágico generado a mano (token_hash), NO con signInWithOtp: ese
+    // usa el flujo PKCE de Supabase, que ata el enlace al navegador donde se
+    // PIDIÓ — si el socio lo pide desde el ordenador y lo abre en el email
+    // del móvil (lo normal), fallaba en silencio y acababa en la home. Con
+    // token_hash el enlace funciona se abra donde se abra.
+    const { data: link, error: linkError } = await admin.auth.admin.generateLink({
+      type: "magiclink",
       email,
-      options: { emailRedirectTo: `${siteUrl}/auth/callback?next=/${locale}/cuenta` },
     });
+    const hashedToken = link?.properties?.hashed_token;
+
+    if (!linkError && hashedToken) {
+      const url = `${siteUrl}/auth/callback?token_hash=${hashedToken}&type=magiclink&next=/${locale}/cuenta`;
+      const apiKey = process.env.RESEND_API_KEY;
+      if (apiKey) {
+        try {
+          const resend = new Resend(apiKey);
+          const from = process.env.CONTACT_FROM || club.remitente;
+          const eu = locale === "eu";
+          await resend.emails.send({
+            from,
+            to: email,
+            subject: eu ? "Zure sarbide-esteka — C.D. Berriz" : "Tu enlace de acceso — C.D. Berriz",
+            text: eu
+              ? `Kaixo:\n\nSakatu esteka hau zure bazkide-arloan sartzeko:\n\n${url}\n\nEz baduzu zuk eskatu, ez ikusi mesedez.\n\nC.D. Berriz`
+              : `Hola:\n\nPulsa este enlace para entrar en tu área de socio/a:\n\n${url}\n\nSi no lo has pedido tú, puedes ignorar este email.\n\nC.D. Berriz`,
+          });
+        } catch {
+          /* si falla el envío, no hay más que hacer: no hay enlace de repuesto que mostrar */
+        }
+      }
+    }
   }
 
   // Si no había ficha con ese DNI/número, ni "email"/"sinEmail" quedan a
