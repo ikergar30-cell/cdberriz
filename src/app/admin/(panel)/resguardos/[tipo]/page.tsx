@@ -4,6 +4,7 @@ import type { PersonaPago } from "@/lib/supabase/types";
 import { FormResguardos } from "./FormResguardos";
 import { GestionPersonas } from "./GestionPersonas";
 import { CabeceraPagina, CuerpoPagina } from "../../ui";
+import { RESGUARDOS_DIAS_RETENCION, limiteRetencionResguardos } from "@/config/resguardos";
 
 const MESES_ES = [
   "enero", "febrero", "marzo", "abril", "mayo", "junio",
@@ -41,10 +42,13 @@ export default async function ResguardosPage({
       .select("*")
       .eq("tipo", tipoPersona)
       .order("nombre"),
+    // Solo los de los últimos 90 días: pasado ese plazo se borran solos
+    // (ver src/config/resguardos.ts) y no deben seguir apareciendo aquí.
     supabase
       .from("resguardos")
       .select("id, importe_cents, concepto, fecha, personas_pago!inner(nombre, tipo)")
       .eq("personas_pago.tipo", tipoPersona)
+      .gte("created_at", limiteRetencionResguardos().toISOString())
       .order("created_at", { ascending: false })
       .limit(25),
   ]);
@@ -74,6 +78,10 @@ export default async function ResguardosPage({
       <h2 className="mt-10 font-display text-sm font-bold uppercase tracking-wide text-neutral-500">
         Últimos resguardos generados
       </h2>
+      <p className="mt-1 text-xs text-neutral-400">
+        Se guardan {RESGUARDOS_DIAS_RETENCION} días y después se borran solos: llevan nombre, DNI e
+        importe, y no hace falta conservarlos más tiempo.
+      </p>
       {!historial || historial.length === 0 ? (
         <p className="mt-3 text-sm text-neutral-500">Todavía no hay resguardos.</p>
       ) : (

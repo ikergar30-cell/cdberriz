@@ -2,10 +2,13 @@ import { NextResponse, type NextRequest } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { cuotaEfectiva } from "@/lib/edad";
+import { limiteRetencionResguardos } from "@/config/resguardos";
 
 // Tarea programada (Vercel Cron): revisa la edad de los socios y, cuando un
 // Joven supera los 25, cambia su suscripción de Stripe a Individual para que la
 // SIGUIENTE renovación cobre la cuota correcta (sin cobro inmediato extra).
+// Aprovecha el mismo paso diario para la limpieza de resguardos caducados
+// (ver más abajo), en vez de añadir otra tarea programada aparte.
 //
 // Seguridad: solo se ejecuta con el secreto CRON_SECRET (cabecera Authorization).
 export const runtime = "nodejs";
@@ -17,6 +20,15 @@ export async function GET(request: NextRequest) {
   }
 
   const db = createAdminClient();
+
+  // Resguardos de árbitros/entrenadores con más de 90 días: se borran solos
+  // (llevan nombre, DNI e importe — no hay motivo para guardarlos más).
+  const { data: caducados } = await db
+    .from("resguardos")
+    .delete()
+    .lt("created_at", limiteRetencionResguardos().toISOString())
+    .select("id");
+  const resguardosBorrados = caducados?.length ?? 0;
 
   // Cuotas joven → individual (ids y price de Stripe).
   const { data: tipos } = await db
@@ -64,6 +76,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     revisados: socios?.length ?? 0,
     cambiados_a_individual: cambiados,
+    resguardos_caducados_borrados: resguardosBorrados,
     errores,
   });
 }
