@@ -1,5 +1,6 @@
 import { stripe } from "@/lib/stripe";
 import { proximoCierreTemporada } from "@/config/facturacion";
+import { compensarProrrateoRenovacion } from "@/lib/stripe/compensarProrrateo";
 
 /**
  * Reprograma cuándo cae el PRÓXIMO cobro de una suscripción ya activa (o su
@@ -35,12 +36,15 @@ export async function reAlinearRenovacion(
     trial_end: objetivo,
     proration_behavior: "none",
   });
+
   // "trial_end" retrasa el cobro sin cobrar de más ahora, pero en el modo de
   // facturación de esta cuenta ("flexible") no reinicia por sí solo la fecha
-  // ancla al terminar la prueba: el cobro final saldría prorrateado (de
-  // menos) en vez del precio completo. Por eso el cron
-  // "ajustar-ancla-cuotas" corrige la fecha ancla justo el día que termina
-  // cada prueba (ver src/app/api/cron/ajustar-ancla-cuotas/route.ts).
+  // ancla: al terminar la prueba, Stripe descuenta el "tiempo no utilizado" y
+  // cobraría de menos (20,72 € en vez de 25 €). Se compensa aquí mismo, para
+  // que el importe correcto se vea en Stripe desde el primer día y no dependa
+  // de que la tarea programada llegue a tiempo el día del cobro.
+  await compensarProrrateoRenovacion(subscriptionId);
+
   return "actualizada";
 }
 

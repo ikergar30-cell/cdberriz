@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { compensarProrrateoRenovacion } from "@/lib/stripe/compensarProrrateo";
 
 // "trial_end" (ver src/lib/stripe/alinearFacturacion.ts) retrasa el cobro de
 // una suscripción sin cobrar de más, pero en el modo de facturación de esta
@@ -36,6 +37,7 @@ export async function GET(request: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   const ajustados: string[] = [];
+  const compensadosPorAdelantado: string[] = [];
   const errores: string[] = [];
   let revisados = 0;
 
@@ -50,7 +52,21 @@ export async function GET(request: NextRequest) {
         limit: 1,
       });
       const borrador = facturas.data.find((f) => f.billing_reason === "subscription_cycle");
-      if (!borrador) continue;
+
+      // Todavía no hay factura en borrador (el caso normal el resto del año):
+      // se deja ya compensado el descuento de "tiempo no utilizado" que Stripe
+      // aplicará el día de la renovación, para que el importe correcto se vea
+      // en Stripe durante todo el año. Es idempotente: si ya cuadra, no toca
+      // nada (ver src/lib/stripe/compensarProrrateo.ts).
+      if (!borrador) {
+        const r = await compensarProrrateoRenovacion(s.stripe_subscription_id!);
+        if (r.ajustado) {
+          compensadosPorAdelantado.push(
+            `${s.nombre} ${s.apellidos}: +${(r.ajusteCents / 100).toFixed(2)}€`,
+          );
+        }
+        continue;
+      }
 
       const lineas = await stripe.invoices.listLineItems(borrador.id!);
       // El precio real de la cuota es la suma de las líneas positivas (el
@@ -91,5 +107,5 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ revisados, ajustados, errores });
+  return NextResponse.json({ revisados, ajustados, compensadosPorAdelantado, errores });
 }

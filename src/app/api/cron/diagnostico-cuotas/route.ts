@@ -40,6 +40,18 @@ export async function GET(request: NextRequest) {
         status: "draft",
         limit: 1,
       });
+
+      // Lo que Stripe cobraría hoy por hoy en la próxima renovación. Tiene que
+      // coincidir con la cuota completa: si sale menos, es el prorrateo de
+      // "tiempo no utilizado" sin compensar (ver compensarProrrateo.ts).
+      const cuotaCents = (sub.items.data[0]?.price?.unit_amount ?? 0) * (sub.items.data[0]?.quantity ?? 1);
+      let proximaFacturaCents: number | null = null;
+      try {
+        const previsión = await stripe.invoices.createPreview({ subscription: s.stripe_subscription_id! });
+        proximaFacturaCents = previsión.total;
+      } catch {
+        // Suscripción cancelada o sin próxima factura: no aplica.
+      }
       detalle.push({
         numero_socio: s.numero_socio,
         nombre: `${s.nombre} ${s.apellidos}`,
@@ -51,7 +63,10 @@ export async function GET(request: NextRequest) {
         current_period_end: sub.items.data[0]?.current_period_end
           ? new Date(sub.items.data[0].current_period_end * 1000).toISOString().slice(0, 10)
           : null,
-        precio_esperado_cents: sub.items.data[0]?.price?.unit_amount ?? null,
+        precio_esperado_cents: cuotaCents || null,
+        proxima_factura_cents: proximaFacturaCents,
+        proxima_factura_correcta:
+          proximaFacturaCents === null ? null : proximaFacturaCents === cuotaCents,
         factura_borrador_pendiente: facturasBorrador.data.length > 0,
       });
     } catch (e) {
