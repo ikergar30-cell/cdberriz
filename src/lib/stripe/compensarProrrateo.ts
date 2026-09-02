@@ -28,6 +28,12 @@ export async function compensarProrrateoRenovacion(
   const item = suscripcion.items.data[0];
   if (!item?.price?.unit_amount) return { ajustado: false };
 
+  // Una suscripción cancelada no tiene próxima factura que corregir. Es el
+  // caso de todos los socios de baja, así que se descarta antes de preguntar
+  // a Stripe: si no, cada pasada de la tarea programada devolvería una decena
+  // de "errores" que no lo son y taparían uno de verdad.
+  if (["canceled", "incomplete_expired"].includes(suscripcion.status)) return { ajustado: false };
+
   const cuotaCents = item.price.unit_amount * (item.quantity ?? 1);
 
   const previsión = await stripe.invoices.createPreview({ subscription: subscriptionId });
