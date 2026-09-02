@@ -145,6 +145,60 @@ export default async function CuentaPage({
     ? (await admin.from("socios").select("nombre, apellidos").eq("id", socio.titular_id).maybeSingle()).data
     : null;
 
+  // Padres/madres "por hijo/a jugando": el otro progenitor del mismo
+  // jugador/a también es socio, y aunque tenga su propia ficha (con o sin
+  // datos completos), en el portal de cualquiera de los dos se ven los
+  // carnés de ambos — enlazados por la tabla "jugadores", no por email
+  // compartido, para no mezclar datos personales entre las dos fichas.
+  type CarnetVinculado = {
+    id: string;
+    nombre: string;
+    apellidos: string;
+    numero_socio: number;
+    estado: string;
+    carnet_token: string | null;
+    foto_url: string | null;
+    cuota: string | null;
+    jugador: string;
+  };
+  let carnetsVinculados: CarnetVinculado[] = [];
+  if (socio) {
+    const { data: hijos } = await admin
+      .from("jugadores")
+      .select("nombre, madre_socio_id, padre_socio_id")
+      .or(`madre_socio_id.eq.${socio.id},padre_socio_id.eq.${socio.id}`);
+
+    // socio_id del otro progenitor → nombre del primer jugador/a en común.
+    const otrosPorJugador = new Map<string, string>();
+    for (const h of hijos ?? []) {
+      const otroId = h.madre_socio_id === socio.id ? h.padre_socio_id : h.madre_socio_id;
+      if (otroId && otroId !== socio.id && !otrosPorJugador.has(otroId)) {
+        otrosPorJugador.set(otroId, h.nombre);
+      }
+    }
+
+    if (otrosPorJugador.size > 0) {
+      const { data: otrosSocios } = await admin
+        .from("socios")
+        .select("id, nombre, apellidos, numero_socio, estado, carnet_token, foto_url, tipos_abono(nombre)")
+        .in("id", Array.from(otrosPorJugador.keys()));
+      carnetsVinculados = (otrosSocios ?? []).map((o) => {
+        const t = (o as unknown as { tipos_abono?: { nombre: string } | null }).tipos_abono;
+        return {
+          id: o.id,
+          nombre: o.nombre,
+          apellidos: o.apellidos,
+          numero_socio: o.numero_socio,
+          estado: o.estado,
+          carnet_token: o.carnet_token,
+          foto_url: o.foto_url,
+          cuota: t?.nombre ?? null,
+          jugador: otrosPorJugador.get(o.id)!,
+        };
+      });
+    }
+  }
+
   const tipo = (socio as { tipos_abono?: { nombre: string; precio_cents: number } | null } | null)?.tipos_abono;
   const eventosMostrar = eventos.slice(0, 3);
 
@@ -249,6 +303,29 @@ export default async function CuentaPage({
                   />
                   <SubirFoto />
                 </section>
+
+                {/* Carnés del otro padre/madre del mismo hijo/a jugador/a */}
+                {carnetsVinculados.map((c) => (
+                  <section key={c.id} className="rounded-2xl border border-neutral-200 bg-white p-6">
+                    <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                      {eu
+                        ? `${c.nombre}ren karnet digitala (${c.jugador}ren guraso zarete biak)`
+                        : `Carné digital de ${c.nombre} (también socio/a por ${c.jugador})`}
+                    </p>
+                    <CarnetSocio
+                      socio={{
+                        nombre: c.nombre,
+                        apellidos: c.apellidos,
+                        numero_socio: c.numero_socio,
+                        estado: c.estado,
+                        carnet_token: c.carnet_token,
+                        foto_url: c.foto_url,
+                        cuota: c.cuota,
+                      }}
+                      locale={locale}
+                    />
+                  </section>
+                ))}
 
                 {/* Próximos eventos */}
                 <section className="rounded-2xl border border-neutral-200 bg-white p-6">

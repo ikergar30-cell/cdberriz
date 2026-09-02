@@ -142,15 +142,23 @@ export async function reactivarMiCuota(): Promise<ActionResult> {
 }
 
 // Acceso al portal con email, DNI o número de socio: se busca el email
-// asociado y se manda el enlace mágico ahí. SIEMPRE se responde con el mismo
-// mensaje de éxito, se encuentre o no la ficha — así nadie puede usar este
-// formulario para comprobar si un DNI o número de socio existe en el club.
-export async function iniciarSesionPortal(identificador: string, locale: string): Promise<ActionResult> {
+// asociado y se manda el enlace mágico ahí. Si el DNI/número de socio no
+// existe, se responde con el mismo mensaje de éxito genérico (no revelamos
+// si ese dato está en el club). PERO si la ficha SÍ existe y no tiene email
+// guardado, avisamos claramente: antes se devolvía el mismo "éxito" y la
+// persona se quedaba esperando un correo que nunca iba a llegar, sin saber
+// por qué (bug real, origen de quejas — sobre todo entre padres/madres
+// socios "por hijo jugando" dados de alta sin pedirles su email).
+export async function iniciarSesionPortal(
+  identificador: string,
+  locale: string,
+): Promise<{ error?: string; sinEmail?: boolean }> {
   const valor = identificador.trim();
   if (!valor) return { error: "Escribe tu email, DNI o número de socio." };
 
   const admin = createAdminClient();
   let email: string | null = null;
+  let sinEmail = false;
 
   if (valor.includes("@")) {
     email = valor;
@@ -159,14 +167,14 @@ export async function iniciarSesionPortal(identificador: string, locale: string)
     const { data } = await admin
       .from("socios")
       .select("email")
-      .not("email", "is", null)
       .or(esNumero ? `numero_socio.eq.${valor}` : `dni.eq.${valor.toUpperCase()}`)
       .limit(1);
-    email = data?.[0]?.email ?? null;
+    if (data && data.length > 0) {
+      email = data[0].email;
+      sinEmail = !email;
+    }
   }
 
-  // Si no hay ficha o no tiene email guardado, no revelamos nada: se
-  // devuelve éxito igualmente y simplemente no llega ningún correo.
   if (email) {
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
     const supabase = createClient();
@@ -175,6 +183,10 @@ export async function iniciarSesionPortal(identificador: string, locale: string)
       options: { emailRedirectTo: `${siteUrl}/auth/callback?next=/${locale}/cuenta` },
     });
   }
+
+  // Si no había ficha con ese DNI/número, ni "email"/"sinEmail" quedan a
+  // true: el formulario mostrará el mensaje genérico de siempre.
+  return { sinEmail };
 }
 
 // Cambia la cuenta bancaria a la que se domicilia la cuota. Solo aplica a

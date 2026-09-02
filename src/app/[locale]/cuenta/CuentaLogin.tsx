@@ -8,13 +8,13 @@ export function CuentaLogin() {
   const locale = useLocale();
   const eu = locale === "eu";
   const [valor, setValor] = useState("");
-  const [estado, setEstado] = useState<"idle" | "enviando" | "enviado" | "error">("idle");
+  const [estado, setEstado] = useState<"idle" | "enviando" | "enviado" | "sinEmail" | "error">("idle");
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setEstado("enviando");
     const r = await iniciarSesionPortal(valor, locale);
-    setEstado(r?.error ? "error" : "enviado");
+    setEstado(r?.error ? "error" : r?.sinEmail ? "sinEmail" : "enviado");
   }
 
   if (estado === "enviado") {
@@ -25,6 +25,26 @@ export function CuentaLogin() {
             ? "Zure emaila gure erregistroetan badago, esteka bat bidali dugu. Egin klik bertan sartzeko."
             : "Si tu email está en nuestros registros, te hemos enviado un enlace. Haz clic en él para entrar."}
         </p>
+      </div>
+    );
+  }
+
+  if (estado === "sinEmail") {
+    return (
+      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-800">
+        <p className="font-semibold">
+          {eu
+            ? "Zure fitxa aurkitu dugu, baina ez daukagu zure emailik gordeta."
+            : "Hemos encontrado tu ficha, pero no tenemos ningún email guardado."}
+        </p>
+        <p className="mt-2 text-sm">
+          {eu
+            ? "Jarri gurekin harremanetan zure emaila gehitzeko, eta gero saiatu berriro sartzen."
+            : "Ponte en contacto con el club para que te lo añadan, y después vuelve a intentar entrar."}
+        </p>
+        <a href="/contacto" className="mt-3 inline-block text-sm font-semibold underline">
+          {eu ? "Kontaktua" : "Ir a Contacto"}
+        </a>
       </div>
     );
   }
