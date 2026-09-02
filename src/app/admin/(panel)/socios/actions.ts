@@ -2,12 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import Stripe from "stripe";
+import { Resend } from "resend";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { crearSuscripcionSEPA } from "@/lib/stripe/sepa";
 import { cambiarCuotaStripe, reAlinearRenovacion } from "@/lib/stripe/alinearFacturacion";
 import { stripe } from "@/lib/stripe";
 import { REEMBOLSO_DIAS, diasDesde } from "@/config/reembolso";
+import { club } from "@/config/club";
 import type { EstadoSocio, OrigenSocio } from "@/lib/supabase/types";
 import type { ActionResult } from "@/lib/actionResult";
 import { normalizarDni } from "@/lib/dni";
@@ -270,6 +273,197 @@ export async function reactivarRenovacion(id: string): Promise<ActionResult> {
   await stripe.subscriptions.update(socio.stripe_subscription_id, { cancel_at_period_end: false });
 
   revalidatePath(`/admin/socios/${id}`);
+}
+
+// ─── Convertir un socio "por hijo/a jugando" en socio de pago ──────────────
+// No cambia "origen" (sigue siendo socio por tener un hijo/a jugando: eso no
+// deja de ser verdad), simplemente se le asigna una cuota y una forma de
+// pago — pasa a verse como "Por hijo/a + cuota" en vez de solo "Por hijo/a".
+
+async function socioParaConvertir(admin: ReturnType<typeof createAdminClient>, id: string) {
+  const { data: socio, error } = await admin
+    .from("socios")
+    .select("id, nombre, apellidos, email, telefono, origen, tipo_abono_id, stripe_customer_id, stripe_subscription_id")
+    .eq("id", id)
+    .single();
+  if (error || !socio) return { ok: false as const, error: "Socio no encontrado." };
+  if (socio.origen !== "jugador") return { ok: false as const, error: "Este socio no es \"por hijo/a jugando\"." };
+  if (socio.tipo_abono_id) return { ok: false as const, error: "Este socio ya tiene una cuota asignada." };
+  return { ok: true as const, socio };
+}
+
+// Opción A: el club cobra directamente (SEPA con IBAN dado de alta en
+// Stripe, domiciliación bancaria fuera de Stripe, o manual/en mano).
+export async function convertirCuotaManual(id: string, formData: FormData): Promise<ActionResult> {
+  await exigirEmpleado();
+  const admin = createAdminClient();
+
+  const resultado = await socioParaConvertir(admin, id);
+  if (!resultado.ok) return { error: resultado.error };
+  const { socio } = resultado;
+
+  const tipoAbonoId = (formData.get("tipo_abono_id") as string | null) ?? "";
+  const metodoPago = (formData.get("metodo_pago") as string | null) ?? "";
+  const iban = (formData.get("iban") as string | null)?.trim() || null;
+  const fechaInicioCobro = (formData.get("fecha_inicio_cobro") as string | null) || null;
+
+  if (!tipoAbonoId) return { error: "Elige una cuota." };
+  if (!["sepa_debit", "sepa_banco", "manual"].includes(metodoPago)) {
+    return { error: "Elige un método de pago." };
+  }
+  if ((metodoPago === "sepa_debit" || metodoPago === "sepa_banco") && !iban) {
+    return { error: "Falta el IBAN." };
+  }
+
+  const { data: cuota, error: errCuota } = await admin
+    .from("tipos_abono")
+    .select("stripe_price_id, clave")
+    .eq("id", tipoAbonoId)
+    .single();
+  if (errCuota || !cuota) return { error: "Cuota no encontrada." };
+
+  const update: Record<string, unknown> = {
+    tipo_abono_id: tipoAbonoId,
+    metodo_pago: metodoPago,
+    iban,
+    estado: "activo",
+  };
+
+  if (metodoPago === "sepa_debit") {
+    if (!socio.email) {
+      return { error: "Este socio necesita un email guardado para darlo de alta en Stripe." };
+    }
+    if (!cuota.stripe_price_id) {
+      return { error: "Esta cuota no tiene precio en Stripe configurado." };
+    }
+    try {
+      const res = await crearSuscripcionSEPA({
+        nombre: socio.nombre,
+        apellidos: socio.apellidos,
+        email: socio.email,
+        telefono: socio.telefono,
+        iban: iban!,
+        stripe_price_id: cuota.stripe_price_id,
+        tipo_abono_id: tipoAbonoId,
+        clave: cuota.clave,
+        fecha_inicio_cobro: fechaInicioCobro,
+      });
+      update.stripe_customer_id = res.stripe_customer_id;
+      update.stripe_subscription_id = res.stripe_subscription_id;
+      update.estado = res.estado;
+    } catch (e) {
+      return { error: "No se pudo dar de alta en Stripe: " + (e instanceof Error ? e.message : "error desconocido") };
+    }
+  }
+
+  const { error } = await admin.from("socios").update(update).eq("id", id);
+  if (error) return { error: error.message };
+
+  revalidatePath(`/admin/socios/${id}`);
+  redirect(`/admin/socios/${id}`);
+}
+
+// Opción B: se le manda un email con un enlace de pago de Stripe (tarjeta o
+// SEPA) para que complete él mismo el alta como socio de pago. El webhook
+// (checkout.session.completed) reconoce "socio_id" en los metadatos y
+// ACTUALIZA esta ficha en vez de crear un socio nuevo.
+export async function enviarEnlacePago(
+  id: string,
+  formData: FormData,
+): Promise<{ error?: string; enlace?: string }> {
+  await exigirEmpleado();
+  const admin = createAdminClient();
+
+  const resultado = await socioParaConvertir(admin, id);
+  if (!resultado.ok) return { error: resultado.error };
+  const { socio } = resultado;
+
+  const tipoAbonoId = (formData.get("tipo_abono_id") as string | null) ?? "";
+  if (!tipoAbonoId) return { error: "Elige una cuota." };
+  if (!socio.email) return { error: "Este socio no tiene email guardado; no se le puede enviar el enlace." };
+
+  const { data: cuota, error: errCuota } = await admin
+    .from("tipos_abono")
+    .select("stripe_price_id, clave, nombre")
+    .eq("id", tipoAbonoId)
+    .single();
+  if (errCuota || !cuota?.stripe_price_id) {
+    return { error: "Esta cuota no tiene precio en Stripe configurado." };
+  }
+
+  const meta = {
+    socio_id: id,
+    tipo_abono_id: tipoAbonoId,
+    clave: cuota.clave,
+    nombre: socio.nombre,
+    apellidos: socio.apellidos,
+  };
+
+  let customerId = socio.stripe_customer_id;
+  try {
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: socio.email,
+        name: `${socio.nombre} ${socio.apellidos}`,
+        phone: socio.telefono || undefined,
+        metadata: meta,
+      });
+      customerId = customer.id;
+    } else {
+      await stripe.customers.update(customerId, { metadata: meta });
+    }
+  } catch (e) {
+    return { error: "No se pudo preparar el pago en Stripe: " + (e instanceof Error ? e.message : "error") };
+  }
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const datosSesion = {
+    mode: "subscription" as const,
+    customer: customerId,
+    line_items: [{ price: cuota.stripe_price_id, quantity: 1 }],
+    locale: "es" as const,
+    subscription_data: { metadata: meta },
+    success_url: `${siteUrl}/es/socios/gracias?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${siteUrl}/es/cuenta`,
+  };
+
+  let session;
+  try {
+    session = await stripe.checkout.sessions.create({ ...datosSesion, payment_method_types: ["card", "sepa_debit"] });
+  } catch (e) {
+    // Si SEPA no está activado en Stripe todavía, reintentar solo con tarjeta
+    // (mismo comportamiento que el checkout público de /socios/alta).
+    const esFalloSepa = e instanceof Stripe.errors.StripeInvalidRequestError && e.param === "payment_method_types";
+    if (!esFalloSepa) {
+      return { error: "No se pudo crear el enlace de pago: " + (e instanceof Error ? e.message : "error") };
+    }
+    session = await stripe.checkout.sessions.create({ ...datosSesion, payment_method_types: ["card"] });
+  }
+  if (!session.url) return { error: "No se pudo crear el enlace de pago." };
+
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return { error: "No hay email configurado. Copia y envía este enlace a mano: " + session.url };
+
+  try {
+    const resend = new Resend(apiKey);
+    const from = process.env.CONTACT_FROM || club.remitente;
+    await resend.emails.send({
+      from,
+      to: socio.email,
+      subject: `Completa tu alta como socio de pago — ${club.nombre}`,
+      text:
+        `Hola ${socio.nombre}:\n\n` +
+        `Desde el ${club.nombre} te invitamos a completar tu alta como socio/a de pago (${cuota.nombre}). ` +
+        `Pulsa este enlace para hacer el pago de forma segura, con tarjeta o domiciliación bancaria:\n\n` +
+        `${session.url}\n\n` +
+        `Un saludo,\n${club.nombre}`,
+    });
+  } catch {
+    return { error: "El enlace se generó pero falló el envío del email. Cópialo a mano: " + session.url };
+  }
+
+  revalidatePath(`/admin/socios/${id}`);
+  return { enlace: session.url };
 }
 
 // Reembolsa el último pago (solo si está dentro del plazo, ver

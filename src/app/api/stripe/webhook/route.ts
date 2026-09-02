@@ -64,6 +64,26 @@ export async function POST(request: NextRequest) {
           ? "activo"
           : "pendiente";
 
+        // Conversión de un socio "por hijo/a jugando" a socio de pago (ver
+        // enviarEnlacePago en admin/socios/actions.ts): NO es un alta nueva,
+        // así que se ACTUALIZA la ficha existente por su id en vez de
+        // crear/hacer upsert de un socio distinto. No se toca nombre,
+        // dirección ni fecha_alta: ya era socio desde antes.
+        if (m.socio_id) {
+          const { error: errConversion } = await db
+            .from("socios")
+            .update({
+              tipo_abono_id: m.tipo_abono_id || null,
+              estado: estadoInicial,
+              metodo_pago: "stripe",
+              stripe_customer_id: customerId,
+              stripe_subscription_id: subscriptionId,
+            })
+            .eq("id", m.socio_id);
+          if (errConversion) throw new Error(errConversion.message);
+          break;
+        }
+
         const { data: titular, error: errTitular } = await db
           .from("socios")
           .upsert(

@@ -101,6 +101,11 @@ export function SocioForm({
   const esSepaBanco = metodoPago === "sepa_banco";
   const muestraIban = esSepaStripe || esSepaBanco;
   const esNuevo = !socio;
+  // Un socio "por hijo/a jugando" que todavía no paga cuota no necesita ver
+  // la sección de pago aquí: para eso está el botón "Convertir en socio de
+  // pago" de su ficha, que además da de alta en Stripe. Si ya tiene cuota
+  // asignada (p. ej. tras convertirlo), sí se le deja editar el pago aquí.
+  const esJugadorSinCuota = !esNuevo && socio?.origen === "jugador" && !socio?.tipo_abono_id;
 
   const input =
     "w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none transition focus:border-azul focus:ring-2 focus:ring-azul/20";
@@ -286,7 +291,13 @@ export function SocioForm({
       </section>
 
       {/* ── Pago / Stripe ── */}
-      {!esSegundoTitular && (
+      {esJugadorSinCuota ? (
+        <section className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-500">
+          Este socio no paga cuota (es socio por tener un hijo/a jugando). Para que empiece a
+          pagar, usa <strong>&quot;Convertir en socio de pago&quot;</strong> en su ficha, en vez
+          de aquí.
+        </section>
+      ) : !esSegundoTitular && (
       <section>
         <h2 className="mb-4 text-xs font-bold uppercase tracking-wider text-neutral-400">
           Método de pago

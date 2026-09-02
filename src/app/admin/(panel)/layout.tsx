@@ -60,9 +60,15 @@ export default async function PanelLayout({
       titulo: "Socios",
       items: [
         { href: "/admin/socios", label: "Socios" },
+        { href: "/admin/familias", label: "Familias / Jugadores" },
         { href: "/admin/cuotas", label: "Cuotas" },
-        { href: "/admin/socios/carnets", label: "Carnés físicos" },
+      ],
+    },
+    {
+      titulo: "Control de acceso",
+      items: [
         { href: "/admin/verificar", label: "Verificar carné" },
+        { href: "/admin/socios/carnets", label: "Carnés físicos" },
         { href: "/admin/socios/asistencia", label: "Asistencia" },
         { href: "/admin/invitados", label: "Invitados" },
       ],

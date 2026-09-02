@@ -11,6 +11,7 @@ import { etiquetaTipoSocio } from "@/config/origenSocio";
 import { proximoCierreTemporada } from "@/config/facturacion";
 import { HistorialPagos } from "./HistorialPagos";
 import { AccionesAbono } from "./AccionesAbono";
+import { ConvertirSocio } from "./ConvertirSocio";
 
 const ESTADO_BADGE: Record<Socio["estado"], string> = {
   activo: "bg-green-100 text-green-700",
@@ -90,10 +91,11 @@ export default async function FichaSocioPage({
   const historialCarnets = (carnetsHist as CarnetFisico[]) ?? [];
   const historialEntradas = (entradasHist as { id: string; creado_en: string }[]) ?? [];
 
+  const admin = createAdminClient();
+
   // Si es el 2º carné de un abono familiar, mostramos también quién es el titular.
   let titular: Pick<Socio, "id" | "nombre" | "apellidos"> | null = null;
   if (s.titular_id) {
-    const admin = createAdminClient();
     const { data } = await admin
       .from("socios")
       .select("id, nombre, apellidos")
@@ -107,6 +109,30 @@ export default async function FichaSocioPage({
     .from("socios")
     .select("id, nombre, apellidos, numero_socio")
     .eq("titular_id", id);
+
+  // "Por hijo/a jugando" y sin cuota asignada todavía: no le aplica nada de
+  // pago/Stripe, así que esas secciones se ocultan y en su lugar se ofrece
+  // "Convertir en socio de pago".
+  const esJugadorPuro = s.origen === "jugador" && !s.tipo_abono_id;
+
+  // Hijos/as vinculados a este socio (tabla "jugadores"), con el otro
+  // padre/madre si también es socio — misma idea que en el portal del socio.
+  const { data: hijos } = await admin
+    .from("jugadores")
+    .select("id, nombre, apellidos, equipo, madre_socio_id, padre_socio_id")
+    .or(`madre_socio_id.eq.${id},padre_socio_id.eq.${id}`);
+  const otroIds = Array.from(
+    new Set(
+      (hijos ?? [])
+        .map((h) => (h.madre_socio_id === id ? h.padre_socio_id : h.madre_socio_id))
+        .filter((otroId): otroId is string => Boolean(otroId) && otroId !== id),
+    ),
+  );
+  const { data: otrosPadres } =
+    otroIds.length > 0
+      ? await admin.from("socios").select("id, nombre, apellidos, numero_socio").in("id", otroIds)
+      : { data: [] };
+  const otroPadrePorId = new Map((otrosPadres ?? []).map((p) => [p.id, p]));
 
   // Estado real de la suscripción en Stripe (fuente de verdad para la fecha
   // de próxima renovación y si hay una cancelación ya programada).
@@ -349,9 +375,50 @@ export default async function FichaSocioPage({
               fechaFinPeriodo={proximaRenovacion ? formatearFecha(proximaRenovacion) : null}
               haUsadoCarnet={haUsadoCarnet}
             />
+
+            {esJugadorPuro && (
+              <div className="mt-4 border-t border-neutral-100 pt-4">
+                <ConvertirSocio
+                  socioId={id}
+                  tipos={(tipos as TipoAbono[] | null) ?? []}
+                  tieneEmail={Boolean(s.email)}
+                />
+              </div>
+            )}
           </div>
 
-          <HistorialPagos facturas={facturas} tieneStripe={Boolean(s.stripe_customer_id)} />
+          {/* Hijos/as en el club (tabla "jugadores") */}
+          {hijos && hijos.length > 0 && (
+            <div className="rounded-2xl border border-neutral-200 bg-white p-6">
+              <h2 className="font-display text-sm font-bold uppercase tracking-wide text-neutral-500">
+                Hijos/as en el club
+              </h2>
+              <ul className="mt-3 divide-y divide-neutral-100">
+                {hijos.map((h) => {
+                  const otroId = h.madre_socio_id === id ? h.padre_socio_id : h.madre_socio_id;
+                  const otro = otroId ? otroPadrePorId.get(otroId) : null;
+                  return (
+                    <li key={h.id} className="py-2.5 text-sm">
+                      <span className="font-semibold text-neutral-800">
+                        {h.nombre} {h.apellidos}
+                      </span>
+                      <span className="text-neutral-500"> — {h.equipo || "sin equipo"}</span>
+                      {otro && (
+                        <span className="block text-xs text-neutral-400">
+                          También socio/a por su hijo/a:{" "}
+                          <Link href={`/admin/socios/${otro.id}`} className="text-azul hover:underline">
+                            {otro.nombre} {otro.apellidos} (nº {otro.numero_socio})
+                          </Link>
+                        </span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+
+          {!esJugadorPuro && <HistorialPagos facturas={facturas} tieneStripe={Boolean(s.stripe_customer_id)} />}
 
           {/* Histórico de carnés físicos */}
           {historialCarnets.length > 0 && (
