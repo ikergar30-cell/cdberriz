@@ -15,12 +15,14 @@ import { pickLocale } from "@/lib/locale";
 import { proximoCierreTemporada } from "@/config/facturacion";
 import { REEMBOLSO_DIAS, diasDesde } from "@/config/reembolso";
 import { CarnetSocio } from "@/components/CarnetSocio";
+import { camposFaltantesPortal } from "@/lib/socios/camposFaltantes";
 import { CuentaLogin } from "./CuentaLogin";
 import { CuentaAcciones } from "./CuentaAcciones";
 import { SolicitarCarnet } from "./SolicitarCarnet";
 import { CancelarCuota } from "./CancelarCuota";
 import { SubirFoto } from "./SubirFoto";
 import { CuentaBanco } from "./CuentaBanco";
+import { CompletarDatos } from "./CompletarDatos";
 
 const ESTADO_LABEL: Record<string, { es: string; eu: string; cls: string }> = {
   activo:    { es: "Activo",          eu: "Aktiboa",         cls: "bg-green-100 text-green-800" },
@@ -92,11 +94,15 @@ export default async function CuentaPage({
   // deje a esa persona sin poder entrar a su portal.
   const { data: sociosCoincidentes } = await admin
     .from("socios")
-    .select("id, nombre, apellidos, numero_socio, estado, origen, fecha_alta, direccion, carnet_token, foto_url, carnet_fisico_pedido_en, carnet_fisico_entregado_en, carnet_fisico_recogida, stripe_customer_id, stripe_subscription_id, titular_id, metodo_pago, iban, tipos_abono(nombre, precio_cents)")
+    .select("id, nombre, apellidos, numero_socio, estado, origen, fecha_alta, direccion, telefono, dni, poblacion, codigo_postal, fecha_nacimiento, carnet_token, foto_url, carnet_fisico_pedido_en, carnet_fisico_entregado_en, carnet_fisico_recogida, stripe_customer_id, stripe_subscription_id, titular_id, metodo_pago, iban, tipos_abono(nombre, precio_cents)")
     .ilike("email", user.email)
     .order("numero_socio", { ascending: true })
     .limit(1);
   const socio = sociosCoincidentes?.[0] ?? null;
+
+  // Si a la ficha le faltan datos (DNI, teléfono… según el tipo de socio), se
+  // le pide completarlos ANTES de enseñarle el carné (ver camposFaltantesPortal).
+  const faltanDatos = socio ? camposFaltantesPortal(socio) : [];
 
   // Estado real de la suscripción en Stripe: si ya hay una cancelación
   // programada, y la fecha en la que dejará de renovarse.
@@ -233,6 +239,10 @@ export default async function CuentaPage({
               </span>
             </div>
 
+            {faltanDatos.length > 0 ? (
+              <CompletarDatos campos={faltanDatos} />
+            ) : (
+            <>
             {/* Datos del abono */}
             <div className="rounded-2xl border border-neutral-200 bg-white p-6">
               <dl className="grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-4">
@@ -523,6 +533,8 @@ export default async function CuentaPage({
 
               </div>
             </div>
+            </>
+            )}
           </div>
         ) : (
           /* Socio no encontrado */

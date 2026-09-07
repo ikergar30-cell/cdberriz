@@ -7,12 +7,23 @@ import { stripe } from "@/lib/stripe";
 import { club } from "@/config/club";
 import type { ActionResult } from "@/lib/actionResult";
 import { REEMBOLSO_DIAS, diasDesde } from "@/config/reembolso";
+import { esDniValido, normalizarDni } from "@/lib/dni";
+import { capitalizarPalabras } from "@/lib/texto";
+import { camposFaltantesPortal, type CampoPortal } from "@/lib/socios/camposFaltantes";
+import type { OrigenSocio } from "@/lib/supabase/types";
 
 type SocioSesion = {
   id: string;
   stripe_subscription_id: string | null;
   titular_id: string | null;
   metodo_pago: string | null;
+  origen: OrigenSocio;
+  dni: string | null;
+  telefono: string | null;
+  direccion: string | null;
+  poblacion: string | null;
+  codigo_postal: string | null;
+  fecha_nacimiento: string | null;
 };
 type ResultadoSesion =
   | { ok: false; error: string }
@@ -34,7 +45,9 @@ async function socioDeLaSesion(): Promise<ResultadoSesion> {
   // rompa el portal entero para esa persona en vez de dejarla entrar.
   const { data: socios, error } = await admin
     .from("socios")
-    .select("id, stripe_subscription_id, titular_id, metodo_pago")
+    .select(
+      "id, stripe_subscription_id, titular_id, metodo_pago, origen, dni, telefono, direccion, poblacion, codigo_postal, fecha_nacimiento",
+    )
     .ilike("email", user.email)
     .order("numero_socio", { ascending: true })
     .limit(1);
@@ -278,4 +291,100 @@ export async function subirFotoCarnet(formData: FormData): Promise<ActionResult>
 
   const { error } = await admin.from("socios").update({ foto_url: publica.publicUrl }).eq("id", socio.id);
   if (error) return { error: error.message };
+}
+
+// Guarda los datos que el socio rellena en su portal cuando su ficha está
+// incompleta (ver camposFaltantesPortal). Solo pide y solo escribe los campos
+// que de verdad le faltan, según su tipo de socio; nunca vacía un dato que ya
+// tuviera. Se localiza por la sesión, igual que el resto de acciones.
+export async function completarDatosSocio(
+  locale: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  const eu = locale === "eu";
+  const t = (es: string, txtEu: string) => (eu ? txtEu : es);
+
+  const sesion = await socioDeLaSesion();
+  if (!sesion.ok) return { error: sesion.error };
+  const { admin, socio } = sesion;
+
+  // Fuente de la verdad: qué le falta de verdad AHORA en la base de datos.
+  const faltantes = camposFaltantesPortal(socio);
+  if (faltantes.length === 0) return; // ya estaba completo (otra pestaña, etc.)
+
+  const etiqueta: Record<CampoPortal, string> = {
+    dni: "DNI / NIE",
+    telefono: t("teléfono", "telefonoa"),
+    direccion: t("dirección", "helbidea"),
+    poblacion: t("población", "herria"),
+    codigo_postal: t("código postal", "posta kodea"),
+    fecha_nacimiento: t("fecha de nacimiento", "jaiotze-data"),
+  };
+
+  const updates: Record<string, string> = {};
+
+  for (const campo of faltantes) {
+    const bruto = String(formData.get(campo) ?? "").trim();
+    if (!bruto) {
+      return { error: t(`Falta ${etiqueta[campo]}.`, `${etiqueta[campo]} falta da.`) };
+    }
+    switch (campo) {
+      case "dni": {
+        const dni = normalizarDni(bruto);
+        if (!esDniValido(dni)) {
+          return { error: t("El DNI / NIE no es válido.", "DNI / NIE ez da baliozkoa.") };
+        }
+        updates.dni = dni;
+        break;
+      }
+      case "telefono": {
+        const tel = bruto.replace(/\s+/g, "");
+        if (!/^\+?\d{6,15}$/.test(tel)) {
+          return { error: t("El teléfono no es válido.", "Telefonoa ez da baliozkoa.") };
+        }
+        updates.telefono = tel;
+        break;
+      }
+      case "codigo_postal": {
+        if (!/^\d{5}$/.test(bruto)) {
+          return { error: t("El código postal debe tener 5 cifras.", "Posta kodeak 5 zifra izan behar ditu.") };
+        }
+        updates.codigo_postal = bruto;
+        break;
+      }
+      case "fecha_nacimiento": {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(bruto)) {
+          return { error: t("La fecha de nacimiento no es válida.", "Jaiotze-data ez da baliozkoa.") };
+        }
+        const fecha = new Date(`${bruto}T00:00:00`);
+        const año = fecha.getFullYear();
+        if (Number.isNaN(fecha.getTime()) || fecha > new Date() || año < 1900) {
+          return { error: t("La fecha de nacimiento no es válida.", "Jaiotze-data ez da baliozkoa.") };
+        }
+        updates.fecha_nacimiento = bruto;
+        break;
+      }
+      case "poblacion":
+        updates.poblacion = capitalizarPalabras(bruto);
+        break;
+      case "direccion":
+        updates.direccion = bruto;
+        break;
+    }
+  }
+
+  const { error } = await admin.from("socios").update(updates).eq("id", socio.id);
+  if (error) {
+    // El DNI tiene índice único: si ya está en otra ficha, avisamos claro en
+    // vez de soltar el error crudo de Postgres.
+    if (error.code === "23505") {
+      return {
+        error: t(
+          "Ese DNI ya está registrado en otra ficha del club. Ponte en contacto con el club.",
+          "DNI hori klubeko beste fitxa batean dago erregistratuta. Jarri klubarekin harremanetan.",
+        ),
+      };
+    }
+    return { error: error.message };
+  }
 }

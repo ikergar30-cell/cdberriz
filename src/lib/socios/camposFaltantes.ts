@@ -32,3 +32,33 @@ export function camposFaltantes(socio: SocioParcial): string[] {
   }
   return CAMPOS_CUOTA.filter((c) => !socio[c.clave as keyof typeof socio]).map((c) => c.etiqueta);
 }
+
+// --- Datos que el propio socio debe completar en SU portal ------------------
+//
+// Es un criterio distinto al de arriba (que sirve para avisar al personal en
+// el listado): aquí el socio ya ha entrado a su área y le pedimos que rellene
+// lo que falte ANTES de enseñarle el carné. Como ha entrado con un enlace
+// mágico a su email, el email siempre está; lo que pedimos es identificarse
+// (DNI) y poder contactarle (teléfono). A quien paga cuota le pedimos además
+// los datos que hacen falta para el carné físico y la facturación; al socio
+// "por hijo/a jugando" no se le agobia con dirección, población, etc.
+export type CampoPortal =
+  | "dni" | "telefono" | "direccion" | "poblacion" | "codigo_postal" | "fecha_nacimiento";
+
+export function camposPortalRequeridos(origen: OrigenSocio): CampoPortal[] {
+  const base: CampoPortal[] = ["dni", "telefono"];
+  if (origen === "cuota") {
+    return [...base, "direccion", "poblacion", "codigo_postal", "fecha_nacimiento"];
+  }
+  return base;
+}
+
+type SocioPortal = Partial<Record<CampoPortal, unknown>> & { origen: OrigenSocio };
+
+// Subconjunto de los requeridos que el socio tiene todavía sin rellenar.
+export function camposFaltantesPortal(socio: SocioPortal): CampoPortal[] {
+  return camposPortalRequeridos(socio.origen).filter((c) => {
+    const v = socio[c];
+    return v === null || v === undefined || String(v).trim() === "";
+  });
+}
