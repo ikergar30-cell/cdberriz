@@ -1,14 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+
+// El PIN de taquilla se recuerda en este dispositivo para no tener que
+// teclearlo cada vez (solo la primera). Es el mismo código para todo el que
+// abre la puerta, no una contraseña personal.
+const CLAVE_PIN = "cdb_taquilla_pin";
 
 export default function LoginVerificadorPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
+  const [pin, setPin] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
+
+  // Rellenar el PIN recordado en este dispositivo, si lo hay.
+  useEffect(() => {
+    try {
+      const guardado = localStorage.getItem(CLAVE_PIN);
+      if (guardado) setPin(guardado);
+    } catch {
+      /* almacenamiento no disponible */
+    }
+  }, []);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -17,12 +33,19 @@ export default function LoginVerificadorPage() {
     const res = await fetch("/api/admin/login-verificador", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, pin }),
     });
     if (!res.ok) {
-      setError("Ese email no tiene acceso a verificar carnés.");
+      const json = await res.json().catch(() => null);
+      setError(json?.error || "Email o PIN incorrecto.");
       setCargando(false);
       return;
+    }
+    // Recordar el PIN en este dispositivo para las próximas veces.
+    try {
+      localStorage.setItem(CLAVE_PIN, pin);
+    } catch {
+      /* almacenamiento no disponible */
     }
     router.replace("/admin/verificar");
     router.refresh();
@@ -52,7 +75,7 @@ export default function LoginVerificadorPage() {
           <h1 className="mt-3 font-display text-xl font-extrabold uppercase text-azul-700">
             Verificar carné
           </h1>
-          <p className="mt-1 text-sm text-neutral-500">Acceso solo con email, sin contraseña</p>
+          <p className="mt-1 text-sm text-neutral-500">Acceso con email y PIN de taquilla</p>
         </div>
 
         <form onSubmit={onSubmit} className="space-y-4">
@@ -70,6 +93,25 @@ export default function LoginVerificadorPage() {
               autoComplete="email"
               autoFocus
             />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-semibold" htmlFor="pin">
+              PIN de taquilla
+            </label>
+            <input
+              id="pin"
+              type="password"
+              inputMode="numeric"
+              value={pin}
+              onChange={(e) => setPin(e.target.value)}
+              className="w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-sm outline-none transition focus:border-azul focus:ring-2 focus:ring-azul/20"
+              required
+              autoComplete="off"
+            />
+            <p className="mt-1 text-xs text-neutral-400">
+              Se recuerda en este dispositivo: solo hay que ponerlo la primera vez.
+            </p>
           </div>
 
           {error && <p className="text-sm font-semibold text-rojo">{error}</p>}

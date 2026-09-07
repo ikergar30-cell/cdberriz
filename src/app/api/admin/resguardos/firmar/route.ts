@@ -2,8 +2,8 @@ import { readFile } from "fs/promises";
 import path from "path";
 import { NextResponse, type NextRequest } from "next/server";
 import { Resend } from "resend";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { empleadoPleno } from "@/lib/auth/empleado";
 import { club } from "@/config/club";
 import { generarResguardoPDF, nombreArchivoResguardo } from "@/lib/resguardos/pdf";
 import { validarFila, type FilaEntrada } from "@/lib/resguardos/validar";
@@ -31,18 +31,7 @@ function pngDesdeDataUrl(dataUrl: unknown): Uint8Array | null {
 }
 
 export async function POST(request: NextRequest) {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-
-  const { data: perfil } = await supabase
-    .from("perfiles")
-    .select("rol")
-    .eq("id", user.id)
-    .maybeSingle();
-  if (!perfil || perfil.rol === "verificador") {
+  if (!(await empleadoPleno())) {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
 

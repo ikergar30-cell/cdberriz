@@ -1,28 +1,20 @@
 import { readFile } from "fs/promises";
 import path from "path";
 import { NextResponse, type NextRequest } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { empleadoPleno } from "@/lib/auth/empleado";
 import { generarCarnetsPDF, nombreArchivoCarnet, type SocioCarnet } from "@/lib/carnet/pdf";
 
 export const runtime = "nodejs";
 
 // Genera el PDF de carnés físicos para imprenta. Sin parámetros: todos los
 // pendientes de entregar (una tarjeta por página). Con ?id=<socio>: solo ese
-// socio. Solo empleados autenticados.
+// socio. Lleva nombre, número y token de carné de cada socio, así que solo
+// empleados plenos (NO el rol verificador de taquilla).
 export async function GET(request: NextRequest) {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-
-  const { data: perfil } = await supabase
-    .from("perfiles")
-    .select("id")
-    .eq("id", user.id)
-    .maybeSingle();
-  if (!perfil) return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+  if (!(await empleadoPleno())) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+  }
 
   const id = request.nextUrl.searchParams.get("id");
   const admin = createAdminClient();

@@ -2,8 +2,8 @@ import { readFile } from "fs/promises";
 import path from "path";
 import { NextResponse, type NextRequest } from "next/server";
 import JSZip from "jszip";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { empleadoPleno } from "@/lib/auth/empleado";
 import {
   generarResguardoPDF,
   nombreArchivoResguardo,
@@ -17,19 +17,11 @@ export const runtime = "nodejs";
 // pago en la base de datos. Solo empleados autenticados.
 
 // Vuelve a descargar el PDF de un resguardo ya registrado (no crea apuntes).
+// Lleva nombre y DNI: solo empleados plenos (NO el verificador de taquilla).
 export async function GET(request: NextRequest) {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-
-  const { data: perfil } = await supabase
-    .from("perfiles")
-    .select("id")
-    .eq("id", user.id)
-    .maybeSingle();
-  if (!perfil) return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+  if (!(await empleadoPleno())) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+  }
 
   const id = request.nextUrl.searchParams.get("id") ?? "";
   if (!id) return NextResponse.json({ error: "Falta el id" }, { status: 400 });
@@ -70,18 +62,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-
-  const { data: perfil } = await supabase
-    .from("perfiles")
-    .select("id")
-    .eq("id", user.id)
-    .maybeSingle();
-  if (!perfil) return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+  // Crea apuntes de pago: solo empleados plenos (NO el verificador de taquilla).
+  if (!(await empleadoPleno())) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+  }
 
   let cuerpo: { tipo?: unknown; filas?: unknown };
   try {
