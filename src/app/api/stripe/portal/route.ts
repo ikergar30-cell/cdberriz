@@ -1,34 +1,36 @@
 import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { resolverPortal } from "@/lib/socios/sesionPortal";
 
 // Abre el portal de cliente de Stripe para que el socio gestione su cuota.
-// Seguridad: exige sesión iniciada (enlace mágico). Buscamos el socio por el
-// email AUTENTICADO, no por uno que mande el cliente. Así nadie gestiona la
-// cuota de otro.
+// Seguridad: exige sesión iniciada (enlace mágico) y resuelve SU ficha con
+// resolverPortal() (coincidencia exacta de email + desambiguación si el correo
+// lo comparten varias personas). Así nadie gestiona la cuota de otro.
 export async function POST() {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user?.email) {
+  const portal = await resolverPortal();
+  if (portal.tipo === "sin_sesion") {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
+  if (portal.tipo === "elegir") {
+    return NextResponse.json(
+      { error: "Con este email hay varias fichas: elige la tuya en tu área de socio." },
+      { status: 409 },
+    );
+  }
+  if (portal.tipo !== "ok") {
+    return NextResponse.json(
+      { error: "No encontramos una cuota asociada a tu email" },
+      { status: 404 },
+    );
+  }
 
-  // El socio puede no tener perfil de empleado; leemos con service_role,
-  // pero SOLO su propia ficha (filtrada por su email autenticado).
-  // .limit(1) en vez de .maybeSingle(): un email duplicado entre dos socios
-  // (dato antiguo mal cargado) haría que .maybeSingle() lance un error y
-  // deje a esa persona sin poder gestionar su cuota.
   const admin = createAdminClient();
-  const { data: sociosCoincidentes } = await admin
+  const { data: socio } = await admin
     .from("socios")
     .select("stripe_customer_id")
-    .ilike("email", user.email)
-    .not("stripe_customer_id", "is", null)
-    .limit(1);
-  const socio = sociosCoincidentes?.[0];
+    .eq("id", portal.socioId)
+    .maybeSingle();
 
   if (!socio?.stripe_customer_id) {
     return NextResponse.json(

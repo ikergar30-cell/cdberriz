@@ -1,8 +1,8 @@
 import { setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/routing";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { resolverPortal } from "@/lib/socios/sesionPortal";
 import { stripe } from "@/lib/stripe";
 import { sanityFetch } from "@/sanity/lib/sanityFetch";
 import {
@@ -23,6 +23,7 @@ import { CancelarCuota } from "./CancelarCuota";
 import { SubirFoto } from "./SubirFoto";
 import { CuentaBanco } from "./CuentaBanco";
 import { CompletarDatos } from "./CompletarDatos";
+import { ElegirFicha, CambiarFicha } from "./ElegirFicha";
 
 const ESTADO_LABEL: Record<string, { es: string; eu: string; cls: string }> = {
   activo:    { es: "Activo",          eu: "Aktiboa",         cls: "bg-green-100 text-green-800" },
@@ -73,10 +74,12 @@ export default async function CuentaPage({
   const eu = locale === "eu";
   const titulo = eu ? "Nire kuota" : "Mi cuota";
 
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  // Resolución de identidad centralizada (ver src/lib/socios/sesionPortal.ts):
+  // coincidencia EXACTA de email y, si el correo lo comparten varias personas,
+  // desambiguación en vez de coger la ficha del número más bajo a ciegas.
+  const portal = await resolverPortal();
 
-  if (!user?.email) {
+  if (portal.tipo === "sin_sesion") {
     return (
       <>
         <PageHeader title={titulo} />
@@ -87,18 +90,34 @@ export default async function CuentaPage({
     );
   }
 
+  if (portal.tipo === "elegir") {
+    return (
+      <>
+        <PageHeader title={titulo} />
+        <div className="container max-w-2xl py-12 md:py-16">
+          <ElegirFicha opciones={portal.opciones} />
+        </div>
+      </>
+    );
+  }
+
   const admin = createAdminClient();
 
-  // .limit(1) en vez de .maybeSingle(): un email duplicado entre dos socios
-  // (dato antiguo mal cargado) haría que .maybeSingle() lance un error y
-  // deje a esa persona sin poder entrar a su portal.
-  const { data: sociosCoincidentes } = await admin
-    .from("socios")
-    .select("id, nombre, apellidos, numero_socio, estado, origen, fecha_alta, direccion, telefono, dni, poblacion, codigo_postal, fecha_nacimiento, carnet_token, foto_url, carnet_fisico_pedido_en, carnet_fisico_entregado_en, carnet_fisico_recogida, stripe_customer_id, stripe_subscription_id, titular_id, metodo_pago, iban, tipos_abono(nombre, precio_cents)")
-    .ilike("email", user.email)
-    .order("numero_socio", { ascending: true })
-    .limit(1);
-  const socio = sociosCoincidentes?.[0] ?? null;
+  // Ya identificada la ficha por su id (único), maybeSingle() es seguro.
+  const socio =
+    portal.tipo === "ok"
+      ? (
+          await admin
+            .from("socios")
+            .select("id, nombre, apellidos, numero_socio, estado, origen, fecha_alta, direccion, telefono, dni, poblacion, codigo_postal, fecha_nacimiento, carnet_token, foto_url, carnet_fisico_pedido_en, carnet_fisico_entregado_en, carnet_fisico_recogida, stripe_customer_id, stripe_subscription_id, titular_id, metodo_pago, iban, tipos_abono(nombre, precio_cents)")
+            .eq("id", portal.socioId)
+            .maybeSingle()
+        ).data
+      : null;
+
+  // ¿Comparte email con otras fichas? Entonces mostramos el enlace para volver
+  // a elegir, por si aterrizó en la que no era.
+  const variasFichas = portal.tipo === "ok" && portal.opciones.length > 1;
 
   // Si a la ficha le faltan datos (DNI, teléfono… según el tipo de socio), se
   // le pide completarlos ANTES de enseñarle el carné (ver camposFaltantesPortal).
@@ -233,6 +252,7 @@ export default async function CuentaPage({
                 <p className="mt-1 text-sm text-white/70">
                   {eu ? "Bazkide zk." : "Socio nº"} {socio.numero_socio}
                 </p>
+                {variasFichas && <CambiarFicha />}
               </div>
               <span className={`rounded-full px-3 py-1 text-xs font-semibold ${ESTADO_LABEL[socio.estado]?.cls ?? "bg-white/15 text-white"}`}>
                 {ESTADO_LABEL[socio.estado]?.[eu ? "eu" : "es"] ?? socio.estado}

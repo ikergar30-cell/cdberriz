@@ -1,18 +1,27 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { resolverPortal } from "@/lib/socios/sesionPortal";
 import { club } from "@/config/club";
 
 export async function POST(request: Request) {
-  // Verificar sesión del socio.
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user?.email) {
+  // Verificar sesión del socio y resolver SU ficha (coincidencia exacta de
+  // email + desambiguación si el correo lo comparten varias personas).
+  const portal = await resolverPortal();
+  if (portal.tipo === "sin_sesion") {
     return NextResponse.json({ error: "No autenticado." }, { status: 401 });
+  }
+  if (portal.tipo === "elegir") {
+    return NextResponse.json(
+      { error: "Con este email hay varias fichas: elige la tuya en tu área de socio." },
+      { status: 409 },
+    );
+  }
+  if (portal.tipo !== "ok") {
+    return NextResponse.json(
+      { error: "No se encontró tu ficha de socio." },
+      { status: 404 },
+    );
   }
 
   let body: { direccion?: string } = {};
@@ -26,18 +35,14 @@ export async function POST(request: Request) {
 
   const admin = createAdminClient();
 
-  // Buscar la ficha del socio por email. .limit(1) en vez de .maybeSingle():
-  // un email duplicado entre dos socios (dato antiguo mal cargado) haría que
-  // .maybeSingle() lance un error y la solicitud falle sin motivo aparente.
-  const { data: sociosCoincidentes, error: errorSocio } = await admin
+  // Ficha ya identificada por su id (único): maybeSingle() es seguro.
+  const { data: socio } = await admin
     .from("socios")
     .select("id, nombre, apellidos, numero_socio, direccion, foto_url, carnet_fisico_pedido_en, carnet_fisico_entregado_en")
-    .ilike("email", user.email)
-    .order("numero_socio", { ascending: true })
-    .limit(1);
-  const socio = sociosCoincidentes?.[0];
+    .eq("id", portal.socioId)
+    .maybeSingle();
 
-  if (errorSocio || !socio) {
+  if (!socio) {
     return NextResponse.json(
       { error: "No se encontró tu ficha de socio." },
       { status: 404 },
@@ -114,7 +119,7 @@ export async function POST(request: Request) {
           `Un socio ha solicitado su carné físico:\n\n` +
           `Nº socio: ${socio.numero_socio}\n` +
           `Nombre: ${socio.nombre} ${socio.apellidos}\n` +
-          `Email: ${user.email}\n` +
+          `Email: ${portal.email}\n` +
           `Dirección: ${direccionFinal}\n\n` +
           `Entrega prevista: septiembre de ${year} en Berrizburu Futbol Zelaia.\n`,
       });

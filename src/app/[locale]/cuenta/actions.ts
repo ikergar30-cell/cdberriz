@@ -1,7 +1,7 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { Resend } from "resend";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe";
 import { club } from "@/config/club";
@@ -10,6 +10,7 @@ import { REEMBOLSO_DIAS, diasDesde } from "@/config/reembolso";
 import { esDniValido, normalizarDni } from "@/lib/dni";
 import { capitalizarPalabras } from "@/lib/texto";
 import { camposFaltantesPortal, type CampoPortal } from "@/lib/socios/camposFaltantes";
+import { resolverPortal, COOKIE_FICHA_PORTAL } from "@/lib/socios/sesionPortal";
 import type { OrigenSocio } from "@/lib/supabase/types";
 
 type SocioSesion = {
@@ -30,31 +31,57 @@ type ResultadoSesion =
   | { ok: true; admin: ReturnType<typeof createAdminClient>; socio: SocioSesion };
 
 // Localiza la ficha del socio a partir de la sesión (enlace mágico) del
-// PROPIO usuario — nunca de un id que mande el cliente, para que nadie
-// pueda cancelar la cuota de otra persona.
+// PROPIO usuario — nunca de un id que mande el cliente, para que nadie pueda
+// tocar la cuota de otra persona. La resolución (incluida la desambiguación
+// cuando varias personas comparten email) vive en un único sitio:
+// resolverPortal(), en src/lib/socios/sesionPortal.ts.
 async function socioDeLaSesion(): Promise<ResultadoSesion> {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user?.email) return { ok: false, error: "No autorizado." };
+  const res = await resolverPortal();
+  if (res.tipo === "sin_sesion") return { ok: false, error: "No autorizado." };
+  if (res.tipo === "sin_socio") return { ok: false, error: "No encontramos tu ficha de socio." };
+  if (res.tipo === "elegir") {
+    return {
+      ok: false,
+      error: "Con este email hay varias fichas de socio: elige la tuya en tu área de socio antes de continuar.",
+    };
+  }
 
   const admin = createAdminClient();
-  // .limit(1) en vez de .maybeSingle(): un email duplicado entre dos socios
-  // (dato antiguo mal cargado) haría que .maybeSingle() lance un error y
-  // rompa el portal entero para esa persona en vez de dejarla entrar.
-  const { data: socios, error } = await admin
+  // Ya identificada la ficha por su id (único), maybeSingle() es seguro.
+  const { data: socio, error } = await admin
     .from("socios")
     .select(
       "id, stripe_subscription_id, titular_id, metodo_pago, origen, dni, telefono, direccion, poblacion, codigo_postal, fecha_nacimiento",
     )
-    .ilike("email", user.email)
-    .order("numero_socio", { ascending: true })
-    .limit(1);
+    .eq("id", res.socioId)
+    .maybeSingle();
   if (error) return { ok: false, error: error.message };
-  const socio = socios?.[0];
   if (!socio) return { ok: false, error: "No encontramos tu ficha de socio." };
   return { ok: true, admin, socio };
+}
+
+// Cuando el email lo comparten varias fichas, guarda cuál ha elegido esta
+// persona. Solo se acepta un id que de verdad esté entre esas fichas (nunca
+// uno cualquiera que mande el cliente).
+export async function elegirFichaPortal(socioId: string): Promise<ActionResult> {
+  const res = await resolverPortal();
+  if (res.tipo === "sin_sesion") return { error: "No autorizado." };
+  const opciones = "opciones" in res ? res.opciones : [];
+  if (!opciones.some((o) => o.id === socioId)) {
+    return { error: "Esa ficha no está asociada a tu email." };
+  }
+  cookies().set(COOKIE_FICHA_PORTAL, socioId, {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 180, // 6 meses
+  });
+}
+
+// Olvida la ficha elegida para volver a la pantalla de "¿quién eres?".
+export async function olvidarFichaPortal(): Promise<ActionResult> {
+  cookies().delete(COOKIE_FICHA_PORTAL);
+  return;
 }
 
 // ¿Puede este socio acogerse al derecho de desistimiento (devolución del
