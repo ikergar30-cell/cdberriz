@@ -16,6 +16,50 @@ function hoy() {
   return new Date().toISOString().slice(0, 10);
 }
 
+// Entrega un archivo al usuario de forma fiable en móvil y escritorio.
+//
+// El método anterior (crear un <a download> con una URL de blob, pulsarlo y
+// revocar la URL enseguida) NO funciona en el móvil: en iOS Safari abre el PDF
+// encima de la página perdiendo el formulario, y con el ZIP no hace nada;
+// además revocar la URL de inmediato corta la descarga en algunos navegadores.
+//
+// En el móvil usamos la hoja de compartir del sistema (guardar en Archivos,
+// enviar por WhatsApp, por email…), que es lo que de verdad funciona; en
+// escritorio, descarga normal (revocando la URL con margen, no al instante).
+async function entregarArchivo(blob: Blob, nombre: string) {
+  const tipo = blob.type || (nombre.endsWith(".zip") ? "application/zip" : "application/pdf");
+  const file = new File([blob], nombre, { type: tipo });
+
+  if (typeof navigator !== "undefined" && typeof navigator.canShare === "function") {
+    let puedeCompartir = false;
+    try {
+      puedeCompartir = navigator.canShare({ files: [file] });
+    } catch {
+      puedeCompartir = false;
+    }
+    if (puedeCompartir) {
+      try {
+        await navigator.share({ files: [file], title: nombre });
+        return;
+      } catch (e) {
+        // Si el usuario cierra la hoja de compartir, no seguimos con la descarga.
+        if (e instanceof DOMException && e.name === "AbortError") return;
+        // Cualquier otro fallo: caemos a la descarga clásica de abajo.
+      }
+    }
+  }
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = nombre;
+  a.rel = "noopener";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+
 function mesActual() {
   return new Date().toISOString().slice(0, 7);
 }
@@ -89,16 +133,11 @@ export function FormResguardos({
         const json = await res.json().catch(() => null);
         throw new Error(json?.error || "No se pudo generar el resguardo");
       }
-      // Descargar el PDF/ZIP recibido.
+      // Entregar el PDF/ZIP recibido de forma fiable también en el móvil.
       const blob = await res.blob();
       const disposition = res.headers.get("Content-Disposition") || "";
       const nombre = /filename="([^"]+)"/.exec(disposition)?.[1] || "resguardos";
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = nombre;
-      a.click();
-      URL.revokeObjectURL(url);
+      await entregarArchivo(blob, nombre);
       // Refrescar el historial y dejar el formulario listo para el siguiente.
       setFilas([filaVacia()]);
       router.refresh();
