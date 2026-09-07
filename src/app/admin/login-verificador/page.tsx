@@ -5,9 +5,20 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 
 // El PIN de taquilla se recuerda en este dispositivo para no tener que
-// teclearlo cada vez (solo la primera). Es el mismo código para todo el que
-// abre la puerta, no una contraseña personal.
+// teclearlo cada vez. Como CAMBIA CADA MES, se guarda junto al mes en que se
+// usó: si ya es otro mes, no se rellena (ese código ya no vale).
 const CLAVE_PIN = "cdb_taquilla_pin";
+
+function mesActual(): string {
+  const partes = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Madrid",
+    year: "numeric",
+    month: "2-digit",
+  }).formatToParts(new Date());
+  const anio = partes.find((p) => p.type === "year")?.value ?? "";
+  const mes = partes.find((p) => p.type === "month")?.value ?? "";
+  return `${anio}${mes}`;
+}
 
 export default function LoginVerificadorPage() {
   const router = useRouter();
@@ -16,13 +27,15 @@ export default function LoginVerificadorPage() {
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
 
-  // Rellenar el PIN recordado en este dispositivo, si lo hay.
+  // Rellenar el PIN recordado en este dispositivo, solo si es del mes actual.
   useEffect(() => {
     try {
       const guardado = localStorage.getItem(CLAVE_PIN);
-      if (guardado) setPin(guardado);
+      if (!guardado) return;
+      const { pin: pinGuardado, mes } = JSON.parse(guardado);
+      if (pinGuardado && mes === mesActual()) setPin(pinGuardado);
     } catch {
-      /* almacenamiento no disponible */
+      /* almacenamiento no disponible o formato antiguo: se ignora */
     }
   }, []);
 
@@ -41,9 +54,9 @@ export default function LoginVerificadorPage() {
       setCargando(false);
       return;
     }
-    // Recordar el PIN en este dispositivo para las próximas veces.
+    // Recordar el PIN (con el mes) en este dispositivo para las próximas veces.
     try {
-      localStorage.setItem(CLAVE_PIN, pin);
+      localStorage.setItem(CLAVE_PIN, JSON.stringify({ pin, mes: mesActual() }));
     } catch {
       /* almacenamiento no disponible */
     }
@@ -110,7 +123,7 @@ export default function LoginVerificadorPage() {
               autoComplete="off"
             />
             <p className="mt-1 text-xs text-neutral-400">
-              Se recuerda en este dispositivo: solo hay que ponerlo la primera vez.
+              Cambia cada mes. Se recuerda en este dispositivo hasta el mes siguiente.
             </p>
           </div>
 
