@@ -4,6 +4,7 @@ import { stripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { suscribirNewsletter } from "@/lib/newsletter";
 import { reAlinearRenovacion } from "@/lib/stripe/alinearFacturacion";
+import { normalizarDni } from "@/lib/dni";
 
 // Webhook de Stripe: sincroniza socios y pagos en Supabase.
 // SEGURIDAD: cada evento se VERIFICA con la firma (STRIPE_WEBHOOK_SECRET); un
@@ -84,7 +85,7 @@ export async function POST(request: NextRequest) {
           break;
         }
 
-        const { data: titular, error: errTitular } = await db
+        const upsertTitular = await db
           .from("socios")
           .upsert(
             {
@@ -111,7 +112,46 @@ export async function POST(request: NextRequest) {
           )
           .select("id")
           .single();
-        if (errTitular) throw new Error(errTitular.message);
+
+        let titularId: string;
+        if (upsertTitular.error) {
+          // 23505 = choque con el índice único de DNI: esa persona YA es socia
+          // (lo habitual: una madre/padre socio "por hijo/a jugando" que ahora
+          // se hace de cuota). Antes esto lanzaba, el webhook devolvía 500 y
+          // Stripe acababa desistiendo: se le cobraba pero no quedaba enlazado
+          // con Stripe ni figuraba como socio de pago. Ahora se ENLAZA su ficha
+          // existente con Stripe en vez de fallar.
+          const dniNorm = m.dni ? normalizarDni(m.dni) : null;
+          if (upsertTitular.error.code !== "23505" || !dniNorm) {
+            throw new Error(upsertTitular.error.message);
+          }
+          const { data: existente, error: errBuscaDni } = await db
+            .from("socios")
+            .select("id, email, telefono")
+            .ilike("dni", dniNorm)
+            .maybeSingle();
+          if (errBuscaDni) throw new Error(errBuscaDni.message);
+          if (!existente) throw new Error(upsertTitular.error.message);
+
+          // Solo se enlaza el pago; NO se pisan nombre, DNI ni dirección de la
+          // ficha que ya existía. Email/teléfono solo se rellenan si faltaban.
+          const enlace: Record<string, unknown> = {
+            tipo_abono_id: m.tipo_abono_id || null,
+            estado: estadoInicial,
+            metodo_pago: "stripe",
+            stripe_customer_id: customerId,
+            stripe_subscription_id: subscriptionId,
+          };
+          if (!existente.email && customer.email) enlace.email = customer.email;
+          if (!existente.telefono && (m.telefono || customer.phone)) {
+            enlace.telefono = m.telefono || customer.phone;
+          }
+          const { error: errEnlace } = await db.from("socios").update(enlace).eq("id", existente.id);
+          if (errEnlace) throw new Error(errEnlace.message);
+          titularId = existente.id;
+        } else {
+          titularId = upsertTitular.data.id;
+        }
 
         // Abono familiar: segundo carnet enlazado al titular que paga. El
         // contacto (email/teléfono) va por el titular; la dirección es la
@@ -132,7 +172,7 @@ export async function POST(request: NextRequest) {
             tipo_abono_id: m.tipo_abono_id || null,
             estado: estadoInicial,
             metodo_pago: "stripe",
-            titular_id: titular.id,
+            titular_id: titularId,
             stripe_subscription_id: subscriptionId,
             fecha_alta: new Date().toISOString().slice(0, 10),
           };
@@ -141,7 +181,7 @@ export async function POST(request: NextRequest) {
           const { data: existente, error: errBusca } = await db
             .from("socios")
             .select("id")
-            .eq("titular_id", titular.id)
+            .eq("titular_id", titularId)
             .maybeSingle();
           if (errBusca) throw new Error(errBusca.message);
           comprobar(
@@ -310,8 +350,14 @@ export async function POST(request: NextRequest) {
         break;
       }
     }
-  } catch {
-    // Error procesando: devolvemos 500 para que Stripe reintente.
+  } catch (e) {
+    // Error procesando: devolvemos 500 para que Stripe reintente. Se registra
+    // el tipo de evento y el mensaje (sin datos personales) para poder verlo en
+    // los logs de Vercel; antes fallaba en silencio.
+    console.error(
+      `[stripe/webhook] Error procesando ${evento.type}:`,
+      e instanceof Error ? e.message : e,
+    );
     return NextResponse.json({ error: "Error procesando el evento" }, { status: 500 });
   }
 

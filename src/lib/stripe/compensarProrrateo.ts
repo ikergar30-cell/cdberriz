@@ -46,6 +46,7 @@ export async function compensarProrrateoRenovacion(
     amount: ajuste,
     currency: previsión.currency,
     description: "Ajuste a cuota completa (renovación el 1 de julio)",
+    metadata: { origen: "ajuste_cuota_completa" },
   });
 
   return { ajustado: true, ajusteCents: ajuste };

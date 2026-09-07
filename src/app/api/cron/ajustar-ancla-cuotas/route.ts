@@ -68,13 +68,23 @@ export async function GET(request: NextRequest) {
         continue;
       }
 
-      const lineas = await stripe.invoices.listLineItems(borrador.id!);
-      // El precio real de la cuota es la suma de las líneas positivas (el
-      // cargo del abono); cualquier línea negativa es el prorrateo de más
-      // que Stripe añade solo y que hay que compensar.
-      const esperado = lineas.data.filter((l) => l.amount > 0).reduce((sum, l) => sum + l.amount, 0);
-      const ajuste = esperado - borrador.total;
-      if (ajuste === 0) continue;
+      // El importe correcto de la renovación es la cuota COMPLETA de la
+      // suscripción (precio × cantidad), NO la suma de las líneas positivas del
+      // borrador. Antes se sumaban las positivas, pero si el prorrateo de
+      // "tiempo no utilizado" ya se compensó por adelantado (ver
+      // compensarProrrateo.ts), esa compensación es también una línea positiva:
+      // sumarla contaba el ajuste dos veces y cobraba de más (29,28 € en vez de
+      // 25,00 €). Tomando la cuota del precio real, el cálculo cuadra tanto si
+      // ya se compensó (ajuste 0 → no toca nada) como si no.
+      const sub = await stripe.subscriptions.retrieve(s.stripe_subscription_id!);
+      const item = sub.items.data[0];
+      const cuotaCents = (item?.price?.unit_amount ?? 0) * (item?.quantity ?? 1);
+      if (!cuotaCents) continue;
+
+      const ajuste = cuotaCents - borrador.total;
+      // <= 0: si ya cuadra, Stripe cobrará el borrador correcto por su cuenta;
+      // y si saliera un importe mayor del esperado, se deja para revisar a mano.
+      if (ajuste <= 0) continue;
 
       await stripe.invoiceItems.create({
         customer: borrador.customer as string,
@@ -82,6 +92,7 @@ export async function GET(request: NextRequest) {
         amount: ajuste,
         currency: borrador.currency,
         description: "Ajuste a cuota completa (sincronización de renovación al 1 de julio)",
+        metadata: { origen: "ajuste_cuota_completa" },
       });
       await stripe.invoices.finalizeInvoice(borrador.id!);
       // Fuerza el intento de cobro ya mismo en vez de esperar a que Stripe lo
@@ -101,7 +112,7 @@ export async function GET(request: NextRequest) {
         proration_behavior: "none",
       });
 
-      ajustados.push(`${s.nombre} ${s.apellidos}: ${(borrador.total / 100).toFixed(2)}€ → ${(esperado / 100).toFixed(2)}€`);
+      ajustados.push(`${s.nombre} ${s.apellidos}: ${(borrador.total / 100).toFixed(2)}€ → ${(cuotaCents / 100).toFixed(2)}€`);
     } catch (e) {
       errores.push(`${s.nombre} ${s.apellidos}: ${e instanceof Error ? e.message : "error"}`);
     }
