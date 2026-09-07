@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { PersonaPago, TipoPersonaPago } from "@/lib/supabase/types";
+import { compartirODescargar } from "@/lib/compartirArchivo";
+import { FirmarResguardo } from "./FirmarResguardo";
 
 type Fila = {
   nombre: string;
@@ -16,49 +18,6 @@ function hoy() {
   return new Date().toISOString().slice(0, 10);
 }
 
-// Entrega un archivo al usuario de forma fiable en móvil y escritorio.
-//
-// El método anterior (crear un <a download> con una URL de blob, pulsarlo y
-// revocar la URL enseguida) NO funciona en el móvil: en iOS Safari abre el PDF
-// encima de la página perdiendo el formulario, y con el ZIP no hace nada;
-// además revocar la URL de inmediato corta la descarga en algunos navegadores.
-//
-// En el móvil usamos la hoja de compartir del sistema (guardar en Archivos,
-// enviar por WhatsApp, por email…), que es lo que de verdad funciona; en
-// escritorio, descarga normal (revocando la URL con margen, no al instante).
-async function entregarArchivo(blob: Blob, nombre: string) {
-  const tipo = blob.type || (nombre.endsWith(".zip") ? "application/zip" : "application/pdf");
-  const file = new File([blob], nombre, { type: tipo });
-
-  if (typeof navigator !== "undefined" && typeof navigator.canShare === "function") {
-    let puedeCompartir = false;
-    try {
-      puedeCompartir = navigator.canShare({ files: [file] });
-    } catch {
-      puedeCompartir = false;
-    }
-    if (puedeCompartir) {
-      try {
-        await navigator.share({ files: [file], title: nombre });
-        return;
-      } catch (e) {
-        // Si el usuario cierra la hoja de compartir, no seguimos con la descarga.
-        if (e instanceof DOMException && e.name === "AbortError") return;
-        // Cualquier otro fallo: caemos a la descarga clásica de abajo.
-      }
-    }
-  }
-
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = nombre;
-  a.rel = "noopener";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 4000);
-}
 
 function mesActual() {
   return new Date().toISOString().slice(0, 7);
@@ -86,6 +45,19 @@ export function FormResguardos({
   const [filas, setFilas] = useState<Fila[]>([filaVacia()]);
   const [generando, setGenerando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Fila que se está firmando (abre la modal de firma). Solo para una fila.
+  const [firmando, setFirmando] = useState<Fila | null>(null);
+
+  // Abre la modal de firma con la fila actual, si tiene todos los datos.
+  function abrirFirma() {
+    const f = filas[0];
+    if (!f.nombre.trim() || !f.dni.trim() || !f.importe.trim() || !f.concepto.trim() || !f.fecha.trim()) {
+      setError("Rellena todos los datos del resguardo antes de firmar.");
+      return;
+    }
+    setError(null);
+    setFirmando(f);
+  }
 
   function cambiar(i: number, campo: keyof Fila, valor: string) {
     setFilas((fs) => {
@@ -137,7 +109,7 @@ export function FormResguardos({
       const blob = await res.blob();
       const disposition = res.headers.get("Content-Disposition") || "";
       const nombre = /filename="([^"]+)"/.exec(disposition)?.[1] || "resguardos";
-      await entregarArchivo(blob, nombre);
+      await compartirODescargar(blob, nombre);
       // Refrescar el historial y dejar el formulario listo para el siguiente.
       setFilas([filaVacia()]);
       router.refresh();
@@ -262,7 +234,20 @@ export function FormResguardos({
               ? "Generar PDF"
               : `Generar ${filas.length} PDFs (ZIP)`}
         </button>
+        {filas.length === 1 && (
+          <button
+            type="button"
+            onClick={abrirFirma}
+            className="rounded-full border border-azul bg-azul px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-azul-700"
+          >
+            Firmar y enviar
+          </button>
+        )}
       </div>
+
+      {firmando && (
+        <FirmarResguardo tipo={tipo} fila={firmando} onClose={() => setFirmando(null)} />
+      )}
     </div>
   );
 }

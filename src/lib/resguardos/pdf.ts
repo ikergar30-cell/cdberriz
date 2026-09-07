@@ -1,5 +1,8 @@
-import { PDFDocument, PDFFont, PDFPage, StandardFonts, rgb } from "pdf-lib";
+import { PDFDocument, PDFFont, PDFImage, PDFPage, StandardFonts, rgb } from "pdf-lib";
 import type { TipoPersonaPago } from "@/lib/supabase/types";
+
+// Firmas ya incrustadas en el PDF, listas para dibujar (club y persona).
+export type FirmasResguardo = { club?: PDFImage; persona?: PDFImage };
 
 // Genera los resguardos de pago (árbitros y entrenadores) replicando las
 // plantillas oficiales del club: página A4 con DOS copias idénticas (una para
@@ -80,6 +83,7 @@ function dibujarCopia(
   datos: DatosResguardo,
   fuentes: Fuentes,
   yTop: number,
+  firmas?: FirmasResguardo,
 ): number {
   const anchoCol = (A4.ancho - MARGEN * 2 - HUECO_COLUMNAS) / 2;
   const xEu = MARGEN;
@@ -126,6 +130,25 @@ function dibujarCopia(
   const yFirmaLinea = Math.min(yEu, yEs) - 58;
   const anchoLinea = anchoCol * 0.8;
 
+  // Dibuja una firma manuscrita (imagen) sobre su línea, escalada para caber
+  // en el hueco sin deformarse.
+  const dibujarFirma = (x: number, firma?: PDFImage) => {
+    if (!firma) return;
+    const altoMax = 44; // hueco vertical disponible sobre la línea
+    const escala = Math.min(anchoLinea / firma.width, altoMax / firma.height);
+    const ancho = firma.width * escala;
+    const alto = firma.height * escala;
+    page.drawImage(firma, {
+      x: x + (anchoLinea - ancho) / 2, // centrada sobre la línea
+      y: yFirmaLinea + 3, // justo encima de la línea
+      width: ancho,
+      height: alto,
+    });
+  };
+
+  dibujarFirma(xEu, firmas?.club);
+  dibujarFirma(xEs, firmas?.persona);
+
   for (const [x, etiquetas] of [
     [xEu, ["C.D. Berriz ordezkatzen", "En representación de C.D. Berriz"]],
     [xEs, [datos.nombre]],
@@ -146,15 +169,25 @@ function dibujarCopia(
   return yFirmaLinea - 12 - 11 * 2;
 }
 
-/** Genera el PDF (una página, dos copias) de un resguardo. */
+/**
+ * Genera el PDF (una página, dos copias) de un resguardo. Si se pasan las
+ * firmas (PNG), se estampan sobre sus líneas en las DOS copias, de modo que
+ * tanto el club como la persona conservan una copia firmada por ambos.
+ */
 export async function generarResguardoPDF(
   datos: DatosResguardo,
   escudoPng: Uint8Array,
+  firmasPng?: { club?: Uint8Array; persona?: Uint8Array },
 ): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   const normal = await doc.embedFont(StandardFonts.Helvetica);
   const negrita = await doc.embedFont(StandardFonts.HelveticaBold);
   const escudo = await doc.embedPng(escudoPng);
+
+  const firmas: FirmasResguardo = {
+    club: firmasPng?.club ? await doc.embedPng(firmasPng.club) : undefined,
+    persona: firmasPng?.persona ? await doc.embedPng(firmasPng.persona) : undefined,
+  };
 
   const page = doc.addPage([A4.ancho, A4.alto]);
 
@@ -171,7 +204,7 @@ export async function generarResguardoPDF(
   const fuentes = { normal, negrita };
 
   // Copia 1 (club).
-  const finCopia1 = dibujarCopia(page, datos, fuentes, A4.alto - MARGEN - escudoAlto - 34);
+  const finCopia1 = dibujarCopia(page, datos, fuentes, A4.alto - MARGEN - escudoAlto - 34, firmas);
 
   // Separador discontinuo, como en la plantilla.
   const ySep = finCopia1 - 30;
@@ -184,7 +217,7 @@ export async function generarResguardoPDF(
   });
 
   // Copia 2 (persona).
-  dibujarCopia(page, datos, fuentes, ySep - 44);
+  dibujarCopia(page, datos, fuentes, ySep - 44, firmas);
 
   return doc.save();
 }
