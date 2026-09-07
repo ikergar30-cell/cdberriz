@@ -120,6 +120,30 @@ export function FormResguardos({
     }
   }
 
+  // Carga en la fila los datos de una persona ya registrada (elegida en el
+  // desplegable): nombre, DNI y, para entrenadores, su importe fijo. Un
+  // desplegable nativo funciona bien en el móvil, a diferencia del
+  // autocompletado por nombre (que en iOS Safari no llega a mostrarse).
+  function cargarPersona(i: number, personaId: string) {
+    const p = personas.find((x) => x.id === personaId);
+    if (!p) return;
+    setFilas((fs) =>
+      fs.map((f, j) =>
+        j === i
+          ? {
+              ...f,
+              nombre: p.nombre,
+              dni: p.dni,
+              importe:
+                !esArbitro && p.importe_cents != null
+                  ? String(p.importe_cents / 100).replace(".", ",")
+                  : f.importe,
+            }
+          : f,
+      ),
+    );
+  }
+
   const input =
     "w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-azul focus:ring-2 focus:ring-azul/20";
   const label = "mb-1 block text-xs font-semibold uppercase tracking-wide text-neutral-500";
@@ -137,8 +161,36 @@ export function FormResguardos({
         {filas.map((f, i) => (
           <div
             key={i}
-            className="grid gap-3 rounded-lg border border-neutral-100 bg-neutral-50 p-4 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_2fr_1fr_auto]"
+            className="space-y-3 rounded-lg border border-neutral-100 bg-neutral-50 p-4"
           >
+            {/* Cargar de la lista de registrados (funciona en el móvil). */}
+            {personas.length > 0 && (
+              <div>
+                <label className={label}>
+                  {esArbitro ? "Cargar árbitro registrado" : "Cargar entrenador registrado"}
+                </label>
+                <select
+                  className={input}
+                  defaultValue=""
+                  onChange={(e) => {
+                    cargarPersona(i, e.target.value);
+                    e.currentTarget.value = ""; // vuelve a "— Elegir —" para reutilizarlo
+                  }}
+                >
+                  <option value="">— Elegir de la lista —</option>
+                  {personas.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.nombre}
+                      {!esArbitro && p.importe_cents != null
+                        ? ` · ${(p.importe_cents / 100).toLocaleString("es-ES")} €`
+                        : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_2fr_1fr_auto]">
             <div>
               <label className={label}>Nombre y apellidos</label>
               <input
@@ -198,6 +250,7 @@ export function FormResguardos({
                   ✕
                 </button>
               )}
+            </div>
             </div>
           </div>
         ))}
