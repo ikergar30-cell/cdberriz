@@ -232,7 +232,15 @@ export async function iniciarSesionPortal(
     const hashedToken = link?.properties?.hashed_token;
 
     if (!linkError && hashedToken) {
-      const url = `${siteUrl}/auth/callback?token_hash=${hashedToken}&type=magiclink&next=/${locale}/cuenta`;
+      // El enlace NO apunta directo a /auth/callback (que consume el token de
+      // un solo uso nada más abrirlo con un GET). Los clientes de correo de
+      // Android (Gmail) escanean/pre-cargan los enlaces antes de que la persona
+      // los pulse, y ese escaneo gastaba el token: al pulsar de verdad, ya no
+      // valía y caía a la home. En su lugar apunta a una página intermedia que
+      // solo se abre (no inicia sesión) y muestra un botón "Entrar": el token
+      // solo se canjea cuando la persona pulsa, no cuando lo escanea un robot.
+      const destino = encodeURIComponent(`/${locale}/cuenta`);
+      const url = `${siteUrl}/${locale}/cuenta/acceder?token_hash=${hashedToken}&next=${destino}`;
       const apiKey = process.env.RESEND_API_KEY;
       if (apiKey) {
         try {
