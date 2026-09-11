@@ -61,6 +61,11 @@ export async function responderTicket(id: string, cuerpo: string): Promise<Actio
   const copiaInterna = internos.filter(
     (d, i) => internos.findIndex((o) => o.toLowerCase() === d.toLowerCase()) === i,
   );
+  // Si hay recepción de correo configurada (INBOUND_DOMAIN), el reply-to es una
+  // dirección propia del ticket: así la respuesta del contacto vuelve al hilo de
+  // la intranet (vía /api/inbound-email). Si no, vuelve a coordinación y la web.
+  const dominioEntrada = process.env.INBOUND_DOMAIN?.trim();
+  const replyTo = dominioEntrada ? `hilo-${id}@${dominioEntrada}` : copiaInterna;
   try {
     const resend = new Resend(apiKey);
     const from = process.env.CONTACT_FROM || club.remitente;
@@ -70,7 +75,7 @@ export async function responderTicket(id: string, cuerpo: string): Promise<Actio
       from,
       to: ticket.email,
       bcc: copiaInterna,
-      replyTo: copiaInterna,
+      replyTo,
       subject: `Re: ${ticket.asunto || "Tu mensaje"} — C.D. Berriz`,
       text: texto,
     });
