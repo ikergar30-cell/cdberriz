@@ -54,14 +54,15 @@ function parseRemitente(from: string): { nombre: string; email: string } {
 // solo con lo que la persona ha escrito de nuevo.
 function limpiarRespuesta(texto: string): string {
   const lineas = texto.replace(/\r\n/g, "\n").split("\n");
-  const corte = lineas.findIndex((l) =>
-    /^>/.test(l) ||
+  const esInicioCita = (l: string) =>
+    /^>/.test(l) || // línea citada
+    /^\s*El\s.+20\d\d/i.test(l) || // "El vie, 11 sept 2026 a las 8:30, … escribió:" (Gmail es)
+    /^\s*On\s.+20\d\d/i.test(l) || // "On Fri, Sep 11, 2026 … wrote:" (Gmail en)
+    /\bescrib(ió|io):\s*$/i.test(l) ||
+    /\bwrote:\s*$/i.test(l) ||
     /^\s*-{2,}\s*Original Message\s*-{2,}/i.test(l) ||
-    /^\s*_{5,}\s*$/.test(l) ||
-    /^\s*El .+ escribi(ó|o):\s*$/i.test(l) ||
-    /^\s*On .+ wrote:\s*$/i.test(l) ||
-    /escribió:\s*$/.test(l),
-  );
+    /^\s*_{5,}\s*$/.test(l); // separador de Outlook
+  const corte = lineas.findIndex(esInicioCita);
   const util = (corte >= 0 ? lineas.slice(0, corte) : lineas).join("\n").trim();
   return util || texto.trim();
 }
@@ -158,17 +159,9 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Avisar a coordinación y a la web de que hay una respuesta nueva.
+  // Avisar (solo a la cuenta de la web) de que hay una respuesta nueva.
   try {
-    const internos = [
-      ...(process.env.CONTACT_EMAIL || "coordinacioncdberriz@gmail.com").split(","),
-      "webcdberriz@gmail.com",
-    ]
-      .map((d) => d.trim())
-      .filter(Boolean);
-    const to = internos.filter(
-      (d, i) => internos.findIndex((o) => o.toLowerCase() === d.toLowerCase()) === i,
-    );
+    const to = club.emailBuzon;
     const from = process.env.CONTACT_FROM || club.remitente;
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://cdberriz.com";
     await new Resend(apiKey).emails.send({

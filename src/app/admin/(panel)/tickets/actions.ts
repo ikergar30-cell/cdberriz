@@ -50,22 +50,13 @@ export async function responderTicket(id: string, cuerpo: string): Promise<Actio
 
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return { error: "El envío de email no está configurado." };
-  // Copia interna (coordinación + web) para tener el hilo también por email, y
-  // para que las respuestas del contacto vuelvan a esas mismas direcciones.
-  const internos = [
-    ...(process.env.CONTACT_EMAIL || "coordinacioncdberriz@gmail.com").split(","),
-    "webcdberriz@gmail.com",
-  ]
-    .map((d) => d.trim())
-    .filter(Boolean);
-  const copiaInterna = internos.filter(
-    (d, i) => internos.findIndex((o) => o.toLowerCase() === d.toLowerCase()) === i,
-  );
+  // Copia del buzón: solo a la cuenta de la web (no a coordinación).
+  const copiaBuzon = club.emailBuzon;
   // Si hay recepción de correo configurada (INBOUND_DOMAIN), el reply-to es una
   // dirección propia del ticket: así la respuesta del contacto vuelve al hilo de
-  // la intranet (vía /api/inbound-email). Si no, vuelve a coordinación y la web.
+  // la intranet (vía /api/inbound-email). Si no, vuelve a la cuenta del buzón.
   const dominioEntrada = process.env.INBOUND_DOMAIN?.trim();
-  const replyTo = dominioEntrada ? `hilo-${id}@${dominioEntrada}` : copiaInterna;
+  const replyTo = dominioEntrada ? `hilo-${id}@${dominioEntrada}` : copiaBuzon;
   try {
     const resend = new Resend(apiKey);
     const from = process.env.CONTACT_FROM || club.remitente;
@@ -74,7 +65,7 @@ export async function responderTicket(id: string, cuerpo: string): Promise<Actio
     await resend.emails.send({
       from,
       to: ticket.email,
-      bcc: copiaInterna,
+      bcc: copiaBuzon,
       replyTo,
       subject: `Re: ${ticket.asunto || "Tu mensaje"} — C.D. Berriz`,
       text: texto,

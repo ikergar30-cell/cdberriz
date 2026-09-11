@@ -16,6 +16,9 @@ export const club = {
   // carné, etc.). Requiere que el dominio cdberriz.com esté verificado en
   // Resend. Se puede sobreescribir con la variable de entorno CONTACT_FROM.
   remitente: "C.D. Berriz <no-responder@cdberriz.com>",
+  // Destinatario de los avisos del BUZÓN de contacto (formulario web, respuestas
+  // e emails entrantes). Solo esta cuenta, para no saturar coordinación.
+  emailBuzon: "webcdberriz@gmail.com",
   // Tienda oficial (Fútbol Emotion) — se abre en pestaña nueva
   tiendaUrl:
     "https://www.futbolemotion.com/es/categoria/colectivos/equipaciones-cd-berriz",
