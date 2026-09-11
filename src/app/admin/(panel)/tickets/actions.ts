@@ -50,16 +50,29 @@ export async function responderTicket(id: string, cuerpo: string): Promise<Actio
 
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return { error: "El envío de email no está configurado." };
+  // Copia interna (coordinación + web) para tener el hilo también por email, y
+  // para que las respuestas del contacto vuelvan a esas mismas direcciones.
+  const internos = [
+    ...(process.env.CONTACT_EMAIL || "coordinacioncdberriz@gmail.com").split(","),
+    "webcdberriz@gmail.com",
+  ]
+    .map((d) => d.trim())
+    .filter(Boolean);
+  const copiaInterna = internos.filter(
+    (d, i) => internos.findIndex((o) => o.toLowerCase() === d.toLowerCase()) === i,
+  );
   try {
     const resend = new Resend(apiKey);
     const from = process.env.CONTACT_FROM || club.remitente;
-    const replyTo = process.env.CONTACT_EMAIL || "coordinacioncdberriz@gmail.com";
+    // El cuerpo se envía tal cual lo escribe el empleado (ya incluye saludo y
+    // firma, visibles y editables en la intranet).
     await resend.emails.send({
       from,
       to: ticket.email,
-      replyTo,
+      bcc: copiaInterna,
+      replyTo: copiaInterna,
       subject: `Re: ${ticket.asunto || "Tu mensaje"} — C.D. Berriz`,
-      text: `Hola ${ticket.nombre}:\n\n${texto}\n\nUn saludo,\nC.D. Berriz ❤️💙`,
+      text: texto,
     });
   } catch {
     return { error: "No se pudo enviar el email de respuesta." };

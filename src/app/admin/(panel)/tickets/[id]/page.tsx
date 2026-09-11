@@ -92,7 +92,7 @@ export default async function TicketPage({ params: { id } }: { params: { id: str
             ))}
           </div>
 
-          <Responder ticketId={t.id} email={t.email} />
+          <Responder ticketId={t.id} email={t.email} nombre={t.nombre} />
         </div>
 
         {/* Panel lateral de gestión */}
