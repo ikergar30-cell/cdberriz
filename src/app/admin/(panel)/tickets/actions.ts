@@ -61,11 +61,11 @@ export async function responderTicket(id: string, cuerpo: string): Promise<Actio
     const resend = new Resend(apiKey);
     const from = process.env.CONTACT_FROM || club.remitente;
     // El cuerpo se envía tal cual lo escribe el empleado (ya incluye saludo y
-    // firma, visibles y editables en la intranet).
+    // firma, visibles y editables en la intranet). Sin copia (BCC): la respuesta
+    // ya queda guardada en el hilo, no hace falta reenviarla a la web.
     await resend.emails.send({
       from,
       to: ticket.email,
-      bcc: copiaBuzon,
       replyTo,
       subject: `Re: ${ticket.asunto || "Tu mensaje"} — C.D. Berriz`,
       text: texto,
