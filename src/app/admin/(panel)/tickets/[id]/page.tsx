@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Ticket, TicketMensaje } from "@/lib/supabase/types";
-import { etiquetaCategoria, etiquetaEstado } from "@/config/tickets";
+import { etiquetaEstado } from "@/config/tickets";
 import { Responder } from "./Responder";
 import { ControlesTicket } from "./ControlesTicket";
 import { CabeceraPagina, CuerpoPagina } from "../../ui";
@@ -41,9 +41,6 @@ export default async function TicketPage({ params: { id } }: { params: { id: str
         etiquetas={
           <>
         <span className={`rounded-full px-3 py-1 text-xs font-semibold ${est.badge}`}>{est.label}</span>
-        <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-semibold text-neutral-600">
-          {etiquetaCategoria(t.categoria)}
-        </span>
         {t.archivado && (
           <span className="rounded-full bg-neutral-200 px-3 py-1 text-xs font-semibold text-neutral-700">
             Archivado
@@ -102,7 +99,6 @@ export default async function TicketPage({ params: { id } }: { params: { id: str
         <ControlesTicket
           ticketId={t.id}
           estado={t.estado}
-          categoria={t.categoria}
           archivado={t.archivado}
           eliminadoEn={t.eliminado_en}
         />

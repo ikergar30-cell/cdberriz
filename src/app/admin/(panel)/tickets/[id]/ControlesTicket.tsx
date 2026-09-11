@@ -4,13 +4,12 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   cambiarEstadoTicket,
-  cambiarCategoriaTicket,
   archivarTicket,
   eliminarTicket,
   restaurarTicket,
   eliminarTicketDefinitivo,
 } from "../actions";
-import { CATEGORIAS_TICKET, ESTADOS_TICKET } from "@/config/tickets";
+import { ESTADOS_TICKET } from "@/config/tickets";
 import { ERROR_GENERICO } from "@/lib/actionResult";
 import type { EstadoTicket } from "@/lib/supabase/types";
 
@@ -19,13 +18,11 @@ const TEXTO_CONFIRMACION = "webcdberriz@gmail.com";
 export function ControlesTicket({
   ticketId,
   estado,
-  categoria,
   archivado,
   eliminadoEn,
 }: {
   ticketId: string;
   estado: EstadoTicket;
-  categoria: string;
   archivado: boolean;
   eliminadoEn: string | null;
 }) {
@@ -80,20 +77,6 @@ export function ControlesTicket({
           >
             {ESTADOS_TICKET.map((e) => (
               <option key={e.valor} value={e.valor}>{e.label}</option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="mb-1 block text-xs font-semibold uppercase text-neutral-400">Categoría</label>
-          <select
-            value={categoria}
-            disabled={pendiente}
-            onChange={(e) => ejecutar(() => cambiarCategoriaTicket(ticketId, e.target.value))}
-            className={select}
-          >
-            {CATEGORIAS_TICKET.map((c) => (
-              <option key={c.valor} value={c.valor}>{c.label}</option>
             ))}
           </select>
         </div>

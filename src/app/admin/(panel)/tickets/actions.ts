@@ -59,7 +59,7 @@ export async function responderTicket(id: string, cuerpo: string): Promise<Actio
       to: ticket.email,
       replyTo,
       subject: `Re: ${ticket.asunto || "Tu mensaje"} — C.D. Berriz`,
-      text: `Hola ${ticket.nombre}:\n\n${texto}\n\n— C.D. Berriz`,
+      text: `Hola ${ticket.nombre}:\n\n${texto}\n\nUn saludo,\nC.D. Berriz ❤️💙`,
     });
   } catch {
     return { error: "No se pudo enviar el email de respuesta." };
@@ -91,17 +91,6 @@ export async function cambiarEstadoTicket(id: string, estado: EstadoTicket): Pro
   revalidatePath(`/admin/tickets/${id}`);
   revalidatePath("/admin/tickets");
   revalidatePath("/admin");
-}
-
-export async function cambiarCategoriaTicket(id: string, categoria: string): Promise<ActionResult> {
-  const sesion = await exigirEmpleado();
-  if (!sesion.ok) return { error: sesion.error };
-
-  const { error } = await sesion.admin.from("tickets").update({ categoria }).eq("id", id);
-  if (error) return { error: error.message };
-
-  revalidatePath(`/admin/tickets/${id}`);
-  revalidatePath("/admin/tickets");
 }
 
 export async function archivarTicket(id: string, archivar: boolean): Promise<ActionResult> {

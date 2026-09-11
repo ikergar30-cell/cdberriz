@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { Ticket } from "@/lib/supabase/types";
-import { CATEGORIAS_TICKET, ESTADOS_TICKET, etiquetaCategoria, etiquetaEstado } from "@/config/tickets";
+import { ESTADOS_TICKET, etiquetaEstado } from "@/config/tickets";
 import { CabeceraPagina, CuerpoPagina } from "../ui";
 
 function formatearFecha(fecha: string) {
@@ -11,23 +11,21 @@ function formatearFecha(fecha: string) {
 export default async function TicketsPage({
   searchParams,
 }: {
-  searchParams: { estado?: string; categoria?: string; archivados?: string; papelera?: string };
+  searchParams: { estado?: string; archivados?: string; papelera?: string };
 }) {
   const estado = searchParams.estado ?? "";
-  const categoria = searchParams.categoria ?? "";
   const archivados = searchParams.archivados === "1";
   const papelera = searchParams.papelera === "1";
 
   const supabase = createClient();
   let query = supabase
     .from("tickets")
-    .select("id, nombre, email, asunto, categoria, estado, archivado, eliminado_en, created_at, updated_at")
+    .select("id, nombre, email, asunto, estado, archivado, eliminado_en, created_at, updated_at")
     .order("created_at", { ascending: false });
   // La papelera es un cajón aparte: no se cruza con archivado/estado, y el
   // resto de vistas nunca muestran lo eliminado.
   query = papelera ? query.not("eliminado_en", "is", null) : query.is("eliminado_en", null).eq("archivado", archivados);
   if (!papelera && estado) query = query.eq("estado", estado);
-  if (!papelera && categoria) query = query.eq("categoria", categoria);
 
   const { data } = await query;
   const tickets = (data as Ticket[]) ?? [];
@@ -37,7 +35,6 @@ export default async function TicketsPage({
     const p = new URLSearchParams();
     const base = {
       estado,
-      categoria,
       archivados: archivados ? "1" : "",
       papelera: papelera ? "1" : "",
       ...cambios,
@@ -79,7 +76,7 @@ export default async function TicketsPage({
           🗄 Archivados
         </Link>
         <Link
-          href={con({ papelera: papelera ? "" : "1", estado: "", categoria: "", archivados: "" })}
+          href={con({ papelera: papelera ? "" : "1", estado: "", archivados: "" })}
           className={`rounded-full px-3 py-1.5 text-sm font-semibold transition ${
             papelera ? "bg-rojo text-white" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
           }`}
@@ -88,20 +85,6 @@ export default async function TicketsPage({
         </Link>
       </div>
 
-      {/* Filtro por categoría */}
-      {!papelera && (
-        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-          <span className="text-neutral-400">Categoría:</span>
-          <Link href={con({ categoria: "" })} className={chip(!categoria) + " !text-xs !py-1"}>
-            Todas
-          </Link>
-          {CATEGORIAS_TICKET.map((c) => (
-            <Link key={c.valor} href={con({ categoria: c.valor })} className={chip(categoria === c.valor) + " !text-xs !py-1"}>
-              {c.label}
-            </Link>
-          ))}
-        </div>
-      )}
       {papelera && (
         <p className="mt-3 text-xs text-neutral-500">
           Tickets eliminados. Entra en uno para restaurarlo o borrarlo definitivamente.
@@ -119,7 +102,6 @@ export default async function TicketsPage({
               <tr>
                 <th className="px-4 py-3">Remitente</th>
                 <th className="px-4 py-3">Asunto</th>
-                <th className="px-4 py-3">Categoría</th>
                 <th className="px-4 py-3">Estado</th>
                 <th className="px-4 py-3">Fecha</th>
               </tr>
@@ -136,7 +118,6 @@ export default async function TicketsPage({
                       <p className="text-xs text-neutral-400">{t.email}</p>
                     </td>
                     <td className="px-4 py-3 text-neutral-700">{t.asunto ?? "—"}</td>
-                    <td className="px-4 py-3 text-neutral-600">{etiquetaCategoria(t.categoria)}</td>
                     <td className="px-4 py-3">
                       <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${est.badge}`}>
                         {est.label}

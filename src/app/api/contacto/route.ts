@@ -72,7 +72,19 @@ export async function POST(request: Request) {
   // 2. Avisar a coordinación por email. Es informativo: si Resend falla, el
   //    ticket ya está guardado, así que respondemos OK igualmente.
   const apiKey = process.env.RESEND_API_KEY;
-  const to = process.env.CONTACT_EMAIL || "coordinacioncdberriz@gmail.com";
+  // Avisar SIEMPRE a coordinación y a la cuenta de la web. CONTACT_EMAIL puede
+  // traer varias direcciones separadas por comas; se añade webcdberriz@gmail.com
+  // y se eliminan duplicados (sin distinguir mayúsculas).
+  const destinatarios = [
+    ...(process.env.CONTACT_EMAIL || "coordinacioncdberriz@gmail.com").split(","),
+    "webcdberriz@gmail.com",
+  ]
+    .map((d) => d.trim())
+    .filter(Boolean);
+  // Quitar duplicados sin distinguir mayúsculas.
+  const to = destinatarios.filter(
+    (d, i) => destinatarios.findIndex((o) => o.toLowerCase() === d.toLowerCase()) === i,
+  );
   if (apiKey) {
     try {
       const resend = new Resend(apiKey);
