@@ -206,10 +206,12 @@ export async function iniciarSesionPortal(
     email = valor;
   } else {
     const esNumero = /^\d+$/.test(valor);
+    // El DNI se normaliza (sin puntos/guiones/espacios y en mayúsculas) para que
+    // coincida aunque el socio lo teclee con o sin puntos.
     const { data } = await admin
       .from("socios")
       .select("email")
-      .or(esNumero ? `numero_socio.eq.${valor}` : `dni.eq.${valor.toUpperCase()}`)
+      .or(esNumero ? `numero_socio.eq.${valor}` : `dni.eq.${normalizarDni(valor)}`)
       .limit(1);
     if (data && data.length > 0) {
       email = data[0].email;
