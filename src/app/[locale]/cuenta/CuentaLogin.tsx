@@ -10,8 +10,7 @@ import {
   verificarCodigoRegistro,
   reenviarCodigoRegistro,
   solicitarCodigoRecuperacion,
-  verificarCodigoRecuperacion,
-  establecerContrasena,
+  restablecerContrasena,
   iniciarSesionPortal,
 } from "./actions";
 
@@ -20,8 +19,7 @@ type Paso =
   | "login"
   | "registro"
   | "codigo"
-  | "recuperarCodigo"
-  | "recuperarClave"
+  | "recuperar"
   | "enlace"
   | "enlaceEnviado"
   | "sinEmail";
@@ -194,8 +192,8 @@ export function CuentaLogin() {
               correr(
                 () => solicitarCodigoRecuperacion(email, locale),
                 () => {
-                  setAviso(t("Te hemos enviado un código para recuperar tu contraseña.", "Kode bat bidali dizugu pasahitza berreskuratzeko."));
-                  setPaso("recuperarCodigo");
+                  setAviso(t("Te hemos enviado un código. Introdúcelo y elige tu nueva contraseña.", "Kode bat bidali dizugu. Idatzi eta aukeratu pasahitz berria."));
+                  setPaso("recuperar");
                 },
               )
             }
@@ -300,12 +298,21 @@ export function CuentaLogin() {
         </form>
       )}
 
-      {/* Paso RECUPERAR: código */}
-      {paso === "recuperarCodigo" && (
+      {/* Paso RECUPERAR: código + nueva contraseña (en un solo paso, para que no
+          se pueda entrar solo con el código sin fijar la contraseña) */}
+      {paso === "recuperar" && (
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            correr(() => verificarCodigoRecuperacion(email, codigo), () => { setCodigo(""); setPaso("recuperarClave"); });
+            if (password.length < 8) {
+              setError(t("La contraseña debe tener al menos 8 caracteres.", "Pasahitzak gutxienez 8 karaktere izan behar ditu."));
+              return;
+            }
+            if (password !== password2) {
+              setError(t("Las contraseñas no coinciden.", "Pasahitzak ez datoz bat."));
+              return;
+            }
+            correr(() => restablecerContrasena(email, codigo, password), () => router.refresh());
           }}
           className="space-y-4"
         >
@@ -321,31 +328,6 @@ export function CuentaLogin() {
             required
             autoFocus
           />
-          {error && <p className="text-sm font-semibold text-rojo">{error}</p>}
-          <button type="submit" disabled={cargando} className={boton}>
-            {cargando ? "…" : t("Continuar", "Jarraitu")}
-          </button>
-        </form>
-      )}
-
-      {/* Paso RECUPERAR: nueva contraseña */}
-      {paso === "recuperarClave" && (
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (password.length < 8) {
-              setError(t("La contraseña debe tener al menos 8 caracteres.", "Pasahitzak gutxienez 8 karaktere izan behar ditu."));
-              return;
-            }
-            if (password !== password2) {
-              setError(t("Las contraseñas no coinciden.", "Pasahitzak ez datoz bat."));
-              return;
-            }
-            correr(() => establecerContrasena(password), () => router.refresh());
-          }}
-          className="space-y-4"
-        >
-          <p className="text-sm text-neutral-600">{t("Elige tu nueva contraseña.", "Aukeratu zure pasahitz berria.")}</p>
           <input
             type="password"
             value={password}
@@ -354,7 +336,6 @@ export function CuentaLogin() {
             className={input}
             autoComplete="new-password"
             required
-            autoFocus
           />
           <input
             type="password"
@@ -367,7 +348,14 @@ export function CuentaLogin() {
           />
           {error && <p className="text-sm font-semibold text-rojo">{error}</p>}
           <button type="submit" disabled={cargando} className={boton}>
-            {cargando ? "…" : t("Guardar y entrar", "Gorde eta sartu")}
+            {cargando ? "…" : t("Cambiar contraseña y entrar", "Aldatu pasahitza eta sartu")}
+          </button>
+          <button
+            type="button"
+            onClick={() => correr(() => solicitarCodigoRecuperacion(email, locale), () => setAviso(t("Código reenviado.", "Kodea berriro bidali da.")))}
+            className={enlaceBtn}
+          >
+            {t("Reenviar código", "Bidali kodea berriro")}
           </button>
         </form>
       )}

@@ -577,25 +577,28 @@ export async function solicitarCodigoRecuperacion(email: string, locale: string)
   // Siempre "ok": no revelamos si la cuenta existe.
 }
 
-// Verificar el código de recuperación → sesión válida para cambiar contraseña.
-export async function verificarCodigoRecuperacion(email: string, codigo: string): Promise<ActionResult> {
-  const supabase = createServerSupabase();
-  const { error } = await supabase.auth.verifyOtp({
-    email: email.trim().toLowerCase(),
-    token: codigo.replace(/\s+/g, ""),
-    type: "recovery",
-  });
-  if (error) return { error: "El código no es válido o ha caducado." };
-}
-
-// Establecer una nueva contraseña (requiere sesión, p. ej. tras la recuperación).
-export async function establecerContrasena(password: string): Promise<ActionResult> {
+// Recuperación en UN solo paso: verifica el código Y fija la nueva contraseña.
+// Se hace junto a propósito: si solo se verificara el código, verifyOtp ya deja
+// la sesión iniciada y la revalidación de la server action llevaría al carné sin
+// haber cambiado la contraseña. Aquí la sesión y la contraseña nueva se
+// establecen a la vez, así que al entrar la contraseña ya está cambiada.
+export async function restablecerContrasena(
+  email: string,
+  codigo: string,
+  password: string,
+): Promise<ActionResult> {
   if (password.length < MIN_PASS) {
     return { error: `La contraseña debe tener al menos ${MIN_PASS} caracteres.` };
   }
   const supabase = createServerSupabase();
-  const { error } = await supabase.auth.updateUser({ password });
-  if (error) return { error: "No se pudo cambiar la contraseña." };
+  const { error: errOtp } = await supabase.auth.verifyOtp({
+    email: email.trim().toLowerCase(),
+    token: codigo.replace(/\s+/g, ""),
+    type: "recovery",
+  });
+  if (errOtp) return { error: "El código no es válido o ha caducado." };
+  const { error: errPass } = await supabase.auth.updateUser({ password });
+  if (errPass) return { error: "No se pudo cambiar la contraseña. Inténtalo de nuevo." };
 }
 
 // Vincula el email de la sesión con una ficha de socio por DNI o nº de socio.
