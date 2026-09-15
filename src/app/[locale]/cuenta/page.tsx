@@ -26,6 +26,7 @@ import { CuentaBanco } from "./CuentaBanco";
 import { CompletarDatos } from "./CompletarDatos";
 import { ElegirFicha, CambiarFicha } from "./ElegirFicha";
 import { VincularFicha } from "./VincularFicha";
+import { DescargarCarnet } from "./DescargarCarnet";
 
 const ESTADO_LABEL: Record<string, { es: string; eu: string; cls: string }> = {
   activo:    { es: "Activo",          eu: "Aktiboa",         cls: "bg-green-100 text-green-800" },
@@ -337,18 +338,20 @@ export default async function CuentaPage({
                   <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-400">
                     {eu ? "Karnet digitala" : "Carné digital"}
                   </p>
-                  <CarnetSocio
-                    socio={{
-                      nombre: socio.nombre,
-                      apellidos: socio.apellidos,
-                      numero_socio: socio.numero_socio,
-                      estado: socio.estado,
-                      carnet_token: socio.carnet_token,
-                      foto_url: socio.foto_url,
-                      cuota: tipo?.nombre ?? null,
-                    }}
-                    locale={locale}
-                  />
+                  <DescargarCarnet nombreArchivo={`carne-cdberriz-${socio.numero_socio}.png`}>
+                    <CarnetSocio
+                      socio={{
+                        nombre: socio.nombre,
+                        apellidos: socio.apellidos,
+                        numero_socio: socio.numero_socio,
+                        estado: socio.estado,
+                        carnet_token: socio.carnet_token,
+                        foto_url: socio.foto_url,
+                        cuota: tipo?.nombre ?? null,
+                      }}
+                      locale={locale}
+                    />
+                  </DescargarCarnet>
                   <SubirFoto />
                 </section>
 
@@ -360,18 +363,20 @@ export default async function CuentaPage({
                         ? `${c.nombre}ren karnet digitala (${c.jugador}ren guraso zarete biak)`
                         : `Carné digital de ${c.nombre} (también socio/a por ${c.jugador})`}
                     </p>
-                    <CarnetSocio
-                      socio={{
-                        nombre: c.nombre,
-                        apellidos: c.apellidos,
-                        numero_socio: c.numero_socio,
-                        estado: c.estado,
-                        carnet_token: c.carnet_token,
-                        foto_url: c.foto_url,
-                        cuota: c.cuota,
-                      }}
-                      locale={locale}
-                    />
+                    <DescargarCarnet nombreArchivo={`carne-cdberriz-${c.numero_socio}.png`}>
+                      <CarnetSocio
+                        socio={{
+                          nombre: c.nombre,
+                          apellidos: c.apellidos,
+                          numero_socio: c.numero_socio,
+                          estado: c.estado,
+                          carnet_token: c.carnet_token,
+                          foto_url: c.foto_url,
+                          cuota: c.cuota,
+                        }}
+                        locale={locale}
+                      />
+                    </DescargarCarnet>
                   </section>
                 ))}
 

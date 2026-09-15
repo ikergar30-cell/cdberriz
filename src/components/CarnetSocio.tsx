@@ -55,7 +55,7 @@ export async function CarnetSocio({
         <div className="h-24 w-20 shrink-0 overflow-hidden rounded-lg bg-neutral-100">
           {socio.foto_url ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={socio.foto_url} alt="" className="h-full w-full object-cover" />
+            <img src={socio.foto_url} alt="" crossOrigin="anonymous" className="h-full w-full object-cover" />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-3xl text-neutral-300">
               👤
