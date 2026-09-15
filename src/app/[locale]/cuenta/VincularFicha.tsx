@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useLocale } from "next-intl";
 import { useRouter } from "next/navigation";
+import { Link } from "@/i18n/routing";
 import { createClient } from "@/lib/supabase/client";
 import { vincularMiEmail } from "./actions";
 
@@ -75,11 +76,17 @@ export function VincularFicha({ email }: { email: string }) {
       </form>
       <p className="mt-4 text-xs text-neutral-500">
         {t(
-          "Si tu ficha ya tiene otro email o no eres socio/a, ponte en contacto con el club.",
-          "Zure fitxak beste email bat badu edo ez bazara bazkidea, jarri klubarekin harremanetan.",
+          "¿No sabes tu número de socio, tu ficha ya tiene otro email o no eres socio/a?",
+          "Ez dakizu zure bazkide zenbakia, zure fitxak beste email bat du edo ez zara bazkidea?",
         )}
       </p>
-      <button type="button" onClick={salir} className="mt-3 text-sm font-semibold text-neutral-500 underline hover:text-neutral-800">
+      <Link
+        href="/contacto"
+        className="mt-3 inline-block rounded-full border border-azul px-5 py-2.5 text-sm font-semibold text-azul transition hover:bg-azul hover:text-white"
+      >
+        {t("Contactar con el club", "Klubarekin harremanetan jarri")}
+      </Link>
+      <button type="button" onClick={salir} className="mt-4 block text-sm font-semibold text-neutral-500 underline hover:text-neutral-800">
         {t("Cerrar sesión", "Saioa itxi")}
       </button>
     </section>

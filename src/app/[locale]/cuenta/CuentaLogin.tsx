@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useLocale } from "next-intl";
 import { useRouter } from "next/navigation";
+import { Link } from "@/i18n/routing";
 import {
   estadoCuenta,
   iniciarConContrasena,
@@ -121,11 +122,17 @@ export function CuentaLogin() {
         </p>
         <p className="mt-2 text-sm">
           {t(
-            "Escribe tu email arriba y regístrate para crear tu acceso.",
-            "Idatzi zure emaila goian eta erregistratu sarbidea sortzeko.",
+            "Ponte en contacto con el club para que añadan tu email y así puedas acceder.",
+            "Jarri klubarekin harremanetan zure emaila gehitzeko eta sartu ahal izateko.",
           )}
         </p>
-        <button type="button" onClick={volverAEmail} className={`mt-3 ${enlaceBtn}`}>
+        <Link
+          href="/contacto"
+          className="mt-4 inline-block rounded-full bg-rojo px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-rojo-600"
+        >
+          {t("Contactar con el club", "Klubarekin harremanetan jarri")}
+        </Link>
+        <button type="button" onClick={volverAEmail} className={`mt-3 block ${enlaceBtn}`}>
           {t("Volver", "Itzuli")}
         </button>
       </div>
@@ -159,6 +166,12 @@ export function CuentaLogin() {
           <button type="button" onClick={() => { setError(null); setPaso("enlace"); }} className={enlaceBtn}>
             {t("Prefiero entrar con un enlace", "Nahiago dut esteka batekin sartu")}
           </button>
+          <p className="pt-2 text-xs text-neutral-500">
+            {t("¿No tienes email registrado o no puedes entrar?", "Ez daukazu emailik erregistratuta edo ezin duzu sartu?")}{" "}
+            <Link href="/contacto" className="font-semibold text-azul underline hover:text-azul-700">
+              {t("Contacta con el club", "Jarri klubarekin harremanetan")}
+            </Link>
+          </p>
         </form>
       )}
 
