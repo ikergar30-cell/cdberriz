@@ -27,12 +27,21 @@ export function DescargarCarnet({
     setError(null);
     setCargando(true);
     try {
+      const node = ref.current;
+      // Asegurar que TODAS las imágenes (foto y escudo) están decodificadas antes
+      // de capturar; si no, la captura puede salir con la foto en blanco.
+      await Promise.all(
+        Array.from(node.querySelectorAll("img")).map((img) =>
+          img.decode ? img.decode().catch(() => {}) : Promise.resolve(),
+        ),
+      );
       const { toBlob } = await import("html-to-image");
-      const blob = await toBlob(ref.current, {
-        pixelRatio: 3, // nítido para pantallas retina / impresión
-        cacheBust: true,
-        backgroundColor: "#ffffff",
-      });
+      // Sin cacheBust (corrompe los data: URL de la foto ya incrustada). Se hace
+      // una primera pasada de "calentamiento": html-to-image a veces no embebe
+      // las imágenes hasta la segunda llamada.
+      const opciones = { pixelRatio: 3, backgroundColor: "#ffffff" } as const;
+      await toBlob(node, opciones);
+      const blob = await toBlob(node, opciones);
       if (!blob) throw new Error("sin imagen");
       await compartirODescargar(blob, nombreArchivo);
     } catch {
