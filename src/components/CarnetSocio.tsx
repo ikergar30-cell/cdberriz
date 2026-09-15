@@ -39,6 +39,24 @@ export async function CarnetSocio({
 
   const activo = socio.estado === "activo";
 
+  // La foto se incrusta como data URL (descargándola en el servidor) para que
+  // aparezca también al descargar el carné como imagen: html-to-image no puede
+  // capturar una imagen de otro dominio (Supabase) por CORS, y sin esto la foto
+  // salía en blanco en la descarga.
+  let fotoSrc = socio.foto_url;
+  if (socio.foto_url) {
+    try {
+      const res = await fetch(socio.foto_url, { cache: "no-store" });
+      if (res.ok) {
+        const buf = Buffer.from(await res.arrayBuffer());
+        const mime = res.headers.get("content-type") || "image/jpeg";
+        fotoSrc = `data:${mime};base64,${buf.toString("base64")}`;
+      }
+    } catch {
+      /* si falla la descarga, se deja la URL original (se verá en pantalla) */
+    }
+  }
+
   return (
     <div className="mx-auto max-w-sm overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-lg">
       {/* Cabecera con escudo */}
@@ -55,7 +73,7 @@ export async function CarnetSocio({
         <div className="h-24 w-20 shrink-0 overflow-hidden rounded-lg bg-neutral-100">
           {socio.foto_url ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={socio.foto_url} alt="" crossOrigin="anonymous" className="h-full w-full object-cover" />
+            <img src={fotoSrc ?? undefined} alt="" className="h-full w-full object-cover" />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-3xl text-neutral-300">
               👤
