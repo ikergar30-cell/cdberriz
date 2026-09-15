@@ -2,6 +2,7 @@ import { setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/routing";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient as createServerClient } from "@/lib/supabase/server";
 import { resolverPortal } from "@/lib/socios/sesionPortal";
 import { stripe } from "@/lib/stripe";
 import { sanityFetch } from "@/sanity/lib/sanityFetch";
@@ -24,6 +25,7 @@ import { SubirFoto } from "./SubirFoto";
 import { CuentaBanco } from "./CuentaBanco";
 import { CompletarDatos } from "./CompletarDatos";
 import { ElegirFicha, CambiarFicha } from "./ElegirFicha";
+import { VincularFicha } from "./VincularFicha";
 
 const ESTADO_LABEL: Record<string, { es: string; eu: string; cls: string }> = {
   activo:    { es: "Activo",          eu: "Aktiboa",         cls: "bg-green-100 text-green-800" },
@@ -96,6 +98,22 @@ export default async function CuentaPage({
         <PageHeader title={titulo} />
         <div className="container max-w-2xl py-12 md:py-16">
           <ElegirFicha opciones={portal.opciones} />
+        </div>
+      </>
+    );
+  }
+
+  // Sesión iniciada (email verificado) pero su email no está en ninguna ficha:
+  // le pedimos DNI/nº para vincular su email a su ficha de socio.
+  if (portal.tipo === "sin_socio") {
+    const {
+      data: { user },
+    } = await createServerClient().auth.getUser();
+    return (
+      <>
+        <PageHeader title={titulo} />
+        <div className="container max-w-2xl py-12 md:py-16">
+          <VincularFicha email={user?.email ?? ""} />
         </div>
       </>
     );

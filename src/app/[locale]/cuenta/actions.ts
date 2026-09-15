@@ -3,6 +3,7 @@
 import { cookies } from "next/headers";
 import { Resend } from "resend";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient as createServerSupabase } from "@/lib/supabase/server";
 import { stripe } from "@/lib/stripe";
 import { club } from "@/config/club";
 import type { ActionResult } from "@/lib/actionResult";
@@ -424,4 +425,206 @@ export async function completarDatosSocio(
     }
     return { error: error.message };
   }
+}
+
+// ============================================================================
+// ACCESO CON EMAIL + CONTRASEÑA (además del enlace mágico, que se mantiene)
+//
+// Flujo "email primero": el socio escribe su email; si ya tiene cuenta se le
+// pide la contraseña; si no, se registra (elige contraseña) y verifica el email
+// con un CÓDIGO de un solo uso que se le envía por Resend (NO un enlace, para
+// no depender de que abra un link). La verificación usa verifyOtp, que fija la
+// sesión en las cookies desde la propia server action.
+//
+// La identidad del socio se sigue resolviendo por email (resolverPortal). Si el
+// email no está en ninguna ficha, vincularMiEmail() lo asocia a la ficha por
+// DNI/nº, pero SOLO si esa ficha aún no tiene email (no se puede robar una ya
+// vinculada).
+// ============================================================================
+
+const MIN_PASS = 8;
+
+// Busca el usuario de auth por email (paginado). Devuelve el usuario o null.
+async function buscarUsuarioAuth(correo: string) {
+  const admin = createAdminClient();
+  for (let page = 1; page <= 20; page++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
+    if (error) break;
+    const u = data.users.find((x) => (x.email ?? "").toLowerCase() === correo);
+    if (u) return u;
+    if (data.users.length < 1000) break;
+  }
+  return null;
+}
+
+// ¿Existe ya una cuenta (usuario de auth) para este email?
+export async function estadoCuenta(email: string): Promise<{ existe: boolean }> {
+  const correo = email.trim().toLowerCase();
+  if (!correo.includes("@")) return { existe: false };
+  return { existe: !!(await buscarUsuarioAuth(correo)) };
+}
+
+function textoCodigo(codigo: string, eu: boolean): string {
+  return eu
+    ? `Kaixo:\n\nZure sarbide-kodea: ${codigo}\n\nIdatzi kode hori webgunean jarraitzeko. Ordu erdi barru iraungitzen da.\n\nEz baduzu zuk eskatu, ez ikusi mesedez.\n\nC.D. Berriz`
+    : `Hola:\n\nTu código de acceso es: ${codigo}\n\nIntrodúcelo en la web para continuar. Caduca en 30 minutos.\n\nSi no lo has pedido tú, puedes ignorar este email.\n\nC.D. Berriz`;
+}
+
+async function enviarCodigo(email: string, codigo: string, locale: string): Promise<boolean> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return false;
+  try {
+    const resend = new Resend(apiKey);
+    const from = process.env.CONTACT_FROM || club.remitente;
+    const eu = locale === "eu";
+    await resend.emails.send({
+      from,
+      to: email,
+      subject: eu ? "Zure sarbide-kodea — C.D. Berriz" : "Tu código de acceso — C.D. Berriz",
+      text: textoCodigo(codigo, eu),
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Registro: crea la cuenta (email + contraseña, sin confirmar) y envía el código
+// de verificación por email. generateLink('signup') crea el usuario y nos da el
+// email_otp para mandarlo nosotros por Resend.
+export async function registrarSocio(
+  email: string,
+  password: string,
+  locale: string,
+): Promise<ActionResult> {
+  const correo = email.trim().toLowerCase();
+  if (!correo.includes("@")) return { error: "El email no es válido." };
+  if (password.length < MIN_PASS) {
+    return { error: `La contraseña debe tener al menos ${MIN_PASS} caracteres.` };
+  }
+  const admin = createAdminClient();
+
+  // Crear el usuario SIN confirmar, con su contraseña. Si ya existe:
+  //  - confirmado    → que inicie sesión.
+  //  - sin confirmar → es un reintento: actualizamos la contraseña y reenviamos código.
+  const { error: errCrear } = await admin.auth.admin.createUser({
+    email: correo,
+    password,
+    email_confirm: false,
+  });
+  if (errCrear) {
+    const existente = await buscarUsuarioAuth(correo);
+    if (existente?.email_confirmed_at) {
+      return { error: "Ya existe una cuenta con este email. Inicia sesión con tu contraseña." };
+    }
+    if (!existente) return { error: "No se pudo crear la cuenta. Inténtalo de nuevo." };
+    await admin.auth.admin.updateUserById(existente.id, { password });
+  }
+
+  // Código de verificación (email_otp), generado por nosotros y enviado por Resend.
+  const { data, error } = await admin.auth.admin.generateLink({ type: "magiclink", email: correo });
+  const codigo = data?.properties?.email_otp;
+  if (error || !codigo) return { error: "No se pudo generar el código. Inténtalo de nuevo." };
+  if (!(await enviarCodigo(correo, codigo, locale))) {
+    return { error: "No se pudo enviar el código por email. Inténtalo de nuevo." };
+  }
+}
+
+// Reenviar el código de registro.
+export async function reenviarCodigoRegistro(email: string, locale: string): Promise<ActionResult> {
+  const correo = email.trim().toLowerCase();
+  const admin = createAdminClient();
+  const { data, error } = await admin.auth.admin.generateLink({ type: "magiclink", email: correo });
+  if (error || !data?.properties?.email_otp) {
+    return { error: "No se pudo reenviar el código. Vuelve a empezar el registro." };
+  }
+  if (!(await enviarCodigo(correo, data.properties.email_otp, locale))) {
+    return { error: "No se pudo enviar el código por email." };
+  }
+}
+
+// Verificar el código de registro → confirma el email e inicia sesión.
+export async function verificarCodigoRegistro(email: string, codigo: string): Promise<ActionResult> {
+  const supabase = createServerSupabase();
+  const { error } = await supabase.auth.verifyOtp({
+    email: email.trim().toLowerCase(),
+    token: codigo.replace(/\s+/g, ""),
+    type: "magiclink",
+  });
+  if (error) return { error: "El código no es válido o ha caducado." };
+}
+
+// Login con email + contraseña.
+export async function iniciarConContrasena(email: string, password: string): Promise<ActionResult> {
+  const supabase = createServerSupabase();
+  const { error } = await supabase.auth.signInWithPassword({
+    email: email.trim().toLowerCase(),
+    password,
+  });
+  if (error) return { error: "Email o contraseña incorrectos." };
+}
+
+// "Olvidé mi contraseña": envía un código de recuperación. Respuesta genérica
+// (no revelamos si el email existe).
+export async function solicitarCodigoRecuperacion(email: string, locale: string): Promise<ActionResult> {
+  const correo = email.trim().toLowerCase();
+  if (!correo.includes("@")) return { error: "El email no es válido." };
+  const admin = createAdminClient();
+  const { data, error } = await admin.auth.admin.generateLink({ type: "recovery", email: correo });
+  if (!error && data?.properties?.email_otp) {
+    await enviarCodigo(correo, data.properties.email_otp, locale);
+  }
+  // Siempre "ok": no revelamos si la cuenta existe.
+}
+
+// Verificar el código de recuperación → sesión válida para cambiar contraseña.
+export async function verificarCodigoRecuperacion(email: string, codigo: string): Promise<ActionResult> {
+  const supabase = createServerSupabase();
+  const { error } = await supabase.auth.verifyOtp({
+    email: email.trim().toLowerCase(),
+    token: codigo.replace(/\s+/g, ""),
+    type: "recovery",
+  });
+  if (error) return { error: "El código no es válido o ha caducado." };
+}
+
+// Establecer una nueva contraseña (requiere sesión, p. ej. tras la recuperación).
+export async function establecerContrasena(password: string): Promise<ActionResult> {
+  if (password.length < MIN_PASS) {
+    return { error: `La contraseña debe tener al menos ${MIN_PASS} caracteres.` };
+  }
+  const supabase = createServerSupabase();
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) return { error: "No se pudo cambiar la contraseña." };
+}
+
+// Vincula el email de la sesión con una ficha de socio por DNI o nº de socio.
+// Solo si la ficha aún NO tiene email (para no poder robar una ya vinculada).
+export async function vincularMiEmail(identificador: string): Promise<ActionResult> {
+  const supabase = createServerSupabase();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.email) return { error: "No autorizado." };
+
+  const valor = identificador.trim();
+  if (!valor) return { error: "Escribe tu DNI o número de socio." };
+
+  const admin = createAdminClient();
+  const esNumero = /^\d+$/.test(valor);
+  const { data: fichas } = await admin
+    .from("socios")
+    .select("id, email")
+    .or(esNumero ? `numero_socio.eq.${valor}` : `dni.eq.${normalizarDni(valor)}`)
+    .limit(1);
+  const ficha = fichas?.[0];
+  if (!ficha) return { error: "No encontramos ninguna ficha con ese DNI o número de socio." };
+  if (ficha.email && ficha.email.trim()) {
+    return { error: "Esa ficha ya está vinculada a otro email. Ponte en contacto con el club." };
+  }
+  const { error } = await admin
+    .from("socios")
+    .update({ email: user.email.toLowerCase() })
+    .eq("id", ficha.id);
+  if (error) return { error: "No se pudo vincular. Inténtalo de nuevo." };
 }
