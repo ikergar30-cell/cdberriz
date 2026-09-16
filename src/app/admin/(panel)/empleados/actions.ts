@@ -1,9 +1,57 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { Resend } from "resend";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { club } from "@/config/club";
 import type { RolEmpleado } from "@/lib/supabase/types";
+
+// Busca un usuario de auth por email (paginado). Devuelve el usuario o null.
+async function buscarUsuarioAuth(correo: string) {
+  const admin = createAdminClient();
+  for (let page = 1; page <= 20; page++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
+    if (error) break;
+    const u = data.users.find((x) => (x.email ?? "").toLowerCase() === correo);
+    if (u) return u;
+    if (data.users.length < 1000) break;
+  }
+  return null;
+}
+
+// Envía por RESEND (no por el correo de Supabase, que no está configurado) un
+// enlace para que el empleado establezca su contraseña de acceso al panel.
+// Genera un token de recuperación con la API admin y lo manda nosotros mismos.
+async function enviarEnlaceContrasena(email: string, nombre: string): Promise<{ ok: boolean; error?: string }> {
+  const admin = createAdminClient();
+  const { data: link, error } = await admin.auth.admin.generateLink({ type: "recovery", email });
+  const hashedToken = link?.properties?.hashed_token;
+  if (error || !hashedToken) return { ok: false, error: "No se pudo generar el enlace de acceso." };
+
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return { ok: false, error: "El envío de email no está configurado." };
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const url = `${siteUrl}/auth/callback?token_hash=${hashedToken}&type=recovery`;
+  try {
+    const resend = new Resend(apiKey);
+    const from = process.env.CONTACT_FROM || club.remitente;
+    await resend.emails.send({
+      from,
+      to: email,
+      subject: "Acceso al panel de C.D. Berriz",
+      text:
+        `Hola ${nombre}:\n\n` +
+        `Te han creado una cuenta para el panel de gestión de C.D. Berriz.\n\n` +
+        `Pulsa este enlace para establecer tu contraseña:\n${url}\n\n` +
+        `Después podrás entrar en ${siteUrl}/admin con tu email y esa contraseña.\n\n` +
+        `Un saludo,\nC.D. Berriz`,
+    });
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "No se pudo enviar el email de acceso." };
+  }
+}
 
 export async function crearEmpleado(formData: FormData): Promise<void> {
   // Verificar que el usuario actual es admin.
@@ -31,42 +79,52 @@ export async function crearEmpleado(formData: FormData): Promise<void> {
 
   const admin = createAdminClient();
 
-  // Crear usuario en Auth con contraseña aleatoria y confirmar email automáticamente.
+  // Crear el usuario en Auth (contraseña aleatoria, email confirmado). Si ese
+  // email YA existe en Auth (p. ej. la persona es socia y se registró en el
+  // portal), se reutiliza su usuario en lugar de fallar.
+  let userId: string;
   const { data: authData, error: authError } = await admin.auth.admin.createUser({
     email,
     password: crypto.randomUUID(),
     email_confirm: true,
   });
-
-  if (authError || !authData.user) {
-    const msg = authError?.message ?? "Error al crear el usuario.";
-    redirect("/admin/empleados?error=" + encodeURIComponent(msg));
+  if (authData?.user) {
+    userId = authData.user.id;
+  } else if (/registered|exists|already/i.test(authError?.message ?? "")) {
+    const existente = await buscarUsuarioAuth(email);
+    if (!existente) {
+      redirect("/admin/empleados?error=" + encodeURIComponent("Ese email ya existe pero no se ha podido localizar. Inténtalo de nuevo."));
+    }
+    userId = existente.id;
+  } else {
+    redirect("/admin/empleados?error=" + encodeURIComponent(authError?.message ?? "Error al crear el usuario."));
   }
 
-  // Insertar en la tabla de perfiles.
+  // ¿Ya tiene perfil de empleado? No duplicar.
+  const { data: yaPerfil } = await admin.from("perfiles").select("id").eq("id", userId).maybeSingle();
+  if (yaPerfil) {
+    redirect("/admin/empleados?error=" + encodeURIComponent("Esta persona ya es empleada del panel."));
+  }
+
   const { error: perfilError } = await admin
     .from("perfiles")
-    .insert({ id: authData.user.id, nombre, email, rol });
-
+    .insert({ id: userId, nombre, email, rol });
   if (perfilError) {
-    // Intentar limpiar el usuario de Auth si falló el perfil.
-    await admin.auth.admin.deleteUser(authData.user.id);
+    // Si acabábamos de crear el usuario y falló el perfil, lo limpiamos.
+    if (authData?.user) await admin.auth.admin.deleteUser(userId);
     redirect("/admin/empleados?error=" + encodeURIComponent(perfilError.message));
   }
 
-  // El rol "verificador" no usa contraseña: entra solo con su email desde
-  // /admin/login-verificador (ver esa ruta). Para el resto, enviamos el
-  // email de "restablecer contraseña" para que la establezcan.
-  //
-  // OJO: admin.generateLink() NO envía ningún email (solo genera el enlace
-  // para reenviarlo tú mismo con un proveedor propio); hay que usar
-  // resetPasswordForEmail() del cliente normal, que sí dispara el correo
-  // real de Supabase con la plantilla configurada.
+  // El rol "verificador" entra sin contraseña (email + PIN de taquilla). Al
+  // resto se le envía por Resend un enlace para establecer su contraseña.
   if (rol !== "verificador") {
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-    await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${siteUrl}/auth/callback`,
-    });
+    const r = await enviarEnlaceContrasena(email, nombre);
+    if (!r.ok) {
+      redirect(
+        "/admin/empleados?error=" +
+          encodeURIComponent(`Empleado creado, pero no se pudo enviar el email de acceso (${r.error ?? ""}). Usa "Reenviar enlace".`),
+      );
+    }
   }
 
   redirect("/admin/empleados?ok=1");
@@ -88,13 +146,17 @@ export async function reenviarEnlace(email: string): Promise<void> {
 
   if (!perfil || perfil.rol !== "admin") redirect("/admin");
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${siteUrl}/auth/callback`,
-  });
+  // El nombre para personalizar el email (si lo tenemos).
+  const admin = createAdminClient();
+  const { data: perfilDestino } = await admin
+    .from("perfiles")
+    .select("nombre")
+    .eq("email", email)
+    .maybeSingle();
 
-  if (error) {
-    redirect("/admin/empleados?error=" + encodeURIComponent(error.message));
+  const r = await enviarEnlaceContrasena(email, perfilDestino?.nombre ?? "");
+  if (!r.ok) {
+    redirect("/admin/empleados?error=" + encodeURIComponent(r.error ?? "No se pudo reenviar el enlace."));
   }
 
   redirect("/admin/empleados?ok=3");

@@ -109,6 +109,46 @@ export default async function EmpleadosPage({ searchParams }: Props) {
         </table>
       </div>
 
+      {/* Explicación de los roles */}
+      <div className="mb-6 rounded-2xl border border-neutral-200 bg-neutral-50 p-6">
+        <h2 className="mb-4 font-display text-lg font-bold uppercase text-neutral-900">
+          Roles de acceso
+        </h2>
+        <ul className="space-y-4 text-sm">
+          <li>
+            <span className="inline-block rounded-full bg-azul-100 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-azul-700">
+              Admin
+            </span>
+            <p className="mt-1.5 text-neutral-600">
+              Acceso completo a todo el panel (socios, cuotas, buzón, resguardos, invitados, carnés…)
+              <strong className="text-neutral-800"> y, además, puede gestionar empleados</strong> (crear,
+              editar y eliminar cuentas). Es el único rol que ve esta pantalla de Empleados.
+            </p>
+          </li>
+          <li>
+            <span className="inline-block rounded-full bg-green-100 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-green-700">
+              Empleado
+            </span>
+            <p className="mt-1.5 text-neutral-600">
+              Acceso a toda la gestión del día a día (socios, cuotas, buzón, resguardos, invitados,
+              verificar carné…), <strong className="text-neutral-800">pero no puede gestionar empleados</strong>.
+              Entra con su email y una contraseña que se establece con el enlace que recibe por email.
+            </p>
+          </li>
+          <li>
+            <span className="inline-block rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-amber-700">
+              Verificador
+            </span>
+            <p className="mt-1.5 text-neutral-600">
+              Es la cuenta de <strong className="text-neutral-800">taquilla</strong>: solo puede abrir
+              «Verificar carné» en la entrada, y no ve ningún dato de socios. <strong className="text-neutral-800">No
+              usa contraseña</strong>: entra desde <code>/admin/login-verificador</code> con su email y el
+              <strong className="text-neutral-800"> PIN de taquilla</strong>, que cambia cada mes.
+            </p>
+          </li>
+        </ul>
+      </div>
+
       {/* Formulario de alta */}
       <div className="rounded-2xl border border-neutral-200 bg-white p-6">
         <h2 className="mb-4 font-display text-lg font-bold uppercase text-neutral-900">
